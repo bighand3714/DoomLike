@@ -1,0 +1,49 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
+[ext_resource type="Script" path="res://scripts/player/player_controller.gd" id="2_player"]
+[ext_resource type="Script" path="res://scripts/utils/fps_counter.gd" id="3_fps"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_pshp"]
+radius = 0.4
+height = 1.8
+
+[node name="Main" type="Node3D"]
+script = ExtResource("1_main")
+
+[node name="Player" type="CharacterBody3D" parent="."]
+unique_name_in_owner = true
+script = ExtResource("2_player")
+
+[node name="Camera3D" type="Camera3D" parent="Player"]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, 0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Player"]
+shape = SubResource("CapsuleShape3D_pshp")
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+
+[node name="WeaponHolder" type="Node3D" parent="Player"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, -0.3, -0.6)
+
+[node name="Level" type="Node3D" parent="."]
+unique_name_in_owner = true
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="Crosshair" type="ColorRect" parent="UI"]
+unique_name_in_owner = true
+anchors_preset = 0
+offset_left = 638.0
+offset_top = 358.0
+offset_right = 642.0
+offset_bottom = 362.0
+color = Color(0, 1, 0, 0.7)
+
+[node name="FPS" type="Label" parent="UI"]
+anchors_preset = 0
+offset_left = 12.0
+offset_top = 12.0
+offset_right = 120.0
+offset_bottom = 36.0
+script = ExtResource("3_fps")

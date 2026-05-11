@@ -1,0 +1,12 @@
+# Godot 4+ specific ignores
+.godot/
+/android/
+
+# OS files
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# Godot
+addons/
+*.translation
