@@ -18,6 +18,7 @@ scripts/        GDScript 源代码
   level/            关卡系统（level_data.gd 数据蓝图, level_builder.gd 建造器）
   editor/           编辑器模式切换（game_mode.gd）
   utils/            FPS计数器（fps_counter.gd）
+  ui/               HUD 状态显示（player_status.gd）
   weapon/           武器系统
     weapon_data.gd     WeaponData Resource + DamageType/FireMode 枚举
     weapon_node.gd     武器基类（射线射击、散布、弹药、换弹、后坐力）
@@ -49,7 +50,8 @@ Main (Node3D)                          ← main.gd
 ├── Level (Node3D)                     [%Level] ← 程序化CSG几何体生成位置
 └── UI (CanvasLayer)
     ├── Crosshair (ColorRect)           [%Crosshair]
-    └── FPS (Label)                     ← fps_counter.gd
+    ├── FPS (Label)                     ← fps_counter.gd
+    └── PlayerStatus (Node)             ← player_status.gd (位置/状态/武器HUD)
 ```
 
 ## 输入映射

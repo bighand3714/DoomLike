@@ -177,3 +177,14 @@ func _prev_weapon() -> void:
 	# + _weapons.size() 确保负数变正数（Godot 的 % 对负数结果也是负数）
 	var prev_idx := (_current_index - 1 + _weapons.size()) % _weapons.size()
 	_equip(prev_idx)
+
+
+# ==============================================================================
+# get_current_weapon() — 供外部（如 HUD）查询当前武器信息
+# ==============================================================================
+# 返回当前装备的武器节点，如果没有任何武器则返回 null。
+# HUD 通过这个公开方法获取武器引用，而不是直接访问 _weapons 数组。
+func get_current_weapon() -> WeaponNode:
+	if _current_index < 0 or _current_index >= _weapons.size():
+		return null
+	return _weapons[_current_index]

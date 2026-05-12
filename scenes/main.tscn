@@ -1,9 +1,10 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/player/player_controller.gd" id="2_player"]
 [ext_resource type="Script" path="res://scripts/utils/fps_counter.gd" id="3_fps"]
 [ext_resource type="Script" path="res://scripts/weapon/weapon_manager.gd" id="4_wm"]
+[ext_resource type="Script" path="res://scripts/ui/player_status.gd" id="5_ps"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_pshp"]
 radius = 0.4
@@ -51,3 +52,6 @@ offset_top = 12.0
 offset_right = 120.0
 offset_bottom = 36.0
 script = ExtResource("3_fps")
+
+[node name="PlayerStatus" type="Node" parent="UI"]
+script = ExtResource("5_ps")
