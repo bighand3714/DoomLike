@@ -1,6 +1,6 @@
 # DoomLike 项目路线图 — 原子化任务拆解
 
-> **当前进度：第一阶段（原型搭建）** — 核心移动已完成，其余系统待实现。
+> **当前进度：第二阶段（武器与射击）已完成** — 核心移动 + 武器/射击/伤害系统已可运行，敌人/地图编辑器等系统待实现。总进度 37/138 任务（27%）。
 
 ---
 
@@ -234,30 +234,265 @@ scripts/
 
 ## 第三阶段：敌人系统（Phase 3）
 
-### 3.1 敌人基类
-- [ ] `Enemy` CharacterBody3D 基类
-- [ ] 敌人状态枚举（`IDLE`, `PATROL`, `CHASE`, `ATTACK`, `PAIN`, `DEATH`）
-- [ ] 状态机框架（`_process_state()` 分发）
-- [ ] 生命值 + `Damageable` 接口
-- [ ] 受击反应（闪白、击退、疼痛动画）
-- [ ] 死亡动画 + 尸体残留
+> **目标**：实现敌人 AI 核心循环——敌人能看见玩家 → 追过来 → 攻击 → 被打死。产出"有敌人可打"的完整战斗体验。
+>
+> **不在此阶段**：投掷物抛物线与弹道特效（Phase 3.4 做火球基础，美术打磨在 Phase 7/8）、敌人巡逻路径点编辑器（Phase 5）、BOSS 战斗（Phase 8 多关卡）。
 
-### 3.2 敌人 AI：小恶魔（Imp）
-- [ ] 看见玩家时进入 CHASE 状态（视线检测 `RayCast3D`）
-- [ ] 在一定距离内进入 ATTACK 状态（投掷火球）
-- [ ] 巡逻路径点系统（PATROL 状态随机漫游）
-- [ ] 失去玩家视野后搜索/返回巡逻
-- [ ] 火球投射物（飞行、碰撞、伤害）
+---
 
-### 3.3 敌人 AI：恶魔士兵（Demon Soldier）
-- [ ] 与 Imp 共享基类，调整参数
-- [ ] 远程射击攻击（hitscan，非投射物）
-- [ ] 掩体利用（移动中短暂停留射击）
+### 3.1 敌人基类（`scripts/enemy/enemy.gd`）
 
-### 3.4 投射物系统
-- [ ] `Projectile` Area3D 基类（速度、伤害、生命周期）
-- [ ] 投射物碰撞检测（击中玩家/墙壁/地面）
-- [ ] 投射物特效占位（粒子/闪光）
+新建文件，定义所有敌人共享的数据、状态机和基础行为。每个具体敌人（Imp、Demon Soldier）是它的子类。
+
+- [ ] **3.1.1** 创建 `Enemy` 基类（`extends CharacterBody3D`）
+  - 为什么用 CharacterBody3D：敌人需要在物理世界中移动，需要碰撞检测和 `move_and_slide()`
+  - 本阶段不使用 NavigationAgent3D（Godot 导航系统），改为简化的"朝玩家直线移动 + 射线检测撞墙就停"，保持 DOOM 风格的直线追杀感
+  - 预留 `NavigationAgent3D` 集成接口，后续可切换为真导航
+
+- [ ] **3.1.2** 敌人状态枚举 `EnemyState`
+  - `IDLE` — 待机（玩家未发现时，原地站立或缓慢踱步）
+  - `PATROL` — 巡逻（沿预设路径点移动，Phase 3 暂时原地转圈代替）
+  - `CHASE` — 追击（发现玩家，朝玩家方向移动）
+  - `ATTACK` — 攻击（在攻击距离内，执行攻击动作）
+  - `PAIN` — 受击硬直（受伤瞬间短暂停顿，0.3 秒后恢复追击）
+  - `DEATH` — 死亡（播放死亡动画/变灰，禁用碰撞，等待尸体消失）
+
+- [ ] **3.1.3** 状态机框架
+  - `_state: EnemyState` — 当前状态
+  - `_process_state(delta: float)` — 每帧根据当前状态分发到对应的处理函数
+  - 各状态处理函数签名：`_state_idle(delta)`、`_state_chase(delta)`、`_state_attack(delta)`、`_state_pain(delta)`、`_state_death(delta)`
+  - `_transition_to(new_state: EnemyState)` — 状态切换函数，负责"离开旧状态"和"进入新状态"的清理/初始化
+  - 状态迁移图：
+    ```
+    IDLE/PATROL → CHASE（看见玩家）
+    CHASE → ATTACK（进入攻击距离）
+    ATTACK → CHASE（玩家跑出攻击距离）
+    任意状态 → PAIN（受到伤害，除 DEATH 外）
+    PAIN → CHASE（硬直结束）
+    任意状态 → DEATH（生命值归零）
+    ```
+
+- [ ] **3.1.4** 敌人属性（`@export` 可配置）
+  - `move_speed: float = 4.0` — 追击移动速度（比玩家慢，玩家可以风筝）
+  - `attack_range: float = 15.0` — 攻击触发距离（米）
+  - `sight_range: float = 30.0` — 发现玩家距离（米），超过此距离敌人不会反应
+  - `attack_cooldown: float = 1.0` — 攻击间隔（秒），防止连续无脑输出
+  - `pain_duration: float = 0.3` — 受击硬直时间
+  - `death_duration: float = 2.0` — 死亡动画/尸体停留时间
+  - `knockback_force: float = 3.0` — 受击击退力度
+
+- [ ] **3.1.5** 生命值集成
+  - 自动创建 `Damageable` 子节点（在 `_ready` 中检查，没有则 `Damageable.new()` 并 `add_child`）
+  - 连接 `Damageable.damaged` → `_on_damaged(amount, type)`，在其中处理 PAIN 状态切换和击退
+  - 连接 `Damageable.died` → `_on_died()`，在其中处理 DEATH 状态切换、碰撞禁用、定时 `queue_free()`
+  - `max_health` 和初始 health 从 `@export var enemy_data: EnemyData` 配置文件中读取（类似 WeaponData 的数据驱动思路）
+
+- [ ] **3.1.6** 玩家检测（"视觉"系统）
+  - 在 `_physics_process` 中持续检查：玩家是否在 `sight_range` 范围内？
+  - 粗略检查：`global_position.distance_to(player.global_position) < sight_range`
+  - 精确检查：从敌人位置向玩家发射一条射线（`PhysicsRayQueryParameters3D`），确认中间没有墙壁遮挡
+  - 如果粗略距离通过但射线被墙壁挡住 → 视为"看不见玩家"
+  - 一旦"看见"就进入 CHASE 状态，不需要每帧验证（简化设计：敌人一旦发现就"锁定目标"，不会跟丢）
+
+- [ ] **3.1.7** 追击移动逻辑（`_state_chase(delta)`）
+  - 计算敌人到玩家的方向向量（只用 XZ 平面，忽略 Y 轴高度差——DOOM 的 2.5D 传统）
+  - 用 `velocity = direction * move_speed` 向玩家移动，调用 `move_and_slide()`
+  - 到达 `attack_range` 内时切换到 ATTACK 状态
+  - 玩家跳出 `sight_range * 1.5` 时切换回 IDLE/PATROL（给一点余量，不频繁切换）
+
+- [ ] **3.1.8** 受击反应（`_state_pain(delta)`）
+  - 进入 PAIN 时：`_pain_timer = pain_duration`
+  - 每帧减计时器，归零后切换到 CHASE
+  - 视觉：子类覆写 `_flash_pain()`（材质变亮/变白），基类提供默认实现（用 `material_override.albedo_color` Tween 闪白）
+  - 击退：`velocity = (self.global_position - damage_source.global_position).normalized() * knockback_force`（沿"伤害来源→敌人"方向推开）
+
+- [ ] **3.1.9** 死亡处理（`_state_death(delta)`）
+  - 进入 DEATH 时：禁用 CollisionShape3D（`collision.disabled = true`），防止挡路/继续被打
+  - 视觉：子类覆写 `_on_death_visual()`，基类默认把 `material_override.albedo_color` 调暗/变灰
+  - 计时 `death_duration` 秒后 `queue_free()`
+  - 发射信号 `enemy_died(self)`（供 main.gd 统计击杀数、触发开门等）
+
+---
+
+### 3.2 敌人配置文件（`scripts/enemy/enemy_data.gd`）
+
+类似 `WeaponData` 的数据蓝图，把敌人参数从代码中抽离为 Resource 文件。
+
+- [ ] **3.2.1** 创建 `EnemyData` Resource 类
+  - `@export var enemy_name: String = "未命名敌人"`
+  - `@export var max_health: float = 100.0`
+  - `@export var move_speed: float = 4.0`
+  - `@export var attack_damage: float = 10.0`
+  - `@export var attack_range: float = 15.0`
+  - `@export var sight_range: float = 30.0`
+  - `@export var attack_cooldown: float = 1.0`
+  - `@export var damage_type: WeaponData.DamageType` — 敌人造成的伤害类型（Imp 火球=PROJECTILE，士兵枪击=HITSCAN，啃咬=MELEE）
+  - `@export var display_name: String` — HUD 杀死提示用
+
+- [ ] **3.2.2** 创建 `imp.tres` 和 `demon_soldier.tres`
+  - Imp：生命 80、速度 5、攻击 15（火球）、攻击距离 12m、视野 30m
+  - Demon Soldier：生命 120、速度 3、攻击 8（hitscan）、攻击距离 20m、视野 35m
+
+---
+
+### 3.3 投射物系统（`scripts/enemy/projectile.gd`）
+
+火球、火箭弹、等离子弹等飞行物体的基类。敌人和玩家都可以生成投射物。
+
+- [ ] **3.3.1** 创建 `Projectile` 基类（`extends Area3D`）
+  - 为什么用 Area3D：投射物需要"当我和某物重叠时"的检测，不需要物理推搡。Area3D 的 `body_entered` / `area_entered` 信号为此设计
+  - `@export var speed: float = 15.0` — 飞行速度（m/s）
+  - `@export var damage: float = 15.0` — 命中伤害
+  - `@export var lifetime: float = 5.0` — 最大存活时间（秒，超时自动销毁，防止飞出地图占用内存）
+  - `@export var damage_type: WeaponData.DamageType = PROJECTILE`
+
+- [ ] **3.3.2** 投射物飞行逻辑
+  - `_physics_process(delta)` 中 `global_position += direction * speed * delta`（直接位移，不模拟重力）
+  - `lifetime -= delta`，归零时 `queue_free()`
+
+- [ ] **3.3.3** 投射物碰撞处理
+  - 连接 `body_entered(body: Node3D)` 信号
+  - 命中 Player → 调用 `body.take_damage()` 或向玩家下面的 Damageable 查找
+  - 命中墙壁/地面 → 生成命中特效占位（火花粒子/弹孔）、`queue_free()`
+  - 命中其他投射物 → 互相抵消？（暂定：不处理，只和墙/玩家碰撞）
+  - 碰到任何 `StaticBody3D` / `CharacterBody3D` 即销毁（不穿透）
+
+- [ ] **3.3.4** 投射物视觉占位
+  - `_ready()` 中创建 `CSGSphere3D`（半径 0.15m，亮色材质）作为火球占位模型
+  - 或创建 `MeshInstance3D` 用 `SphereMesh`
+  - 子类覆写 `_setup_visual()` 自定义外观
+  - 可选：`PointLight3D` 子节点让火球发光（动态光源，本阶段先跳过）
+
+---
+
+### 3.4 敌人 AI：小恶魔 Imp（`scripts/enemy/imp.gd`）
+
+验证整条敌人管线能跑通的"最简实现"——能发现玩家、追过来、扔火球、被打死。
+
+- [ ] **3.4.1** 创建 `Imp` 类（`extends Enemy`）
+  - 在 `_ready()` 中加载 `imp.tres`（EnemyData）
+  - 覆写 `_setup_model()`：用 CSGBox3D 搭一个简陋的人形占位（身体 + 头 + 四肢，简单盒子人）
+
+- [ ] **3.4.2** Imp 攻击行为（`_state_attack(delta)`）
+  - 攻击方式：火球投射物（远程）+ 爪击（近战，贴脸时）
+  - 远程攻击（玩家距离 > 2m）：生成 `Projectile` 实例，方向朝向玩家位置（瞄准玩家当前位置发射）
+  - 近战攻击（玩家距离 ≤ 2m）：直接对玩家调用 `take_damage()`（近战伤害 10 点，HITSCAN 但范围判定）
+  - 攻击后设 `_attack_cooldown` 计时器，期间留在 ATTACK 状态但不发射，计时结束才能再攻击
+  - 攻击时短暂停顿（`velocity = Vector3.ZERO`，持续 0.2 秒）
+
+- [ ] **3.4.3** Imp 投射物生成
+  - 在敌人头顶位置（`global_position + Vector3(0, 1.5, 0)`）生成火球
+  - 火球方向 = `(player.global_position - spawn_pos).normalized()`
+  - 火球速度 10m/s（比手枪子弹慢很多，玩家能躲）
+  - 火球伤害 15 点
+
+- [ ] **3.4.4** Imp 受伤/死亡覆盖
+  - 覆写 `_flash_pain()`：Imp 受击时材质变亮白色 0.2 秒
+  - 覆写 `_on_death_visual()`：Imp 死亡时缩小 30% + 变灰 + 缓缓下沉（Tween `scale` 和 `position.y`）
+  - 死亡音效占位（`AudioStreamPlayer3D.play()` 空音频）
+
+---
+
+### 3.5 第二只敌人：恶魔士兵 Demon Soldier（`scripts/enemy/demon_soldier.gd`）
+
+验证"不同敌人类型可共享基类但行为不同"的架构。
+
+- [ ] **3.5.1** 创建 `DemonSoldier` 类（`extends Enemy`）
+  - 加载 `demon_soldier.tres`
+  - 覆写 `_setup_model()`：比 Imp 更大、更方正的盒子人（装甲外观）
+
+- [ ] **3.5.2** 士兵攻击行为
+  - 远程 hitscan 攻击（瞬时命中，类似玩家手枪）
+  - 从敌人位置向玩家方向发射射线检测（`PhysicsRayQueryParameters3D`）
+  - 命中玩家 → 造成 `enemy_data.attack_damage` 伤害
+  - 攻击间隔 1.5 秒（比 Imp 慢，因为有"举枪→射击→收枪"的节奏）
+  - 攻击时有 0.1 秒的"举枪前摇"（玩家能看到敌人准备动作的窗口）
+
+- [ ] **3.5.3** 士兵移动模式区别
+  - 追击时偶尔"停顿射击"：每追 2 秒，停 0.5 秒射击一次，然后继续追
+  - 没有近战攻击（纯远程）
+  - 比 Imp 稍慢（`move_speed = 3.0`）
+
+---
+
+### 3.6 敌人放置与生成（集成到 `main.gd` 和 Level）
+
+在测试关卡中手动放置敌人，验证完整战斗循环。
+
+- [ ] **3.6.1** `main.gd` 中添加敌人实例化功能
+  - `_spawn_enemy(enemy_scene: PackedScene, position: Vector3) -> Enemy`
+  - 或将敌人直接放在 main.tscn 中（本阶段手动拖入场景）
+
+- [ ] **3.6.2** 在测试房间中放置敌人
+  - 2 只 Imp：分散在房间角落
+  - 1 只 Demon Soldier：放在房间中央或柱子附近
+  - 敌人初始状态为 IDLE，朝向随机
+
+- [ ] **3.6.3** 敌人管理器（`scripts/enemy/enemy_manager.gd`）
+  - `active_enemies: Array[Enemy]` — 当前存活敌人列表
+  - 监听 `enemy_died` 信号，从列表中移除
+  - `all_clear()` — 检查是否所有敌人死亡（触发开门/通关）
+  - 挂载到 Level 节点或 main.gd 中
+
+---
+
+### 3.7 战斗 HUD 增强
+
+在现有的 PlayerStatus HUD 基础上，添加战斗相关信息。
+
+- [ ] **3.7.1** 命中标记（Hit Marker）
+  - 击中敌人时准星短暂变红（30ms），然后恢复绿色
+  - 在 WeaponNode 的 `hit_something` 信号中检测命中目标是否为 Enemy
+  - 在 `main.gd` 或 PlayerStatus 中处理此逻辑
+
+- [ ] **3.7.2** 击杀计数
+  - 在 PlayerStatus HUD 中添加"击杀数"标签（右上角，武器信息上方）
+  - 监听 Enemy 死亡信号，递增计数
+
+- [ ] **3.7.3** 受伤效果
+  - 玩家被敌人攻击时，屏幕四边短暂闪红（在 UI CanvasLayer 上放 4 个 ColorRect 边框）
+  - 持续时间 0.3 秒，从红色渐变到透明
+
+---
+
+### 3.8 集成与验证
+
+- [ ] **3.8.1** 将 Imp 敌人放入测试房间
+  - 至少 2 只 Imp，初始位置远离玩家（房间对角）
+
+- [ ] **3.8.2** 将 Demon Soldier 放入测试房间
+  - 1 只士兵，放在中央柱子附近
+
+- [ ] **3.8.3** 端到端测试清单
+  - 进入房间 → 敌人发现玩家 → 开始追击（CHASE 状态）
+  - 敌人进入攻击距离 → 攻击（Imp 扔火球，士兵瞬发射击）
+  - 火球命中玩家 → 屏幕闪红、玩家扣血
+  - 火球命中墙壁 → 火球消失、无报错
+  - 玩家射击敌人 → 敌人闪白、受击硬直
+  - 敌人血量归零 → 死亡动画 → 尸体消失
+  - 所有敌人死亡 → 控制台打印 "All Clear"
+  - 切换武器射击敌人 → 霰弹枪多弹丸均有伤害判定
+  - 从远距离狙击 → 超出 sight_range 的敌人不反应
+  - 用柱子当掩体 → 射线被墙挡住，敌人丢失视野
+
+---
+
+### Phase 3 新增文件清单
+
+```
+scripts/
+  enemy/
+    enemy.gd             # Enemy 基类（状态机、追击、受击、死亡）
+    enemy_data.gd         # EnemyData Resource 配置文件
+    imp.gd                # 小恶魔 Imp（火球投射物 + 近战爪击）
+    demon_soldier.gd      # 恶魔士兵（hitscan 远程 + 停顿射击）
+    projectile.gd         # 投射物基类（飞行、碰撞、伤害）
+    enemy_manager.gd      # 敌人管理器（追踪存活、all clear 检测）
+assets/
+  enemies/
+    imp.tres              # Imp 配置数据
+    demon_soldier.tres    # Demon Soldier 配置数据
+```
 
 ---
 
@@ -401,18 +636,20 @@ scripts/
 |------|------|--------|--------|------|
 | Phase 1 | 原型搭建 | 13 | 13 | 100% |
 | Phase 2 | 武器与射击 | 24 | 24 | 100% |
-| Phase 3 | 敌人系统 | 9 | 0 | 0% |
+| Phase 3 | 敌人系统 | 31 | 0 | 0% |
 | Phase 4 | 关卡管线 | 9 | 0 | 0% |
 | Phase 5 | 地图编辑器 | 15 | 0 | 0% |
 | Phase 6 | UI/HUD | 16 | 0 | 0% |
 | Phase 7 | 资源与音频 | 16 | 0 | 0% |
 | Phase 8 | 打磨与发布 | 14 | 0 | 0% |
-| **总计** | | **116** | **37** | **32%** |
+| **总计** | | **138** | **37** | **27%** |
 
 ---
 
 ## 下一步建议
 
-Phase 2 已全部完成。当前进度：**116 个任务中完成 37 个（32%）**。
+Phase 2 已全部完成。当前进度：**138 个任务中完成 37 个（27%）**。
 
-下一阶段：**Phase 3（敌人系统）**——添加敌人 AI 和投射物系统，实现"能开枪 + 有敌人可打"的完整战斗循环。
+下一阶段：**Phase 3（敌人系统）**——31 个原子化任务，实现敌人 AI 和投射物系统，完成"能开枪 + 有敌人可打"的完整战斗循环。
+
+建议先做 **3.1（敌人基类 + 状态机）** 和 **3.3（投射物系统）**，这两个是基础依赖。然后做 **3.4（Imp）** 作为第一个可运行的敌人验证整条管线，再做 **3.5（Demon Soldier）** 验证"多敌人类型"架构。

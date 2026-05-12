@@ -2,7 +2,7 @@
 
 ## 项目概览
 
-Godot 4.6 项目，正在构建一款DOOM风格的第一人称射击游戏。当前处于**第二阶段（武器与射击）已完成**——核心移动 + 武器/射击/伤害系统已可运行，敌人/地图编辑器等系统待实现。总进度 37/116 任务（32%）。
+Godot 4.6 项目，正在构建一款DOOM风格的第一人称射击游戏。当前处于**第三阶段（敌人系统）已完成**——核心移动 + 武器/射击/伤害 + 敌人AI/投射物系统已可运行，关卡管线/地图编辑器等系统待实现。总进度 68/138 任务（49%）。
 
 - **引擎**：Godot 4.6 (Forward Plus, D3D12)
 - **物理**：Jolt Physics
@@ -13,7 +13,7 @@ Godot 4.6 项目，正在构建一款DOOM风格的第一人称射击游戏。当
 
 ```
 scripts/        GDScript 源代码
-  main.gd           主游戏控制器（初始化、测试房间搭建、靶子放置、准星）
+  main.gd           主游戏控制器（初始化、测试房间、靶子/敌人放置、准星、命中标记、受伤闪红）
   player/           玩家相关（player_controller.gd）
   level/            关卡系统（level_data.gd 数据蓝图, level_builder.gd 建造器）
   editor/           编辑器模式切换（game_mode.gd）
@@ -28,9 +28,17 @@ scripts/        GDScript 源代码
   damage/           伤害系统
     damageable.gd      可受伤接口（血量、受伤/死亡信号）
     shooting_target.gd 射击靶子（测试用，自动创建Damageable）
-scenes/         Godot 场景文件（main.tscn + 子场景占位目录）
+  enemy/            敌人系统（Phase 3）
+    enemy_data.gd      EnemyData Resource 配置（生命/速度/AI/伤害参数）
+    enemy.gd           Enemy 基类（CharacterBody3D，6状态机、视线检测、追击、受击、死亡）
+    projectile.gd      投射物基类（Area3D，飞行、碰撞、伤害、火球外观）
+    imp.gd             小恶魔（远程火球投射物 + 近战爪击，CSG人形模型）
+    demon_soldier.gd   恶魔士兵（hitscan射击 + 举枪前摇，装甲外观）
+    enemy_manager.gd   敌人生成与管理（追踪存活、击杀信号、all_clear检测）
+scenes/         Godot 场景文件（main.tscn）
 assets/         游戏资源
   weapons/          WeaponData .tres 配置文件（pistol.tres, shotgun.tres）
+  enemies/          EnemyData .tres 配置文件（imp.tres, demon_soldier.tres）
   audio/fonts/levels/textures 子目录（当前为空）
 shaders/        自定义着色器（当前为空）
 docs/           文档（project_roadmap.md 路线图）
@@ -41,17 +49,20 @@ docs/           文档（project_roadmap.md 路线图）
 ```
 Main (Node3D)                          ← main.gd
 ├── Player (CharacterBody3D)           ← player_controller.gd [%Player]
+│   ├── Damageable                     (100HP，自动创建)
 │   ├── Camera3D                       [%Camera3D]
 │   ├── CollisionShape3D               (胶囊体: 半径0.4, 高1.8)
 │   └── WeaponHolder (Node3D)
 │       └── WeaponManager (Node3D)     ← weapon_manager.gd (栏位管理)
 │           ├── Pistol (WeaponNode)    ← pistol.gd (半自动)
 │           └── Shotgun (WeaponNode)   ← shotgun.gd (泵动式)
-├── Level (Node3D)                     [%Level] ← 程序化CSG几何体生成位置
-└── UI (CanvasLayer)
-    ├── Crosshair (ColorRect)           [%Crosshair]
-    ├── FPS (Label)                     ← fps_counter.gd
-    └── PlayerStatus (Node)             ← player_status.gd (位置/状态/武器HUD)
+├── Level (Node3D)                     [%Level] ← 程序化CSG几何体 + 灯光
+│   └── EnemyManager (Node)            [%EnemyManager] ← 敌人实例化 + 追踪
+├── UI (CanvasLayer)
+│   ├── DamageFlash (ColorRect)         [%DamageFlash] ← 全屏受伤闪红
+│   ├── Crosshair (ColorRect)           [%Crosshair] ← 4×4像素绿色准星
+│   ├── FPS (Label)                     ← fps_counter.gd
+│   └── PlayerStatus (Node)             ← player_status.gd (位置/状态/生命/击杀/武器HUD)
 ```
 
 ## 输入映射
@@ -72,13 +83,17 @@ Main (Node3D)                          ← main.gd
 - 使用 `@export` 暴露可调参数到编辑器
 - 使用 `%UniqueName` 引用场景节点（如 `%Player`、`%Level`）
 - 类型注解：`func _ready() -> void`、`var speed: float = 8.0`
+- 跨文件 class_name 解析用 `preload()` + `extends "path"` 处理加载顺序
 
 ## 当前架构说明
 
 - **无自动加载（Autoload）**，所有节点手动实例化
 - **关卡管线未连接**：`LevelData`/`LevelBuilder` 已定义但未被 `main.gd` 调用，当前测试房间直接通过 `_build_test_room()` 硬编码 CSG 生成
 - **武器系统已实现**：`WeaponData`(Resource) → `WeaponNode`(基类) → `WeaponManager`(栏位管理)。射击使用 `PhysicsRayQueryParameters3D` 从摄像机发射线，支持半自动/全自动/泵动式三种模式，弹药/换弹/散布/后坐力全部可配
-- **伤害系统已实现**：`Damageable` 可受伤接口（血量/信号），`ShootingTarget` 测试靶子（闪白/变灰/关闭碰撞）
+- **伤害系统已实现**：`Damageable` 可受伤接口（血量/信号），`ShootingTarget` 测试靶子（闪白/变灰/关闭碰撞）。Player 自动创建 Damageable（100HP）
+- **敌人系统已实现**：`Enemy` 基类 6 状态机（IDLE→CHASE→ATTACK→PAIN→DEATH），视线射线检测，`Imp`（火球+近战）和 `DemonSoldier`（hitscan+前摇）两种敌人。`EnemyManager` 追踪击杀并检测清场
+- **投射物系统已实现**：`Projectile` Area3D 基类，飞行移动、碰撞伤害、生命周期。Imp 火球 10m/s
+- **战斗HUD已实现**：生命值（绿→红低血警告）、击杀计数（黄色）、命中标记（准星闪红）、受伤效果（全屏闪红）
 - **编辑器模式切换器**（GameModeManager）已定义但未挂载到场景树
 - 部分 assets 子目录为空（audio/fonts/levels/textures）
 
@@ -108,7 +123,22 @@ Main (Node3D)                          ← main.gd
 | `spread_angle` | 2.0° | 10.0° | 散布圆锥半角 |
 | `pellet_count` | 1 | 7 | 每次射击弹丸数 |
 | `move_spread_mult` | 1.5 | 1.5 | 移动散布惩罚倍数 |
-| `damage_type` | HITSCAN(0) | HITSCAN(0) | 伤害类型（HITSCAN/PROJECTILE/EXPLOSION/MELEE） |
+| `damage_type` | HITSCAN(0) | HITSCAN(0) | 伤害类型 |
+
+## 敌人参数（enemy_data.gd / EnemyData Resource）
+
+| 属性 | 小恶魔 (Imp) | 恶魔士兵 (Demon Soldier) | 说明 |
+|------|-------------|------------------------|------|
+| `max_health` | 80 | 120 | 生命值 |
+| `attack_damage` | 15 | 8 | 每次攻击伤害 |
+| `damage_type` | PROJECTILE(1) | HITSCAN(0) | 火球飞行弹 / 瞬时射线 |
+| `move_speed` | 5.0m/s | 3.0m/s | 追击速度（比玩家8.0慢） |
+| `attack_range` | 12.0m | 20.0m | 攻击触发距离 |
+| `sight_range` | 30.0m | 35.0m | 发现玩家距离 |
+| `attack_cooldown` | 1.0s | 1.5s | 攻击间隔 |
+| `pain_duration` | 0.3s | 0.3s | 受击硬直时间 |
+| `knockback_force` | 3.0 | 3.0 | 击退力度 |
+| `death_duration` | 2.0s | 2.5s | 尸体停留时间 |
 
 ## 射击流程（weapon_node.gd）
 
@@ -120,4 +150,32 @@ Main (Node3D)                          ← main.gd
      → intersect_ray() 物理检测
      → 命中则调用 target.take_damage(amount, type)
   → 扣弹药 → 设冷却 → _apply_recoil() → 发射信号
+  → 命中敌人时 main.gd 准星闪红 80ms
+```
+
+## 敌人AI流程（enemy.gd）
+
+```
+IDLE/PATROL → 射线检测玩家视线 + 距离 < sight_range
+  → CHASE → 朝玩家直线移动（XZ平面）
+    → 距离 < attack_range → ATTACK
+      Imp: 近战(≤2m,爪击) / 远程(>2m,火球10m/s)
+      Soldier: hitscan射线(举枪前摇0.15s)
+    → 攻击冷却后距离 > attack_range*1.2 → 回归CHASE
+  → 受到伤害 → PAIN(0.3s硬直+闪白+击退) → CHASE
+  → 生命归零 → DEATH(缩小/变灰/下沉) → queue_free
+  → enemy_died信号 → EnemyManager追踪 → 全灭all_cleared
+```
+
+## 战斗HUD布局（player_status.gd）
+
+```
+右上角，从上到下排列：
+  位置:  0.0   1.6   0.0        (白色14号)
+  地面  静止                    (灰色14号)
+  生命: 100 / 100               (绿色→低血变红 15号)
+  击杀: 0  (小恶魔)             (黄色14号)
+  手枪                          (灰色15号)
+  8 / 50                        (白色22号大字)
+  换弹中...                     (橙色14号，隐藏)
 ```

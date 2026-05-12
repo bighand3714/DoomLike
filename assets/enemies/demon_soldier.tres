@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/enemy/enemy_data.gd" id="1_edata"]
+
+[resource]
+script = ExtResource("1_edata")
+enemy_name = "恶魔士兵"
+max_health = 120.0
+attack_damage = 8.0
+damage_type = 0
+move_speed = 3.0
+attack_range = 20.0
+sight_range = 35.0
+attack_cooldown = 1.5
+pain_duration = 0.3
+knockback_force = 3.0
+death_duration = 2.5

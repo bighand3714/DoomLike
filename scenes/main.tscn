@@ -1,10 +1,11 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
 [ext_resource type="Script" path="res://scripts/player/player_controller.gd" id="2_player"]
 [ext_resource type="Script" path="res://scripts/utils/fps_counter.gd" id="3_fps"]
 [ext_resource type="Script" path="res://scripts/weapon/weapon_manager.gd" id="4_wm"]
 [ext_resource type="Script" path="res://scripts/ui/player_status.gd" id="5_ps"]
+[ext_resource type="Script" path="res://scripts/enemy/enemy_manager.gd" id="6_em"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_pshp"]
 radius = 0.4
@@ -34,7 +35,16 @@ script = ExtResource("4_wm")
 [node name="Level" type="Node3D" parent="."]
 unique_name_in_owner = true
 
+[node name="EnemyManager" type="Node" parent="Level"]
+unique_name_in_owner = true
+script = ExtResource("6_em")
+
 [node name="UI" type="CanvasLayer" parent="."]
+
+[node name="DamageFlash" type="ColorRect" parent="UI"]
+unique_name_in_owner = true
+anchors_preset = 15
+color = Color(1, 0, 0, 0)
 
 [node name="Crosshair" type="ColorRect" parent="UI"]
 unique_name_in_owner = true

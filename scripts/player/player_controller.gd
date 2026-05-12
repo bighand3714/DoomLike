@@ -91,9 +91,17 @@ var _pitch := 0.0
 # Godot 会在场景加载完、第一帧开始前，自动调用所有节点的 _ready()。
 # 适合做"初始化"工作，比如隐藏鼠标、设置初始状态等。
 func _ready() -> void:
-	# MOUSE_MODE_CAPTURED 会把鼠标光标"锁"在窗口中央，且隐藏光标。
-	# 这样玩家就能无限旋转视角，不会移到屏幕边缘就卡住了。
+	# 锁定鼠标
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+
+	# 给玩家创建 Damageable 子节点（敌人攻击时用它扣血）
+	var dmg := Damageable.new()
+	dmg.name = "Damageable"
+	dmg.max_health = 100.0
+	add_child(dmg)
+
+	# 受伤时触发屏幕闪红
+	dmg.damaged.connect(_on_player_damaged)
 
 
 # ==============================================================================
@@ -212,3 +220,13 @@ func _physics_process(delta: float) -> void:
 	#   3. 更新 is_on_floor() 状态（跳跃后 is_on_floor() 会变成 false）
 	# 必须每物理帧调用一次。
 	move_and_slide()
+
+
+# ==============================================================================
+# _on_player_damaged() — 玩家受伤时触发屏幕闪红
+# ==============================================================================
+func _on_player_damaged(amount: float, _type: WeaponData.DamageType) -> void:
+	# 通知 main.gd 做屏幕闪红效果
+	var main := get_tree().root.get_node_or_null("Main")
+	if main != null and main.has_method("player_hit"):
+		main.player_hit(amount)

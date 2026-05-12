@@ -2,23 +2,20 @@
 # PlayerStatus — 玩家状态 HUD 显示
 # ==============================================================================
 # 挂在 UI 节点下，在屏幕上显示：
-#   1. 右上角：位置坐标（白色） + 动作状态（灰色）
-#   2. 右下角：武器名称 + 弹药数 + 换弹提示
+#   右上角：位置坐标 → 动作状态 → 生命值 → 击杀数 → 分隔线 → 武器名 → 弹药 → 换弹
 #
-# 锚点策略（简单可靠）：
-#   右上角标签 → left/right 锚定屏幕右边，top/bottom 锚定屏幕上边
-#   右下角标签 → left/right 锚定屏幕右边，top/bottom 锚定屏幕下边
-#   这样 offset 就是"距离屏幕边缘的像素数"，不会跑偏。
+# 锚点策略：所有标签锚定右上角，从上到下排列
 # ==============================================================================
 
 extends Node
 
+# 预加载依赖的类
+const EnemyManagerClass = preload("res://scripts/enemy/enemy_manager.gd")
 
 # ==============================================================================
 # 导出属性
 # ==============================================================================
 
-## 状态显示更新间隔（秒）
 @export var update_interval: float = 0.1
 
 
@@ -27,8 +24,10 @@ extends Node
 # ==============================================================================
 
 @onready var _player: CharacterBody3D = %Player
+@onready var _enemy_manager: Node = %EnemyManager
 var _weapon_manager: WeaponManager
 var _current_weapon: WeaponNode = null
+var _player_dmg: Damageable
 
 
 # ==============================================================================
@@ -37,11 +36,14 @@ var _current_weapon: WeaponNode = null
 
 var _position_label: Label
 var _state_label: Label
+var _health_label: Label
+var _kills_label: Label
 var _weapon_label: Label
 var _ammo_label: Label
 var _reload_label: Label
 
 var _update_timer: float = 0.0
+var _kill_count: int = 0
 
 
 # ==============================================================================
@@ -49,71 +51,52 @@ var _update_timer: float = 0.0
 # ==============================================================================
 
 func _ready() -> void:
-	_create_position_labels()
-	_create_weapon_labels()
+	_create_labels()
 	call_deferred("_connect_signals")
+	call_deferred("_connect_enemy_manager")
 
 
 # ==============================================================================
-# _create_position_labels() — 右上角：位置 + 状态
+# _create_labels() — 所有标签从上到下排列在右上角
 # ==============================================================================
-# 两个标签叠在右上角。因为左右锚定在屏幕右侧、上下锚定在屏幕上侧，
-# offset 值 = 距离右边缘和上边缘的像素距离。
-func _create_position_labels() -> void:
-	# --- 位置标签 ---
-	# 锚定方式：四个边都锚在同一角（右-右，上-上）
-	# offset_left/offset_right = 相对右边缘的距离（负值 = 往左缩）
-	# offset_top/offset_bottom = 相对上边缘的距离
-	_position_label = _create_label_at_corner(
-		CORNER_TOP_RIGHT,
-		Vector2(280, 0),   # size（宽280，高自动）
-		Vector2(12, 12)    # margin（距右边12px，距上边12px）
-	)
+# 每个标签距上边缘的 offset 依次递增（12, 36, 60, 84, 112, 136, 162...）
+func _create_labels() -> void:
+	# --- 位置（y = 12）---
+	_position_label = _make_top_right_label(12.0)
 	_position_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	_position_label.add_theme_font_size_override("font_size", 14)
 
-	# --- 状态标签（位置下方 24px）---
-	_state_label = _create_label_at_corner(
-		CORNER_TOP_RIGHT,
-		Vector2(280, 0),
-		Vector2(12, 36)   # 距上边 36px（= 12 + 24）
-	)
+	# --- 状态（y = 36）---
+	_state_label = _make_top_right_label(36.0)
 	_state_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	_state_label.add_theme_font_size_override("font_size", 14)
 	_state_label.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7, 0.85))
 
+	# --- 生命值（y = 60）---
+	_health_label = _make_top_right_label(60.0)
+	_health_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_health_label.add_theme_font_size_override("font_size", 15)
+	_health_label.add_theme_color_override("font_color", Color(0.3, 1.0, 0.3, 0.9))
 
-# ==============================================================================
-# _create_weapon_labels() — 右上角武器信息：武器名 + 弹药 + 换弹提示
-# ==============================================================================
-# 放在位置/状态标签的下方。
-# 布局（从上到下）：位置 → 状态 → 武器名 → 弹药 → 换弹提示（隐藏）
-func _create_weapon_labels() -> void:
-	# --- 武器名称（位置/状态下方，小字灰色）---
-	_weapon_label = _create_label_at_corner(
-		CORNER_TOP_RIGHT,
-		Vector2(200, 0),
-		Vector2(12, 64)
-	)
+	# --- 击杀数（y = 82）---
+	_kills_label = _make_top_right_label(82.0)
+	_kills_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_kills_label.add_theme_font_size_override("font_size", 14)
+	_kills_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3, 0.9))
+
+	# --- 武器名（y = 110，下方留更大间距当分隔）---
+	_weapon_label = _make_top_right_label(110.0)
 	_weapon_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	_weapon_label.add_theme_font_size_override("font_size", 15)
 	_weapon_label.add_theme_color_override("font_color", Color(0.75, 0.75, 0.75, 0.85))
 
-	# --- 弹药显示（武器名下方，大字白色）---
-	_ammo_label = _create_label_at_corner(
-		CORNER_TOP_RIGHT,
-		Vector2(200, 0),
-		Vector2(12, 84)
-	)
+	# --- 弹药（y = 130）---
+	_ammo_label = _make_top_right_label(130.0)
 	_ammo_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	_ammo_label.add_theme_font_size_override("font_size", 22)
 
-	# --- 换弹提示（弹药下方，橙色，默认隐藏）---
-	_reload_label = _create_label_at_corner(
-		CORNER_TOP_RIGHT,
-		Vector2(200, 0),
-		Vector2(12, 110)
-	)
+	# --- 换弹提示（y = 156）---
+	_reload_label = _make_top_right_label(156.0)
 	_reload_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	_reload_label.add_theme_font_size_override("font_size", 14)
 	_reload_label.add_theme_color_override("font_color", Color(1.0, 0.7, 0.0, 1.0))
@@ -121,58 +104,23 @@ func _create_weapon_labels() -> void:
 
 
 # ==============================================================================
-# 角枚举
+# _make_top_right_label(top_offset) — 创建锚定右上角的标签
 # ==============================================================================
-
-enum Corner {
-	TOP_RIGHT,
-	BOTTOM_RIGHT,
-}
-
-
-# ==============================================================================
-# _create_label_at_corner() — 在指定屏幕角落创建一个锚定好的标签
-# ==============================================================================
-# 参数：
-#   corner — 贴哪个角（TOP_RIGHT 或 BOTTOM_RIGHT）
-#   size   — 标签的矩形大小（x=宽, y=高，y=0 表示高度自动）
-#   margin — 距角落的像素距离（x=距右边, y=距上/下边）
-#
-# 原理：
-#   对于右上角：anchor_left=1, anchor_right=1 → offset控制距右边缘距离
-#               anchor_top=0, anchor_bottom=0 → offset控制距上边缘距离
-#   对于右下角：anchor_left=1, anchor_right=1 → offset控制距右边缘距离
-#               anchor_top=1, anchor_bottom=1 → offset控制距下边缘距离
-func _create_label_at_corner(corner: Corner, size: Vector2, margin: Vector2) -> Label:
+func _make_top_right_label(top_offset: float) -> Label:
 	var label := Label.new()
-
-	# 文字默认白色半透明
 	label.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0, 0.9))
 
-	# --- 锚定到屏幕右边缘 ---
+	# 左右锚定屏幕右边缘
 	label.anchor_left = 1.0
 	label.anchor_right = 1.0
+	label.offset_left = -292.0
+	label.offset_right = -12.0
 
-	# offset_left 和 offset_right 都从右边缘开始算
-	# 例如 size.x=280, margin.x=12:
-	#   offset_right = -12（右边缘往左 12px）
-	#   offset_left = -12 - 280 = -292（左边缘在右边缘往左 292px）
-	label.offset_right = -margin.x
-	label.offset_left = -(margin.x + size.x)
-
-	# --- 锚定到屏幕上/下边缘 ---
-	if corner == CORNER_TOP_RIGHT:
-		# 贴屏幕上边
-		label.anchor_top = 0.0
-		label.anchor_bottom = 0.0
-		label.offset_top = margin.y
-		label.offset_bottom = margin.y + size.y
-	else:
-		# 贴屏幕下边
-		label.anchor_top = 1.0
-		label.anchor_bottom = 1.0
-		label.offset_top = -(margin.y + size.y)
-		label.offset_bottom = -margin.y
+	# 上下锚定屏幕上边缘
+	label.anchor_top = 0.0
+	label.anchor_bottom = 0.0
+	label.offset_top = top_offset
+	label.offset_bottom = top_offset + 24.0
 
 	add_child(label)
 	return label
@@ -185,20 +133,32 @@ func _create_label_at_corner(corner: Corner, size: Vector2, margin: Vector2) -> 
 func _connect_signals() -> void:
 	_weapon_manager = _player.get_node("WeaponHolder/WeaponManager") as WeaponManager
 	if _weapon_manager == null:
-		push_error("PlayerStatus: 无法找到 WeaponManager")
 		return
 
 	if not _weapon_manager.weapon_changed.is_connected(_on_weapon_changed):
 		_weapon_manager.weapon_changed.connect(_on_weapon_changed)
 
-	# 手动触发一次，显示初始武器
 	var weapon := _weapon_manager.get_current_weapon()
 	if weapon != null:
 		_on_weapon_changed(weapon.weapon_data.weapon_name, weapon.weapon_data.slot_index)
 
 
 # ==============================================================================
-# _process(delta) — 定时刷新位置和状态
+# _connect_enemy_manager() — 连接击杀信号
+# ==============================================================================
+
+func _connect_enemy_manager() -> void:
+	if _enemy_manager == null:
+		return
+	# 用字符串连接信号——因为 _enemy_manager 类型是 Node，编译器不知道它有 enemy_killed 信号
+	_enemy_manager.connect("enemy_killed", _on_enemy_killed)
+
+	# 获取玩家 Damageable
+	_player_dmg = _player.get_node_or_null("Damageable") as Damageable
+
+
+# ==============================================================================
+# _process(delta) — 定时刷新
 # ==============================================================================
 
 func _process(delta: float) -> void:
@@ -211,9 +171,20 @@ func _process(delta: float) -> void:
 	_position_label.text = "位置: %.1f  %.1f  %.1f" % [pos.x, pos.y, pos.z]
 	_state_label.text = _get_state_text()
 
+	# 更新血量
+	if _player_dmg != null:
+		var hp := _player_dmg.health
+		var max_hp := _player_dmg.max_health
+		_health_label.text = "生命: %.0f / %.0f" % [hp, max_hp]
+		# 血量低时变红
+		if hp < max_hp * 0.3:
+			_health_label.add_theme_color_override("font_color", Color(1.0, 0.2, 0.2, 1.0))
+		else:
+			_health_label.add_theme_color_override("font_color", Color(0.3, 1.0, 0.3, 0.9))
+
 
 # ==============================================================================
-# _get_state_text() — 玩家动作状态
+# _get_state_text()
 # ==============================================================================
 
 func _get_state_text() -> String:
@@ -239,11 +210,19 @@ func _get_state_text() -> String:
 
 
 # ==============================================================================
-# _on_weapon_changed() — 武器切换回调
+# _on_enemy_killed() — 击杀计数回调
+# ==============================================================================
+
+func _on_enemy_killed(enemy_name: String) -> void:
+	_kill_count += 1
+	_kills_label.text = "击杀: %d  (%s)" % [_kill_count, enemy_name]
+
+
+# ==============================================================================
+# 武器信号回调
 # ==============================================================================
 
 func _on_weapon_changed(weapon_name: String, _slot_index: int) -> void:
-	# 断开旧武器信号
 	if _current_weapon != null:
 		if _current_weapon.ammo_changed.is_connected(_on_ammo_changed):
 			_current_weapon.ammo_changed.disconnect(_on_ammo_changed)
@@ -252,7 +231,6 @@ func _on_weapon_changed(weapon_name: String, _slot_index: int) -> void:
 		if _current_weapon.reload_finished.is_connected(_on_reload_finished):
 			_current_weapon.reload_finished.disconnect(_on_reload_finished)
 
-	# 连接新武器信号
 	_current_weapon = _weapon_manager.get_current_weapon()
 	if _current_weapon != null:
 		_current_weapon.ammo_changed.connect(_on_ammo_changed)
@@ -264,10 +242,6 @@ func _on_weapon_changed(weapon_name: String, _slot_index: int) -> void:
 	if _current_weapon != null:
 		_on_ammo_changed(_current_weapon._current_mag, _current_weapon._current_reserve)
 
-
-# ==============================================================================
-# 弹药 / 换弹回调
-# ==============================================================================
 
 func _on_ammo_changed(current_mag: int, reserve: int) -> void:
 	_ammo_label.text = "%d / %d" % [current_mag, reserve]
