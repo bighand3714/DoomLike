@@ -2,7 +2,7 @@
 
 ## 项目概览
 
-Godot 4.6 项目，正在构建一款DOOM风格的第一人称射击游戏。当前处于**第三阶段（敌人系统）已完成**——核心移动 + 武器/射击/伤害 + 敌人AI/投射物系统已可运行，关卡管线/地图编辑器等系统待实现。总进度 68/138 任务（49%）。
+Godot 4.6 项目，正在构建一款DOOM风格的第一人称射击游戏。当前处于**第四阶段（关卡管线）已完成**——核心移动 + 武器/射击/伤害 + 敌人AI/投射物 + 关卡数据驱动加载系统已可运行，地图编辑器等系统待实现。总进度 95/156 任务（61%）。
 
 - **引擎**：Godot 4.6 (Forward Plus, D3D12)
 - **物理**：Jolt Physics
@@ -13,9 +13,11 @@ Godot 4.6 项目，正在构建一款DOOM风格的第一人称射击游戏。当
 
 ```
 scripts/        GDScript 源代码
-  main.gd           主游戏控制器（初始化、测试房间、靶子/敌人放置、准星、命中标记、受伤闪红）
+  main.gd           主游戏控制器（关卡加载、创建/回退、命中标记、受伤闪红）
   player/           玩家相关（player_controller.gd）
-  level/            关卡系统（level_data.gd 数据蓝图, level_builder.gd 建造器）
+  level/            关卡系统
+    level_data.gd       LevelData Resource（Sector/WallDef/ThingDef 数据结构）
+    level_builder.gd    关卡建造器（数据→3D场景、墙壁/地板/天花板/灯光/实体生成、反向序列化）
   editor/           编辑器模式切换（game_mode.gd）
   utils/            FPS计数器（fps_counter.gd）
   ui/               HUD 状态显示（player_status.gd）
@@ -39,7 +41,8 @@ scenes/         Godot 场景文件（main.tscn）
 assets/         游戏资源
   weapons/          WeaponData .tres 配置文件（pistol.tres, shotgun.tres）
   enemies/          EnemyData .tres 配置文件（imp.tres, demon_soldier.tres）
-  audio/fonts/levels/textures 子目录（当前为空）
+  levels/           关卡数据（test_room.tres 预留目录）
+  audio/fonts/textures 子目录（当前为空）
 shaders/        自定义着色器（当前为空）
 docs/           文档（project_roadmap.md 路线图）
 ```
@@ -56,14 +59,56 @@ Main (Node3D)                          ← main.gd
 │       └── WeaponManager (Node3D)     ← weapon_manager.gd (栏位管理)
 │           ├── Pistol (WeaponNode)    ← pistol.gd (半自动)
 │           └── Shotgun (WeaponNode)   ← shotgun.gd (泵动式)
-├── Level (Node3D)                     [%Level] ← 程序化CSG几何体 + 灯光
-│   └── EnemyManager (Node)            [%EnemyManager] ← 敌人实例化 + 追踪
+├── Level (Node3D)                     [%Level] ← 关卡几何体容器
+│   ├── LevelBuilder (Node3D)          ← level_builder.gd (数据→3D场景)
+│   │   └── Sector_N (Node3D)         每个扇区一个容器
+│   │       ├── Floor (CSGBox3D)      地板
+│   │       ├── Ceiling (CSGBox3D)    天花板
+│   │       ├── Wall ×N (CSGBox3D)    墙壁（实墙有碰撞/Portal无碰撞）
+│   │       └── SectorLight (OmniLight3D) 扇区灯光
+│   ├── EnemyManager (Node)            [%EnemyManager] ← 敌人实例化 + 追踪
+│   ├── GlobalDirectionalLight         主方向光
+│   └── GlobalFillLight                补光
 ├── UI (CanvasLayer)
 │   ├── DamageFlash (ColorRect)         [%DamageFlash] ← 全屏受伤闪红
 │   ├── Crosshair (ColorRect)           [%Crosshair] ← 4×4像素绿色准星
 │   ├── FPS (Label)                     ← fps_counter.gd
 │   └── PlayerStatus (Node)             ← player_status.gd (位置/状态/生命/击杀/武器HUD)
 ```
+
+## 测试关卡布局（3扇区连通空间）
+
+```
+                ← Z=-9 →
+             ┌──────────────────┐
+             │   北室 S1        │  6×6m  h=3m  偏暗(120)
+             │   1×Demon Soldier │
+     Z=-4    │    ╔══════╗      │  ← 3m宽门洞
+┌────────────┴────╨──────╨──────┴────────────┐
+│            ║              ║                │
+│            ║   主大堂 S0  ║                │
+│            ║   10×8m      ║                │
+│            ║    h=4m(160) ╠════╗           │
+│            ║              ║    ╚═══════════→X=10
+│       出生 ║              ║                │
+│     (0,3)  ║              ║   Z=5           │
+│            ║              ║                │
+└────────────╨──────────────╨──┐              │
+     Z=-5    ║              ║  │              │
+             ╚══════════════╝  │              │
+             │   东翼 S2       │              │
+             │   5×10m  h=5m  最亮(200)       │
+             │   1×Imp                         │
+             └─────────────────────────────────┘
+
+═══ 门洞 (portal, 无碰撞)  ─── 实墙 (有碰撞)
+```
+
+| 扇区 | 范围 | 面积 | 天花板 | 亮度 | 敌人 |
+|------|------|------|--------|------|------|
+| S0 主大堂 | X:-5~5, Z:-4~4 | 10×8m | 4m | 160 | 2 Imp |
+| S1 北室 | X:-3~3, Z:-9~-3 | 6×6m | 3m | 120 | 1 Demon Soldier |
+| S2 东翼 | X:5~10, Z:-5~5 | 5×10m | 5m | 200 | 1 Imp |
 
 ## 输入映射
 
@@ -88,14 +133,34 @@ Main (Node3D)                          ← main.gd
 ## 当前架构说明
 
 - **无自动加载（Autoload）**，所有节点手动实例化
-- **关卡管线未连接**：`LevelData`/`LevelBuilder` 已定义但未被 `main.gd` 调用，当前测试房间直接通过 `_build_test_room()` 硬编码 CSG 生成
+- **关卡管线已连接**：`main.gd` 调用 `_create_test_level()` 构建 LevelData → `LevelBuilder.build()` 生成 3D 场景。优先加载 `.tres`，不存在时回退到代码构建。支持 `serialize()` 反向提取
 - **武器系统已实现**：`WeaponData`(Resource) → `WeaponNode`(基类) → `WeaponManager`(栏位管理)。射击使用 `PhysicsRayQueryParameters3D` 从摄像机发射线，支持半自动/全自动/泵动式三种模式，弹药/换弹/散布/后坐力全部可配
 - **伤害系统已实现**：`Damageable` 可受伤接口（血量/信号），`ShootingTarget` 测试靶子（闪白/变灰/关闭碰撞）。Player 自动创建 Damageable（100HP）
 - **敌人系统已实现**：`Enemy` 基类 6 状态机（IDLE→CHASE→ATTACK→PAIN→DEATH），视线射线检测，`Imp`（火球+近战）和 `DemonSoldier`（hitscan+前摇）两种敌人。`EnemyManager` 追踪击杀并检测清场
 - **投射物系统已实现**：`Projectile` Area3D 基类，飞行移动、碰撞伤害、生命周期。Imp 火球 10m/s
 - **战斗HUD已实现**：生命值（绿→红低血警告）、击杀计数（黄色）、命中标记（准星闪红）、受伤效果（全屏闪红）
 - **编辑器模式切换器**（GameModeManager）已定义但未挂载到场景树
-- 部分 assets 子目录为空（audio/fonts/levels/textures）
+- 部分 assets 子目录为空（audio/fonts/textures）
+
+## 关卡数据流
+
+```
+main.gd: _create_test_level() 或 .tres 文件
+  → LevelData (Sector/WallDef/ThingDef 数据)
+  → LevelBuilder.build()
+    → 遍历 sectors: _build_sector()
+      → _build_wall()    WallDef 2D线段 → CSGBox3D 3D薄墙（含Portal碰撞控制）
+      → _build_floor()   AABB → CSGBox3D 地板
+      → _build_ceiling() AABB → CSGBox3D 天花板
+      → _build_light()   light_level → OmniLight3D
+    → 遍历 things: _place_thing()
+      → PLAYER_START → 记录出生点
+      → ENEMY → EnemyManager.spawn_enemy()
+      → PICKUP → 发光方块占位
+      → DECORATION → 柱子/火把等
+  → Player 传送到出生点
+  → LevelBuilder.serialize() 可反向提取
+```
 
 ## 关键参数（player_controller.gd）
 

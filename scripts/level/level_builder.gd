@@ -1,109 +1,399 @@
 # ==============================================================================
 # LevelBuilder — 关卡数据 → 3D 场景的"施工队"
 # ==============================================================================
-# 这个类负责把 LevelData（数据蓝图）转换成真实的 3D 节点（墙壁、地板、灯光）。
-# 它理解 Sector/Wall/Thing 数据，并生成对应的 3D 模型。
-#
-# 另一个方向也重要：serialize() 方法可以把 3D 场景反向提取回 LevelData——
-# 这是地图编辑器的核心功能（编完场景 → 导出关卡文件）。
-#
-# ⚠ 第一阶段：只定义接口（API），实际生成逻辑在后续阶段实现。
-#    目前用 CSGBox3D 直接搭测试关卡，不走这个管线。
+# 把 LevelData（Sector/Wall/Thing 数据）转换成真实的 3D 节点。
+# 支持双向转换：build() 生成场景，serialize() 反向提取数据。
 # ==============================================================================
 
-# extends Node3D 意味着它是一个 3D 节点，可以挂在场景里作为子节点
 class_name LevelBuilder extends Node3D
+
+# 预加载敌人相关类
+const ImpClass = preload("res://scripts/enemy/imp.gd")
+const SoldierClass = preload("res://scripts/enemy/demon_soldier.gd")
 
 
 # ==============================================================================
 # 属性
 # ==============================================================================
 
-## 要建造的关卡数据。在编辑器中拖入一个 LevelData 资源文件（.tres）即可。
 @export var level_data: LevelData
 
+## 玩家出生点——build() 后从这里读取 spawn 位置
+var player_spawn: Transform3D = Transform3D.IDENTITY
+
+## EnemyManager 引用——生成敌人时用
+var enemy_manager: Node = null
+
+## 内部——扇区索引到 AABB 的映射（供后续可见性剔除使用）
+var _sector_bounds: Dictionary = {}
+
 
 # ==============================================================================
-# build() — 根据 LevelData 创建所有 3D 几何体
+# build() — 主流程：清空旧场景 → 建造扇区 → 放置实体
 # ==============================================================================
-# 调用流程：
-#   1. 清空之前建造的旧几何体（防止重复建造）
-#   2. 遍历所有扇区，为每个扇区创建地板、天花板、墙壁
-#   3. 遍历所有"东西"，放置实体（玩家出生点、怪物等）
 func build() -> void:
-	# 第一步：清掉旧节点
-	# get_children() 返回这个节点的所有直接子节点
-	# queue_free() 把节点标记为"待删除"——会在当前帧末尾安全删除
+	# 清空旧几何体
 	for child in get_children():
 		child.queue_free()
+	_sector_bounds.clear()
 
-	# 安全检查：如果没设置 level_data，打印警告并退出
 	if level_data == null:
-		push_warning("LevelBuilder: no LevelData assigned")
+		push_warning("LevelBuilder: 没有 LevelData，无法建造")
 		return
 
-	# 第二步：建造所有扇区
-	for sector in level_data.sectors:
-		_build_sector(sector)
+	# 建造所有扇区
+	for i in range(level_data.sectors.size()):
+		_build_sector(level_data.sectors[i], i)
 
-	# 第三步：放置所有东西
+	# 放置所有实体
 	for thing in level_data.things:
 		_place_thing(thing)
 
 
 # ==============================================================================
-# _build_sector() — 根据一个扇区数据建造其 3D 几何体
+# _build_sector(sector, index) — 建造一个扇区
 # ==============================================================================
-# 这是最核心的方法——把 Sector 数据变成看得见的 3D 模型。
-# 要做的事情：
-#   1. 生成地板面（给定高度和纹理）
-#   2. 生成天花板面（给定高度和纹理）
-#   3. 遍历墙壁列表，为每段墙生成一个四边形面片
-#   4. 设置光照（light_level → 灯光/环境光）
-#
-# TODO: Phase 2+ 实现具体生成逻辑。
-# pass 意思是"什么都不做"——占位符，防止空函数报错。
-func _build_sector(sector: LevelData.Sector) -> void:
-	pass
+func _build_sector(sector: LevelData.Sector, index: int) -> void:
+	# 扇区容器节点
+	var container := Node3D.new()
+	container.name = "Sector_%d" % index
+	add_child(container)
+
+	# 计算包围盒
+	var bounds := _calc_aabb(sector.walls, sector.floor_height, sector.ceiling_height)
+	_sector_bounds[index] = bounds
+
+	# 生成地板
+	_build_floor(sector, bounds, container)
+
+	# 生成天花板
+	_build_ceiling(sector, bounds, container)
+
+	# 生成墙壁
+	for wall in sector.walls:
+		_build_wall(wall, sector.floor_height, sector.ceiling_height, container)
+
+	# 生成灯光
+	_build_light(sector, bounds, container)
 
 
 # ==============================================================================
-# _place_thing() — 在场景中放置一个"东西"
+# _calc_aabb(walls, floor_h, ceiling_h) — 计算墙顶点的包围盒
 # ==============================================================================
-# match 是 GDScript 的"多路分支"语句（类似其他语言的 switch）。
-# 不同类型的东西处理方式不同：
-#   PLAYER_START → 设置玩家出生点
-#   ENEMY → 生成敌人
-#   PICKUP → 放置拾取物
-#   DECORATION → 放置装饰模型
+func _calc_aabb(walls: Array, floor_h: float, ceiling_h: float) -> AABB:
+	if walls.is_empty():
+		return AABB(Vector3.ZERO, Vector3(1, ceiling_h - floor_h, 1))
+
+	var min_x := INF
+	var min_z := INF
+	var max_x := -INF
+	var max_z := -INF
+
+	for wall in walls:
+		var w: LevelData.WallDef = wall
+		min_x = min(min_x, w.start.x, w.end.x)
+		min_z = min(min_z, w.start.y, w.end.y)  # WallDef 中 Vector2.y = Z轴
+		max_x = max(max_x, w.start.x, w.end.x)
+		max_z = max(max_z, w.start.y, w.end.y)
+
+	var center := Vector3(
+		(min_x + max_x) / 2.0,
+		(floor_h + ceiling_h) / 2.0,
+		(min_z + max_z) / 2.0
+	)
+	var size := Vector3(max_x - min_x, ceiling_h - floor_h, max_z - min_z)
+	return AABB(center, size)
+
+
+# ==============================================================================
+# _build_floor(sector, bounds, parent) — 生成地板
+# ==============================================================================
+func _build_floor(sector: LevelData.Sector, bounds: AABB, parent: Node3D) -> void:
+	var thickness := 0.2
+	var box := CSGBox3D.new()
+	box.name = "Floor"
+	box.position = Vector3(bounds.position.x, sector.floor_height - thickness / 2.0, bounds.position.z)
+	box.size = Vector3(bounds.size.x, thickness, bounds.size.z)
+	box.material_override = _make_material(Color(0.3, 0.28, 0.25))
+	box.use_collision = true
+	parent.add_child(box)
+
+
+# ==============================================================================
+# _build_ceiling(sector, bounds, parent) — 生成天花板
+# ==============================================================================
+func _build_ceiling(sector: LevelData.Sector, bounds: AABB, parent: Node3D) -> void:
+	var thickness := 0.2
+	var box := CSGBox3D.new()
+	box.name = "Ceiling"
+	box.position = Vector3(bounds.position.x, sector.ceiling_height + thickness / 2.0, bounds.position.z)
+	box.size = Vector3(bounds.size.x, thickness, bounds.size.z)
+	box.material_override = _make_material(Color(0.35, 0.33, 0.3))
+	box.use_collision = true
+	parent.add_child(box)
+
+
+# ==============================================================================
+# _build_wall(wall, floor_h, ceiling_h, parent) — 生成一面墙壁
+# ==============================================================================
+# 把 WallDef 的 2D 线段（start→end）转成 3D 的薄 CSGBox3D。
 #
-# TODO: Phase 2+ 实现各类实体的生成。
+# WallDef 坐标：Vector2(start.x, start.y) 中，x=X轴位置，y=Z轴位置
+# 墙壁从 floor_h 延伸到 ceiling_h
+func _build_wall(wall: LevelData.WallDef, floor_h: float, ceiling_h: float, parent: Node3D) -> void:
+	var thickness := 0.3  # 墙壁厚度
+
+	# 线段的中点（XZ 平面）
+	var mid_x := (wall.start.x + wall.end.x) / 2.0
+	var mid_z := (wall.start.y + wall.end.y) / 2.0  # Vector2.y = Z轴
+
+	# 线段长度和方向
+	var dx := wall.end.x - wall.start.x
+	var dz := wall.end.y - wall.start.y  # Vector2.y = Z轴
+	var length := sqrt(dx * dx + dz * dz)
+
+	if length < 0.01:
+		return  # 太短，跳过
+
+	var height := ceiling_h - floor_h
+	var y := (floor_h + ceiling_h) / 2.0
+
+	var box := CSGBox3D.new()
+	box.name = "Wall"
+	box.position = Vector3(mid_x, y, mid_z)
+	box.size = Vector3(length, height, thickness)
+
+	# 旋转墙壁使盒子的 X 轴（长边）与线段方向对齐
+	# Vector2(dx, -dz).angle() 算出 Godot Y 轴旋转所需的弧度
+	box.rotation.y = Vector2(dx, -dz).angle()
+
+	# 材质——Portal 墙壁用半透明颜色示意
+	if wall.portal_to >= 0:
+		box.material_override = _make_material(Color(0.3, 0.6, 0.3, 0.5))
+	else:
+		box.material_override = _make_material(Color(0.45, 0.42, 0.38))
+
+	# 碰撞——实墙有碰撞，Portal 无碰撞（玩家可穿过）
+	box.use_collision = (wall.portal_to < 0)
+
+	parent.add_child(box)
+
+
+# ==============================================================================
+# _build_light(sector, bounds, parent) — 根据 light_level 建灯光
+# ==============================================================================
+func _build_light(sector: LevelData.Sector, bounds: AABB, parent: Node3D) -> void:
+	# 在扇区中心上方放置点光源
+	var light := OmniLight3D.new()
+	light.name = "SectorLight"
+	light.position = Vector3(bounds.position.x, sector.ceiling_height - 0.5, bounds.position.z)
+	light.light_energy = sector.light_level / 255.0 * 1.5
+	# 使用默认光照范围，由 light_energy 控制亮度
+	parent.add_child(light)
+
+
+# ==============================================================================
+# _place_thing(thing) — 放置实体
+# ==============================================================================
 func _place_thing(thing: LevelData.ThingDef) -> void:
 	match thing.type:
 		LevelData.ThingDef.Type.PLAYER_START:
-			pass  # TODO: 发射信号 / 设置出生点
+			_place_player_start(thing)
 		LevelData.ThingDef.Type.ENEMY:
-			pass  # TODO: 生成敌人实例
+			_place_enemy(thing)
 		LevelData.ThingDef.Type.PICKUP:
-			pass  # TODO: 生成拾取物实例
+			_place_pickup(thing)
 		LevelData.ThingDef.Type.DECORATION:
-			pass  # TODO: 生成装饰物实例
+			_place_decoration(thing)
 
 
 # ==============================================================================
-# serialize() — 把 3D 场景"逆向提取"回 LevelData
+# _place_player_start(thing) — 记录玩家出生点
 # ==============================================================================
-# 这是地图编辑器的核心导出功能。
-# 编辑器里用户搭好场景后，调用这个静态方法把场景解析成 LevelData，
-# 然后可以保存为 .tres 文件，下次加载就能重现。
-#
-# static 关键字表示这个方法属于"类本身"而不是"某个实例"。
-# 可以这样调用：LevelBuilder.serialize(some_scene_root)
-# 不需要先创建 LevelBuilder 对象。
-#
-# TODO: Phase 4 实现具体提取逻辑。
-static func serialize(_scene_root: Node3D) -> LevelData:
+func _place_player_start(thing: LevelData.ThingDef) -> void:
+	var pos := thing.position
+	player_spawn = Transform3D(
+		Basis.from_euler(Vector3(0, deg_to_rad(thing.angle), 0)),
+		pos
+	)
+
+
+# ==============================================================================
+# _place_enemy(thing) — 生成敌人
+# ==============================================================================
+func _place_enemy(thing: LevelData.ThingDef) -> void:
+	if enemy_manager == null:
+		push_warning("LevelBuilder: 没有 EnemyManager 引用，跳过敌人生成")
+		return
+
+	var subtype: String = thing.subtype
+	var enemy_class: GDScript
+	var data_path: String
+
+	match subtype:
+		"imp":
+			enemy_class = ImpClass
+			data_path = "res://assets/enemies/imp.tres"
+		"demon_soldier":
+			enemy_class = SoldierClass
+			data_path = "res://assets/enemies/demon_soldier.tres"
+		_:
+			push_warning("LevelBuilder: 未知敌人类型 '%s'" % subtype)
+			return
+
+	var enemy_data := load(data_path)
+	if enemy_data == null:
+		push_warning("LevelBuilder: 无法加载敌人数据 '%s'" % data_path)
+		return
+
+	enemy_manager.spawn_enemy(enemy_class, thing.position, enemy_data)
+
+
+# ==============================================================================
+# _place_pickup(thing) — 放置拾取物占位
+# ==============================================================================
+func _place_pickup(thing: LevelData.ThingDef) -> void:
+	var color: Color
+	match thing.subtype:
+		"health_bonus":
+			color = Color(0.2, 0.4, 1.0)
+		"armor_bonus":
+			color = Color(0.2, 0.9, 0.3)
+		_:
+			color = Color(1.0, 0.85, 0.2)  # weapon 等，黄色
+
+	var box := CSGBox3D.new()
+	box.name = "Pickup_" + thing.subtype
+	box.position = thing.position + Vector3(0, 0.3, 0)
+	box.size = Vector3(0.3, 0.3, 0.3)
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = color
+	mat.emission_enabled = true
+	mat.emission = color * 0.5
+	box.material_override = mat
+	box.use_collision = false
+	add_child(box)
+
+
+# ==============================================================================
+# _place_decoration(thing) — 放置装饰物占位
+# ==============================================================================
+func _place_decoration(thing: LevelData.ThingDef) -> void:
+	match thing.subtype:
+		"pillar":
+			var box := CSGBox3D.new()
+			box.name = "Decoration_Pillar"
+			box.position = thing.position
+			box.size = Vector3(0.8, 4.0, 0.8)
+			box.material_override = _make_material(Color(0.5, 0.35, 0.3))
+			box.use_collision = true
+			add_child(box)
+		"torch":
+			# 火把——小方块 + 发光
+			var body := CSGBox3D.new()
+			body.name = "Decoration_Torch"
+			body.position = thing.position + Vector3(0, 1.5, 0)
+			body.size = Vector3(0.2, 1.0, 0.2)
+			var mat := StandardMaterial3D.new()
+			mat.albedo_color = Color(0.6, 0.3, 0.1)
+			body.material_override = mat
+			body.use_collision = false
+			add_child(body)
+		_:
+			# 未知装饰——小方块
+			var box := CSGBox3D.new()
+			box.name = "Decoration_" + thing.subtype
+			box.position = thing.position
+			box.size = Vector3(0.4, 0.4, 0.4)
+			box.material_override = _make_material(Color(0.5, 0.5, 0.5))
+			box.use_collision = false
+			add_child(box)
+
+
+# ==============================================================================
+# _make_material(color) — 创建纯色标准材质
+# ==============================================================================
+func _make_material(c: Color) -> StandardMaterial3D:
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = c
+	mat.roughness = 0.9
+	return mat
+
+
+# ==============================================================================
+# serialize(scene_root) — 从 3D 场景反向提取 LevelData
+# ==============================================================================
+static func serialize(scene_root: Node3D) -> LevelData:
 	var data := LevelData.new()
-	# 这里将来会遍历场景中的所有节点，
-	# 把符合 Sector/Wall/Thing 结构的几何体提取成数据
+
+	# 遍历所有子节点，找到 Sector_N 容器
+	for child in scene_root.get_children():
+		if child.name.begins_with("Sector_"):
+			var sector := _extract_sector(child)
+			if sector != null:
+				data.sectors.append(sector)
+		# ThingDef 是数据类（非 Node），不会出现在场景树中，跳过
+
+	# 元数据保留默认值
+	data.metadata["name"] = "从场景序列化"
+
 	return data
+
+
+# ==============================================================================
+# _extract_sector(container) — 从场景节点提取扇区数据
+# ==============================================================================
+static func _extract_sector(container: Node) -> LevelData.Sector:
+	var sector := LevelData.Sector.new()
+
+	var floor_h := 0.0
+	var ceiling_h := 4.0
+	var walls: Array = []
+
+	for child in container.get_children():
+		if child is CSGBox3D:
+			var box: CSGBox3D = child
+			match child.name:
+				"Floor":
+					floor_h = box.position.y + box.size.y / 2.0
+				"Ceiling":
+					ceiling_h = box.position.y - box.size.y / 2.0
+				"Wall":
+					var wall := _extract_wall(box, floor_h, ceiling_h)
+					if wall != null:
+						walls.append(wall)
+		elif child is OmniLight3D:
+			var light: OmniLight3D = child
+			sector.light_level = clamp(light.light_energy / 1.5 * 255.0, 0, 255) as int
+
+	sector.floor_height = floor_h
+	sector.ceiling_height = ceiling_h
+	sector.walls = walls
+	return sector
+
+
+# ==============================================================================
+# _extract_wall(box, floor_h, ceiling_h) — 从 CSGBox3D 提取 WallDef
+# ==============================================================================
+static func _extract_wall(box: CSGBox3D, _floor_h: float, _ceiling_h: float) -> LevelData.WallDef:
+	var wall := LevelData.WallDef.new()
+
+	# 墙壁盒子的中心在 XZ 平面上，size.x = 沿墙长度，size.z = 厚度
+	var half_length := box.size.x / 2.0
+	var angle_rad := deg_to_rad(box.rotation_degrees.y)
+
+	# 线段方向 = 沿墙壁的方向（perpendicular to Z-axis in box space）
+	var dir_x := sin(angle_rad)
+	var dir_z := cos(angle_rad)
+
+	wall.start = Vector2(
+		box.position.x - dir_x * half_length,
+		box.position.z - dir_z * half_length
+	)
+	wall.end = Vector2(
+		box.position.x + dir_x * half_length,
+		box.position.z + dir_z * half_length
+	)
+
+	wall.portal_to = -1 if box.use_collision else 0
+	return wall
