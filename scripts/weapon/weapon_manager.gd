@@ -1,0 +1,179 @@
+# ==============================================================================
+# WeaponManager — 武器栏位管理器
+# ==============================================================================
+# 挂在 Player 节点的 WeaponHolder 下面，负责管理玩家身上所有武器。
+# 工作内容：
+#   1. 根据 WeaponData 数组创建对应的武器节点实例
+#   2. 响应数字键/滚轮切换武器
+#   3. 把射击输入转发给当前武器
+#   4. 追踪当前装备的是哪把武器
+#
+# 场景位置：Player → WeaponHolder → WeaponManager
+# WeaponManager 的每个子节点都是一把武器（Pistol、Shotgun 等）
+# ==============================================================================
+
+class_name WeaponManager extends Node3D
+
+
+# ==============================================================================
+# 信号
+# ==============================================================================
+
+## 武器切换成功时发射——HUD 用它更新当前武器显示
+## @param weapon_name 新武器的名字（"手枪"、"霰弹枪"）
+## @param slot_index 新武器在栏位中的位置（0, 1, 2...）
+signal weapon_changed(weapon_name: String, slot_index: int)
+
+
+# ==============================================================================
+# 导出属性
+# ==============================================================================
+
+## 武器配置列表——在编辑器中填入 WeaponData 资源文件（.tres）
+## 每个元素 = 一个武器栏位（例如 [手枪.tres, 霰弹枪.tres]）
+@export var weapon_datas: Array[WeaponData] = []
+
+
+# ==============================================================================
+# 内部状态
+# ==============================================================================
+
+## 已经实例化的武器节点——和 weapon_datas 一一对应
+var _weapons: Array[WeaponNode] = []
+
+## 当前使用的武器索引（-1 = 没有任何武器）
+var _current_index: int = -1
+
+## 摄像机引用——从父节点路径获取，然后传给每把武器
+var _camera: Camera3D
+
+
+# ==============================================================================
+# _ready() — 初始化所有武器
+# ==============================================================================
+func _ready() -> void:
+	# 从 Player 节点下找到摄像机
+	# 路径：WeaponManager → WeaponHolder → Player → Camera3D
+	_camera = get_node("../../Camera3D")
+
+	# 如果编辑器中没配置武器数据，自动加载默认武器
+	if weapon_datas.is_empty():
+		weapon_datas = _load_default_weapons()
+
+	# 为每个 WeaponData 创建一个武器节点实例
+	for data in weapon_datas:
+		var weapon := _create_weapon(data)
+		weapon.visible = false
+		add_child(weapon)
+		_weapons.append(weapon)
+
+	# 默认装备第一把武器
+	if _weapons.size() > 0:
+		_equip(0)
+
+
+## 加载默认武器配置——手枪 + 霰弹枪
+func _load_default_weapons() -> Array[WeaponData]:
+	var defaults: Array[WeaponData] = []
+	var pistol := load("res://assets/weapons/pistol.tres") as WeaponData
+	var shotgun := load("res://assets/weapons/shotgun.tres") as WeaponData
+	if pistol:
+		defaults.append(pistol)
+	if shotgun:
+		defaults.append(shotgun)
+	return defaults
+
+
+# ==============================================================================
+# _create_weapon(data) — 根据 WeaponData 创建对应的武器节点
+# ==============================================================================
+# 根据 WeaponData 的 fire_mode 来决定创建哪种武器子类：
+#   PUMP 模式 → Shotgun 节点（有泵动逻辑和长枪管模型）
+#   其他模式 → Pistol 节点（半自动或全自动，手枪外观）
+#
+# 未来如果加了更多武器类型（步枪、火箭筒），在这里加新的判断分支即可。
+func _create_weapon(data: WeaponData) -> WeaponNode:
+	var weapon: WeaponNode
+
+	# 根据射击模式选武器子类
+	if data.fire_mode == WeaponData.FireMode.PUMP:
+		weapon = Shotgun.new()
+	else:
+		weapon = Pistol.new()
+
+	# 把数据注入到武器节点中（摄像机引用 + 配置数据）
+	weapon.setup(data, _camera)
+	return weapon
+
+
+# ==============================================================================
+# _input(event) — 处理武器切换输入
+# ==============================================================================
+# 这里只处理"切换"类输入——武器选择、下一把/上一把。
+# 射击和换弹输入由 WeaponNode 自己在 _input 中处理，
+# 因为它们需要知道武器的状态（换弹中？泵动中？）。
+func _input(event: InputEvent) -> void:
+	# --- 数字键切武器：按 1 切到栏位 0，按 2 切到栏位 1 ---
+	if event.is_action_pressed("weapon_1"):
+		_equip(0)
+	if event.is_action_pressed("weapon_2"):
+		_equip(1)
+
+	# --- 滚轮切换武器 ---
+	# MOUSE_BUTTON_WHEEL_UP = 向上滚（下一把武器）
+	# MOUSE_BUTTON_WHEEL_DOWN = 向下滚（上一把武器）
+	if event is InputEventMouseButton:
+		if event.button_index == MOUSE_BUTTON_WHEEL_UP and event.pressed:
+			_next_weapon()
+		if event.button_index == MOUSE_BUTTON_WHEEL_DOWN and event.pressed:
+			_prev_weapon()
+
+
+# ==============================================================================
+# _equip(index) — 装备指定栏位的武器
+# ==============================================================================
+# 切换流程：
+#   1. 检查索引是否有效（不能切到不存在的栏位）
+#   2. 如果已经是当前武器 → 什么都不做（避免无用切换）
+#   3. 卸下旧武器（隐藏、停止换弹）
+#   4. 装备新武器（显示、通知 HUD）
+func _equip(index: int) -> void:
+	# 边界检查
+	if index < 0 or index >= _weapons.size():
+		return
+
+	# 已经是当前武器，不重复装备
+	if index == _current_index:
+		return
+
+	# 卸下旧武器
+	if _current_index >= 0:
+		_weapons[_current_index]._on_unequip()
+
+	# 装备新武器
+	_current_index = index
+	var weapon := _weapons[_current_index]
+	weapon._on_equip()
+
+	# 通知 HUD 武器切换了
+	weapon_changed.emit(weapon.weapon_data.weapon_name, _current_index)
+
+
+# ==============================================================================
+# _next_weapon() / _prev_weapon() — 滚轮切换
+# ==============================================================================
+# 循环切换：到最后一格后滚回来到第一格，反之亦然。
+# 只对至少 2 把武器的情况有意义。
+
+func _next_weapon() -> void:
+	if _weapons.size() <= 1:
+		return
+	var next_idx := (_current_index + 1) % _weapons.size()
+	_equip(next_idx)
+
+func _prev_weapon() -> void:
+	if _weapons.size() <= 1:
+		return
+	# + _weapons.size() 确保负数变正数（Godot 的 % 对负数结果也是负数）
+	var prev_idx := (_current_index - 1 + _weapons.size()) % _weapons.size()
+	_equip(prev_idx)

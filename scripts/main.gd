@@ -83,6 +83,10 @@ func _build_test_room() -> void:
 	var pillar_mat := _make_color_material(Color(0.5, 0.35, 0.3))
 	_csg_box(Vector3(0, ROOM_H / 2.0, 0), Vector3(1.2, ROOM_H, 1.2), pillar_mat)
 
+	# 放置两个射击靶子，用来测试武器系统
+	_spawn_target(Vector3(-2, ROOM_H / 2.0, 2), Vector3(1.0, 1.5, 1.0))
+	_spawn_target(Vector3(3, ROOM_H / 2.0, -2), Vector3(0.8, 2.0, 0.8))
+
 	# === 灯光 ===
 	# Godot 中有多种灯光类型：
 	#   DirectionalLight3D = 平行光（太阳光，从远处平行照过来）
@@ -179,3 +183,17 @@ func _setup_crosshair() -> void:
 # 如果用户拖拽窗口边缘改变大小，这个函数会让准星自动重新居中。
 func _on_window_resized() -> void:
 	_crosshair.position = Vector2(get_viewport().size) / 2.0 - _crosshair.size / 2.0
+
+
+# ==============================================================================
+# _spawn_target() — 放置一个射击靶子
+# ==============================================================================
+# ShootingTarget 是一个带 Damageable 的 CSGBox3D 方块。
+# 被击中时会闪白，生命归零时变灰并关闭碰撞。
+func _spawn_target(pos: Vector3, size: Vector3) -> ShootingTarget:
+	var target := ShootingTarget.new()
+	target.position = pos
+	target.size = size
+	# ShootingTarget._ready() 会自动创建 Damageable 子节点
+	_level_root.add_child(target)
+	return target
