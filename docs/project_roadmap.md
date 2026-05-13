@@ -894,29 +894,173 @@ scripts/level/level_data.gd  # 如果 WallDef 需要从 CSGBox3D 提取的新字
 
 ---
 
-## 第六阶段：UI/HUD 系统（Phase 6）
+## 第六阶段：UI/HUD + 菜单 + 拾取（Phase 6）
 
-### 6.1 HUD
-- [ ] 生命值显示（数值 + 头像，DOOM 经典底栏风格）
-- [ ] 护甲值显示
-- [ ] 当前武器 + 弹药显示（弹匣/备弹）
-- [ ] 武器栏位指示器（高亮当前武器）
-- [ ] 受伤效果（屏幕闪红）
-- [ ] 拾取提示（物品名称浮现）
+> **目标**：完善战斗 HUD（生命条、武器栏位）、建立菜单系统（主菜单/暂停/死亡画面）、实现拾取系统（血包/护甲/弹药）。让游戏"像个完整产品"。
+>
+> **不在此阶段**：音频（Phase 7）、贴图 UI 美化（Phase 7）、关卡选择菜单（需多关卡 Phase 8，此阶段只做框架）。
+>
+> **可复用资产**：已有 `PlayerStatus`（位置/状态/生命/击杀/武器名/弹药/换弹）、`DamageFlash`（全屏闪红）、`Crosshair`（命中标记）。
 
-### 6.2 菜单系统
-- [ ] 主菜单（开始游戏、关卡选择、设置、退出）
-- [ ] 暂停菜单（继续、重新开始、返回主菜单）
-- [ ] 设置菜单（鼠标灵敏度、Y轴反转、音量、画面）
-- [ ] 关卡完成/死亡画面
+---
 
-### 6.3 拾取系统
-- [ ] `Pickup` Area3D 基类
-- [ ] 拾取触发检测（玩家走进区域）
-- [ ] 弹药拾取（各武器弹药类型）
-- [ ] 血包（小/中/大）
-- [ ] 护甲（小/大）
-- [ ] 武器拾取（首次获得武器）
+### 6.1 生命值 HUD 增强（`scripts/ui/player_status.gd` 修改）
+
+当前已有 `生命: 100 / 100` 文字。改为更直观的**生命条 + 数字**组合。
+
+- [ ] **6.1.1** 生命条（ProgressBar）
+  - 用 `TextureProgressBar` 或自定义 `ColorRect` 拼出横向生命条
+  - 宽 200px，高 16px，右上角生命文字上方
+  - 颜色渐变：绿色(>70%) → 橙色(30-70%) → 红色(<30%) + 低血时闪烁
+  - 使用 `_process` 中的 `_player_dmg.health / _player_dmg.max_health` 更新进度
+
+- [ ] **6.1.2** 护甲值显示
+  - 在生命条下方添加护甲数值 `护甲: 0`
+  - 护甲值从 `_player_dmg` 的新属性 `armor: float` 读取
+  - 蓝色调文字区分于生命值的绿色
+
+- [ ] **6.1.3** 武器栏位指示器
+  - 在右下角显示武器列表 `[1] 手枪  [2] 霰弹枪`
+  - 当前装备的武器高亮（黄色/白色），未装备的灰色
+  - 监听 `WeaponManager.weapon_changed` 信号更新高亮
+  - 位置：右下角，弹药显示下方
+
+---
+
+### 6.2 护甲系统（`scripts/damage/damageable.gd` 修改）
+
+护甲是 DOOM 核心机制——受伤时护甲先吸收部分伤害，再扣血。
+
+- [ ] **6.2.1** `Damageable` 添加护甲属性
+  - `var armor: float = 0.0` — 当前护甲值
+  - `var max_armor: float = 100.0` — 最大护甲值
+  - `signal armor_changed(current: float, max_val: float)` — 护甲变化信号
+
+- [ ] **6.2.2** `take_damage()` 加入护甲减伤
+  - 护甲吸收 50% 伤害（经典 DOOM 规则：蓝甲 50%，绿甲 33%）
+  - 例：受到 20 伤 → 护甲 -10、血量 -10
+  - 护甲不足时：剩余伤害全扣血量
+  - 护甲归零时保留 0，不变成负数
+
+---
+
+### 6.3 菜单系统（新建文件）
+
+- [ ] **6.3.1** 主菜单（`scripts/ui/main_menu.gd`）
+  - 在 `main.tscn` 中新增一个 `MainMenu` CanvasLayer 节点，默认显示
+  - 背景：纯黑 + 游戏标题 "DOOM-LIKE"（大字，红色/橙色）
+  - 按钮列表（垂直居中）：开始游戏、设置、退出
+  - "开始游戏" → 隐藏菜单 CanvasLayer、捕获鼠标、开始游戏循环
+  - "退出" → `get_tree().quit()`
+  - 初始状态：玩家不能移动/射击（`Input.mouse_mode = MOUSE_MODE_VISIBLE`，不处理射击输入）
+
+- [ ] **6.3.2** 暂停菜单（`scripts/ui/pause_menu.gd`）
+  - 新的 `PauseMenu` CanvasLayer，默认隐藏
+  - 按 Esc 时：如果鼠标已捕获 → 显示暂停菜单 + `get_tree().paused = true`
+  - 按钮：继续、返回主菜单
+  - "继续" → 隐藏暂停、`get_tree().paused = false`、重新捕获鼠标
+  - "返回主菜单" → `get_tree().paused = false`、切换回 MainMenu 显示
+  - `player_controller.gd` 中的 Esc 逻辑改为发射信号，由 main.gd 协调
+
+- [ ] **6.3.3** 死亡画面
+  - 玩家死亡时（`Damageable.died` 信号）→ 显示死亡覆盖层
+  - 文字 "你死了"（红色大字居中）+ "按 R 重新开始"（小字）
+  - 按 R → 重新加载当前场景（`get_tree().reload_current_scene()`）
+  - 期间禁用玩家移动/射击
+
+- [ ] **6.3.4** 设置菜单（简化版）
+  - 在暂停菜单或主菜单中加"设置"按钮
+  - 可调参数：鼠标灵敏度（滑块）、Y轴反转（复选框）、音量（滑块，预留给 Phase 7）
+  - 值保存到 `ConfigFile` 或直接改 `player_controller` 的 `@export` 变量
+  - "返回"按钮回到上级菜单
+
+---
+
+### 6.4 拾取系统（新建文件）
+
+- [ ] **6.4.1** `Pickup` 基类（`scripts/pickup/pickup.gd`）
+  - `extends Area3D`
+  - `signal picked_up(by: Node3D)` — 被拾取时发射
+  - `@export var pickup_name: String = "物品"` — 拾取提示用的名字
+  - `@export var respawn_time: float = 0.0` — 0=不重生，>0=秒后重生
+  - `body_entered` 检测到 Player → 调用 `_on_pickup(by)` → `queue_free()`（或重生计时）
+  - 外观：`CSGSphere3D` 或 `CSGBox3D` + 发光材质，悬浮旋转动画（`_process` 中绕 Y 轴旋转）
+
+- [ ] **6.4.2** 血包拾取（`scripts/pickup/health_pickup.gd`）
+  - `extends Pickup`
+  - `@export var heal_amount: float = 25.0` — 小血包 25、中 50、大 100
+  - `_on_pickup()` → 获取 Player 的 `Damageable`，`health = min(health + heal_amount, max_health)`
+  - 外观：红色发光球体
+
+- [ ] **6.4.3** 护甲拾取（`scripts/pickup/armor_pickup.gd`）
+  - `extends Pickup`
+  - `@export var armor_amount: float = 100.0`
+  - `_on_pickup()` → 设置 `Damageable.armor = armor_amount`
+  - 外观：蓝色发光球体
+
+- [ ] **6.4.4** 弹药拾取（`scripts/pickup/ammo_pickup.gd`）
+  - `extends Pickup`
+  - `@export var ammo_amount: int = 10` — 补充备弹数量
+  - `_on_pickup()` → 获取当前武器的 `_current_reserve`，`min(reserve + ammo, max_reserve)`
+  - 外观：黄色发光盒子
+
+- [ ] **6.4.5** 武器拾取（`scripts/pickup/weapon_pickup.gd`）
+  - `extends Pickup`
+  - `@export var weapon_data_path: String` — 武器 .tres 路径
+  - 首次获得：向 `WeaponManager` 注册新武器
+  - 已拥有：补充弹药（同弹药拾取）
+  - 外观：对应武器颜色的大号发光盒子
+
+- [ ] **6.4.6** 拾取通知 HUD
+  - 在 `PlayerStatus` 中添加拾取提示标签（屏幕中央偏上）
+  - 捡到物品时浮出物品名称 + 淡入淡出动画（约 1.5 秒后消失）
+  - 用 Tweener 做：文字从下方浮上 + 透明度 1→0
+  - 连续拾取多个时，新通知替换旧通知（不堆叠）
+
+---
+
+### 6.5 集成与验证
+
+- [ ] **6.5.1** 在测试关卡中放置拾取物
+  - 2 个血包（小 + 中）、1 个护甲、2 个弹药盒
+  - 分散放在房间角落和柱子旁
+
+- [ ] **6.5.2** 端到端测试清单
+  - 启动游戏 → 显示主菜单 → 点"开始游戏" → 进入游戏
+  - 主菜单"退出"按钮 → 退出游戏
+  - 游戏中按 Esc → 暂停菜单 → "继续"恢复游戏
+  - 暂停菜单"返回主菜单" → 回到主菜单
+  - 玩家血量 < 30% → 生命条变红闪烁
+  - 走进血包 → 血量恢复、屏幕浮出 "+25 生命"
+  - 走进护甲 → 护甲数值更新、浮出"护甲"
+  - 走进弹药盒 → 备弹 +10、浮出"+10 弹药"
+  - 敌人攻击带护甲的玩家 → 护甲先扣（50%吸收）
+  - 玩家死亡 → 死亡画面 → 按 R 重新开始
+
+---
+
+### Phase 6 新增/修改文件清单
+
+```
+新增:
+  scripts/ui/
+    main_menu.gd         # 主菜单
+    pause_menu.gd         # 暂停菜单
+    death_screen.gd       # 死亡画面
+    settings_menu.gd      # 设置菜单
+  scripts/pickup/
+    pickup.gd             # Pickup 基类（Area3D）
+    health_pickup.gd      # 血包
+    armor_pickup.gd       # 护甲
+    ammo_pickup.gd        # 弹药
+    weapon_pickup.gd      # 武器拾取
+
+修改:
+  scripts/ui/player_status.gd     # 生命条 + 护甲 + 武器栏位 + 拾取通知
+  scripts/damage/damageable.gd    # 护甲属性 + 减伤逻辑
+  scripts/player/player_controller.gd  # Esc 改为发射信号（菜单管理）
+  scenes/main.tscn                # 添加菜单 CanvasLayer + 拾取物节点
+```
 
 ---
 
@@ -983,10 +1127,10 @@ scripts/level/level_data.gd  # 如果 WallDef 需要从 CSGBox3D 提取的新字
 | Phase 3 | 敌人系统 | 31 | 31 | 100% |
 | Phase 4 | 关卡管线 | 27 | 27 | 100% |
 | Phase 5 | Godot编辑器+导出管线 | 14 | 0 | 0% |
-| Phase 6 | UI/HUD | 16 | 0 | 0% |
+| Phase 6 | UI/HUD+菜单+拾取 | 17 | 0 | 0% |
 | Phase 7 | 资源与音频 | 16 | 0 | 0% |
 | Phase 8 | 打磨与发布 | 14 | 0 | 0% |
-| **总计** | | **155** | **95** | **61%** |
+| **总计** | | **156** | **95** | **61%** |
 
 ---
 

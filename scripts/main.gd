@@ -2,31 +2,75 @@
 # Main — 游戏主控制器
 # ==============================================================================
 # 挂在场景根节点（Main）上，负责：
-#   1. 初始化关卡（CSG 碰撞 + PlayerStart 出生点 + 灯光）
-#   2. 命中标记（准星闪红）
-#   3. 受伤效果（全屏闪红）
+#   1. 初始化关卡 + 菜单系统
+#   2. 命中标记 + 受伤效果 + 拾取通知
 # ==============================================================================
 
 extends Node3D
 
-
-# ==============================================================================
-# 节点引用
-# ==============================================================================
+const MainMenuClass = preload("res://scripts/ui/main_menu.gd")
+const PauseMenuClass = preload("res://scripts/ui/pause_menu.gd")
 
 @onready var _level_root: Node3D = %Level
 @onready var _crosshair: ColorRect = %Crosshair
 @onready var _damage_flash: ColorRect = %DamageFlash
 @onready var _player: CharacterBody3D = %Player
 
+var _main_menu: CanvasLayer
+var _pause_menu: CanvasLayer
+var _game_running := false
+
 
 # ==============================================================================
-# _ready() — 游戏启动
+# _ready()
 # ==============================================================================
 func _ready() -> void:
 	_setup_crosshair()
 	_load_level()
 	_connect_hit_marker()
+
+	# 菜单系统——挂在 UI 下
+	var ui := get_node("UI")
+	_main_menu = _create_main_menu()
+	ui.add_child(_main_menu)
+	_pause_menu = _create_pause_menu()
+	ui.add_child(_pause_menu)
+
+	# 主菜单"开始"后初始化游戏
+	_main_menu.game_started.connect(_on_game_started)
+	_pause_menu.back_to_menu.connect(_on_back_to_menu)
+
+
+# ==============================================================================
+# 菜单系统
+# ==============================================================================
+
+func _create_main_menu() -> CanvasLayer:
+	var menu := MainMenuClass.new()
+	menu.name = "MainMenu"
+	return menu
+
+func _create_pause_menu() -> CanvasLayer:
+	var menu := PauseMenuClass.new()
+	menu.name = "PauseMenu"
+	return menu
+
+func _on_game_started() -> void:
+	_game_running = true
+
+func _on_back_to_menu() -> void:
+	_game_running = false
+	_main_menu.show_menu()
+
+
+func toggle_pause() -> void:
+	if not _game_running:
+		return
+	if get_tree().paused:
+		# 已在暂停 → 不确定，但不应出现
+		pass
+	else:
+		_pause_menu.show_pause()
 
 
 # ==============================================================================
@@ -132,6 +176,15 @@ func player_hit(_amount: float) -> void:
 	_damage_flash.color = Color(1.0, 0.0, 0.0, 0.4)
 	var tween := create_tween()
 	tween.tween_property(_damage_flash, "color", Color(1.0, 0.0, 0.0, 0.0), 0.3)
+
+
+# ==============================================================================
+# show_pickup_notification() — 拾取通知（转发给 HUD）
+# ==============================================================================
+func show_pickup_notification(text: String, color: Color) -> void:
+	var ps := get_node_or_null("UI/PlayerStatus")
+	if ps != null and ps.has_method("show_notification"):
+		ps.show_notification(text, color)
 
 
 # ==============================================================================

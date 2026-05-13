@@ -110,9 +110,11 @@ func _ready() -> void:
 # Godot 把所有的输入——键盘、鼠标、手柄——统一打包成 InputEvent 对象。
 # 这个函数每帧可能会被调用很多次（比如鼠标快速移动时）。
 func _input(event: InputEvent) -> void:
+	# 暂停时跳过所有游戏输入（由菜单处理）
+	if get_tree().paused:
+		return
+
 	# --- 鼠标视角旋转 ---
-	# "is" 关键字用于检查 event 的类型。
-	# 只有鼠标移动事件 且 鼠标被捕获时才处理（防止切出菜单时乱转）。
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 		# event.relative 记录的是"鼠标这一小步移动了多远"（像素）
 		# 乘以 sensitivity 把像素转换成旋转角度
@@ -141,16 +143,11 @@ func _input(event: InputEvent) -> void:
 		# 所以上下看只转摄像机，左右看转整个身体。
 		_camera.transform.basis = Basis.from_euler(Vector3(_pitch, 0.0, 0.0))
 
-	# --- Esc 键处理 ---
-	# is_action_pressed 检查是否按下了某个"动作"（在 Input Map 中定义的）。
-	# "ui_cancel" 是 Godot 内置动作，默认绑定 Esc 键。
+	# --- Esc 键：通知 main.gd 切换暂停菜单 ---
 	if event.is_action_pressed("ui_cancel"):
-		# 如果鼠标当前被捕获 → 释放鼠标（显示光标，方便切出游戏）
-		if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
-			Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-		# 如果鼠标已经释放 → 退出游戏
-		else:
-			get_tree().quit()
+		var main := get_tree().root.get_node_or_null("Main")
+		if main != null and main.has_method("toggle_pause"):
+			main.toggle_pause()
 
 
 # ==============================================================================
