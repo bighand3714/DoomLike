@@ -64,17 +64,30 @@ func _load_level() -> void:
 		# 确保目录存在
 		if not DirAccess.dir_exists_absolute("res://assets/levels"):
 			DirAccess.make_dir_recursive_absolute("res://assets/levels")
-		LevelExporter.export_from_scene(_level_root, save_path)
-		# 清理编辑器 CSG 节点——避免和 LevelBuilder 生成的重复
-		for child in _level_root.get_children():
-			if child is CSGBox3D or child is MeshInstance3D or child is OmniLight3D or child is DirectionalLight3D:
-				child.queue_free()
-			elif child is Node3D and not child is CharacterBody3D:
-				# 清理实体标记节点（Enemy_xxx, PlayerStart 等）
-				if child.name == "PlayerStart" or child.name.begins_with("Enemy_") or child.name.begins_with("Pickup_") or child.name.begins_with("Deco_"):
+		var exported_data: LevelData = LevelExporter.export_from_scene(_level_root, save_path)
+		# 检查导出品质：至少需要 1 扇区 + 地板/墙壁才有意义
+		var has_sectors: bool = exported_data.sectors.size() > 0
+		var has_walls: bool = false
+		for s in exported_data.sectors:
+			if s.walls.size() > 0:
+				has_walls = true
+				break
+		if not has_sectors or not has_walls:
+			# 导出内容太空洞 → 删除无效 .tres，用回退关卡
+			print("[main] 警告：导出关卡无墙壁！请确保 Level 下有 Wall_xxx 或 Floor_xxx 命名的 CSGBox3D 节点")
+			print("[main] 提示：CSGBox3D 节点需命名为 Wall_北墙 / Floor_地面 等才能被识别")
+			DirAccess.remove_absolute(save_path)
+			_current_level_path = "res://assets/levels/test_room.tres"
+		else:
+			# 导出有效 → 清理编辑器节点，保存路径
+			for child in _level_root.get_children():
+				if child is CSGBox3D or child is MeshInstance3D or child is OmniLight3D or child is DirectionalLight3D:
 					child.queue_free()
-			# 更新当前关卡路径，导出完成后走下面的"加载 .tres"流程
-		_current_level_path = save_path
+				elif child is Node3D and not child is CharacterBody3D:
+					if child.name == "PlayerStart" or child.name.begins_with("Enemy_") or child.name.begins_with("Pickup_") or child.name.begins_with("Deco_"):
+						child.queue_free()
+			_current_level_path = save_path
+			print("[main] 关卡导出成功，编辑器节点已清理")
 
 	# === 第二步：加载关卡数据（优先 .tres，回退到代码构建）===
 	var level_data: LevelData = null
@@ -83,6 +96,7 @@ func _load_level() -> void:
 
 	if level_data == null:
 		# fallback：用代码构建测试关卡
+		print("[main] 未找到有效关卡文件，使用代码构建的测试关卡")
 		level_data = _create_test_level()
 
 	# 创建 LevelBuilder 并建造
