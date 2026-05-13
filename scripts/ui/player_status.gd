@@ -131,13 +131,12 @@ func _make_top_right_label(top_offset: float) -> Label:
 # ==============================================================================
 
 func _connect_signals() -> void:
-	_weapon_manager = _player.get_node("WeaponHolder/WeaponManager") as WeaponManager
+	# WeaponManager 有 unique_name，直接引用
+	_weapon_manager = _player.find_child("WeaponManager", true, false) as WeaponManager
 	if _weapon_manager == null:
 		return
-
 	if not _weapon_manager.weapon_changed.is_connected(_on_weapon_changed):
 		_weapon_manager.weapon_changed.connect(_on_weapon_changed)
-
 	var weapon := _weapon_manager.get_current_weapon()
 	if weapon != null:
 		_on_weapon_changed(weapon.weapon_data.weapon_name, weapon.weapon_data.slot_index)
@@ -162,6 +161,7 @@ func _connect_enemy_manager() -> void:
 # ==============================================================================
 
 func _process(delta: float) -> void:
+
 	_update_timer += delta
 	if _update_timer < update_interval:
 		return

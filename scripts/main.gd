@@ -30,7 +30,6 @@ const ThingDefClass = preload("res://scripts/level/data/thing_def.gd")
 @onready var _player: CharacterBody3D = %Player
 
 var _level_builder: LevelBuilder = null
-var _level_data: LevelData = null
 
 ## 当前关卡的文件路径（导出时自动更新）
 var _current_level_path: String = "res://assets/levels/test_room.tres"
@@ -49,72 +48,81 @@ func _ready() -> void:
 # _load_level() — 加载关卡（优先 .tres，回退到代码构建）
 # ==============================================================================
 func _load_level() -> void:
-	# === 第一步：检测 Godot 编辑器中是否已搭建关卡几何体 ===
-	# 如果 Level 节点下有 Wall_ / Floor_ 开头的 CSG 节点，
-	# 说明是"编辑器搭建模式"——先导出为 .tres，再走正常加载流程。
-	# 确定关卡文件路径（导出时会被覆盖，加载时作为默认值）
-	var save_path: String = _current_level_path
+	# === 如果 Level 下有 CSG 节点 → 直接模式（所见即所得）===
+	# 编辑器里放的 CSG 几何体就是关卡，PlayerStart 标记出生点，
+	# Imp/DemonSoldier 等真实敌人节点直接存在于场景中。
+	# === 如果 Level 下无 CSG → 加载 .tres 模式 ===
+	if _has_csg_in_children(_level_root):
+		_load_direct_mode()
+	else:
+		_load_tres_mode()
 
-	if LevelExporter.has_editor_geometry(_level_root):
-		print("[main] 检测到编辑器关卡几何体，正在导出...")
-		# 从 LevelName_xxx 节点获取关卡名称（用于文件名）
-		var level_file := "test_room.tres"
-		for child in _level_root.get_children():
-			if child.name.begins_with("LevelName_"):
-				level_file = child.name.substr(10) + ".tres"  # LevelName_地牢 → 地牢.tres
-				break
-		save_path = "res://assets/levels/" + level_file
-		# 确保目录存在
-		if not DirAccess.dir_exists_absolute("res://assets/levels"):
-			DirAccess.make_dir_recursive_absolute("res://assets/levels")
-		var exported_data: LevelData = LevelExporter.export_from_scene(_level_root, save_path)
-		# 检查导出品质：至少需要 1 扇区 + 地板/墙壁才有意义
-		var has_sectors: bool = exported_data.sectors.size() > 0
-		var has_walls: bool = false
-		for s in exported_data.sectors:
-			if s.walls.size() > 0:
-				has_walls = true
-				break
-		if not has_sectors or not has_walls:
-			# 导出内容太空洞 → 删除无效 .tres，用回退关卡
-			print("[main] 警告：导出关卡无墙壁！请确保 Level 下有 Wall_xxx 或 Floor_xxx 命名的 CSGBox3D 节点")
-			print("[main] 提示：CSGBox3D 节点需命名为 Wall_北墙 / Floor_地面 等才能被识别")
-			DirAccess.remove_absolute(save_path)
-			_current_level_path = "res://assets/levels/test_room.tres"
-		else:
-			# 导出有效 → 清理编辑器节点，保存路径
-			for child in _level_root.get_children():
-				if child is CSGBox3D or child is MeshInstance3D or child is OmniLight3D or child is DirectionalLight3D:
-					child.queue_free()
-				elif child is Node3D and not child is CharacterBody3D:
-					if child.name == "PlayerStart" or child.name.begins_with("Enemy_") or child.name.begins_with("Pickup_") or child.name.begins_with("Deco_"):
-						child.queue_free()
-			_current_level_path = save_path
-			print("[main] 关卡导出成功，编辑器节点已清理")
 
-	# === 第二步：加载关卡数据（优先 .tres，回退到代码构建）===
+func _has_csg_in_children(node: Node) -> bool:
+	for child in node.get_children():
+		if child is CSGBox3D or child is CSGPolygon3D or child is CSGCombiner3D:
+			return true
+		if _has_csg_in_children(child):
+			return true
+	return false
+
+
+func _load_direct_mode() -> void:
+	print("[main] 直接模式：编辑器 CSG + 真实敌人节点")
+
+	# 1. 开启所有 CSG 碰撞
+	_enable_csg_collision(_level_root)
+
+	# 2. 找 PlayerStart 标记 → 设置出生点
+	var spawn_set := false
+	for child in _level_root.get_children():
+		if child.name == "PlayerStart" and child is Node3D:
+			_player.global_position = child.global_position
+			_player.rotation.y = child.global_rotation.y
+			spawn_set = true
+			print("[main] 出生点: (%.1f, %.1f, %.1f)" % [child.global_position.x, child.global_position.y, child.global_position.z])
+			break
+	if not spawn_set:
+		print("[main] 未找到 PlayerStart，使用默认 (0, 2, 0)")
+
+	# 3. 编辑器里已有灯光就不加
+	var has_light := false
+	for child in _level_root.get_children():
+		if child is DirectionalLight3D or child is OmniLight3D:
+			has_light = true
+			break
+	if not has_light:
+		_add_global_lights()
+
+
+func _enable_csg_collision(node: Node) -> void:
+	for child in node.get_children():
+		if child is CSGBox3D or child is CSGPolygon3D or child is CSGCombiner3D:
+			child.use_collision = true
+		_enable_csg_collision(child)
+
+
+func _load_tres_mode() -> void:
+	print("[main] 加载 .tres 模式")
+
 	var level_data: LevelData = null
 	if ResourceLoader.exists(_current_level_path):
 		level_data = load(_current_level_path) as LevelData
 
 	if level_data == null:
-		# fallback：用代码构建测试关卡
-		print("[main] 未找到有效关卡文件，使用代码构建的测试关卡")
+		print("[main] 无 .tres，使用代码构建测试关卡")
 		level_data = _create_test_level()
 
-	# 创建 LevelBuilder 并建造
 	_level_builder = LevelBuilder.new()
 	_level_builder.level_data = level_data
 	_level_builder.enemy_manager = _enemy_manager
 	_level_root.add_child(_level_builder)
 	_level_builder.build()
 
-	# 把玩家传送到出生点
 	var spawn := _level_builder.player_spawn
 	_player.global_position = spawn.origin
 	_player.rotation = Vector3(0, spawn.basis.get_euler().y, 0)
 
-	# 设置灯光（整个关卡的基础环境光 + 主方向光）
 	_add_global_lights()
 
 
@@ -265,7 +273,7 @@ func _add_global_lights() -> void:
 # ==============================================================================
 
 func _connect_hit_marker() -> void:
-	var wm := _player.get_node_or_null("WeaponHolder/WeaponManager") as WeaponManager
+	var wm := _player.find_child("WeaponManager", true, false) as WeaponManager
 	if wm == null:
 		return
 	wm.weapon_changed.connect(_on_weapon_changed_for_hitmarker)
@@ -275,7 +283,7 @@ func _connect_hit_marker() -> void:
 
 
 func _on_weapon_changed_for_hitmarker(_name: String, _index: int) -> void:
-	var wm := _player.get_node_or_null("WeaponHolder/WeaponManager") as WeaponManager
+	var wm := _player.find_child("WeaponManager", true, false) as WeaponManager
 	if wm == null:
 		return
 	var weapon := wm.get_current_weapon()

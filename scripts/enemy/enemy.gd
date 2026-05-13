@@ -86,8 +86,14 @@ func _ready() -> void:
 	_sight_ray.enabled = false  # 手动控制检测时机
 	add_child(_sight_ray)
 
-	# 让子类创建外观模型
-	_setup_model()
+	# 外观模型：如果 .tscn 中已有 CSG/Mesh 几何体就跳过代码生成
+	var _has_model := false
+	for child in get_children():
+		if child is CSGBox3D or child is CSGPolygon3D or child is MeshInstance3D:
+			_has_model = true
+			break
+	if not _has_model:
+		_setup_model()
 
 
 # ==============================================================================

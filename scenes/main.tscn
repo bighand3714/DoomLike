@@ -1,76 +1,46 @@
-[gd_scene format=3 uid="uid://bfnf0tlp76kw7"]
+[gd_scene format=3 uid="uid://3id15akegrw4"]
 
 [ext_resource type="Script" uid="uid://cc0085xwrw74f" path="res://scripts/main.gd" id="1_main"]
-[ext_resource type="Script" uid="uid://y8bg1s06by74" path="res://scripts/player/player_controller.gd" id="2_player"]
+[ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="2_player_scene"]
 [ext_resource type="Script" uid="uid://dgl801sm08a3d" path="res://scripts/utils/fps_counter.gd" id="3_fps"]
-[ext_resource type="Script" uid="uid://b45tacvgihrd8" path="res://scripts/weapon/weapon_manager.gd" id="4_wm"]
-[ext_resource type="Script" uid="uid://bq7mxaap7n220" path="res://scripts/ui/player_status.gd" id="5_ps"]
-[ext_resource type="Script" uid="uid://bafh4ybw4u2ud" path="res://scripts/enemy/enemy_manager.gd" id="6_em"]
+[ext_resource type="PackedScene" path="res://scenes/enemies/demon_soldier.tscn" id="4_o6xl0"]
+[ext_resource type="Script" uid="uid://bq7mxaap7n220" path="res://scripts/ui/player_status.gd" id="4_ps"]
+[ext_resource type="Script" uid="uid://bafh4ybw4u2ud" path="res://scripts/enemy/enemy_manager.gd" id="5_em"]
+[ext_resource type="PackedScene" path="res://scenes/enemies/imp.tscn" id="5_tipki"]
 
-[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_pshp"]
-radius = 0.4
-height = 1.8
-
-[node name="Main" type="Node3D" unique_id=1059792330]
+[node name="Main" type="Node3D" unique_id=981212117]
 script = ExtResource("1_main")
 
-[node name="Player" type="CharacterBody3D" parent="." unique_id=1796245549]
-unique_name_in_owner = true
-script = ExtResource("2_player")
-
-[node name="Camera3D" type="Camera3D" parent="Player" unique_id=324063636]
-unique_name_in_owner = true
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, 0)
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Player" unique_id=1544640637]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
-shape = SubResource("CapsuleShape3D_pshp")
-
-[node name="WeaponHolder" type="Node3D" parent="Player" unique_id=1894337507]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, -0.3, -0.6)
-
-[node name="WeaponManager" type="Node3D" parent="Player/WeaponHolder" unique_id=1258190514]
-script = ExtResource("4_wm")
-
-[node name="Level" type="Node3D" parent="." unique_id=590183104]
+[node name="Player" parent="." unique_id=1433771793 instance=ExtResource("2_player_scene")]
 unique_name_in_owner = true
 
-[node name="LevelName_测试" type="CSGBox3D" parent="Level" unique_id=1313412667]
-size = Vector3(12, 0.2, 12)
-
-[node name="Floor_地面" type="CSGBox3D" parent="Level" unique_id=295777801]
-size = Vector3(12, 0.2, 12)
-
-[node name="PlayerStart" type="Node3D" parent="Level" unique_id=822135487]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.8874824, 1.6, 5.0406876)
-
-[node name="EnemyManager" type="Node" parent="Level" unique_id=2091762417]
+[node name="Level" type="Node3D" parent="." unique_id=888751091]
 unique_name_in_owner = true
-script = ExtResource("6_em")
 
-[node name="Wall_墙" type="CSGBox3D" parent="Level" unique_id=562140617]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, -11.436946)
-size = Vector3(8, 4, 0.3)
+[node name="EnemyManager" type="Node" parent="Level" unique_id=57559640]
+unique_name_in_owner = true
+script = ExtResource("5_em")
 
-[node name="Wall_墙2" type="CSGBox3D" parent="Level" unique_id=224129505]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.745451, 2, 7.4910097)
-size = Vector3(8, 4, 0.3)
+[node name="CSGBox3D" type="CSGBox3D" parent="Level" unique_id=938852104]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.3955078, 0, -2.3243713)
+size = Vector3(40, 0.3, 40)
 
-[node name="Wall_墙3" type="CSGBox3D" parent="Level" unique_id=1447678583]
-transform = Transform3D(-0.020924991, 0, -0.9997811, 0, 1, 0, 0.9997811, 0, -0.020924991, -4.936393, 1.9341602, 0.6330223)
-size = Vector3(8, 4, 0.3)
+[node name="PlayerStart" type="Node3D" parent="Level" unique_id=1326714825]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -9.473101, 1.3648834, 5.883645)
 
-[node name="Wall_墙4" type="CSGBox3D" parent="Level" unique_id=329187742]
-transform = Transform3D(-0.012548638, 0, -0.99992126, 0, 1, 0, 0.99992126, 0, -0.012548638, 6.857174, 1.734211, 0)
-size = Vector3(8, 4, 0.3)
+[node name="DemonSoldier" parent="Level" unique_id=553607527 instance=ExtResource("4_o6xl0")]
+transform = Transform3D(0.5699681, 0, 0.82166684, 0, 1, 0, -0.82166684, 0, 0.5699681, -5.0253963, 1.5971231, -5.9500694)
 
-[node name="UI" type="CanvasLayer" parent="." unique_id=1674855606]
+[node name="Imp" parent="Level" unique_id=1711322783 instance=ExtResource("5_tipki")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12.048926, 1.3640218, -10.1339)
 
-[node name="DamageFlash" type="ColorRect" parent="UI" unique_id=1736799305]
+[node name="UI" type="CanvasLayer" parent="." unique_id=608529813]
+
+[node name="DamageFlash" type="ColorRect" parent="UI" unique_id=714604431]
 unique_name_in_owner = true
 color = Color(1, 0, 0, 0)
 
-[node name="Crosshair" type="ColorRect" parent="UI" unique_id=2054595423]
+[node name="Crosshair" type="ColorRect" parent="UI" unique_id=827903493]
 unique_name_in_owner = true
 offset_left = 638.0
 offset_top = 358.0
@@ -78,12 +48,12 @@ offset_right = 642.0
 offset_bottom = 362.0
 color = Color(0, 1, 0, 0.7)
 
-[node name="FPS" type="Label" parent="UI" unique_id=147960760]
+[node name="FPS" type="Label" parent="UI" unique_id=81808925]
 offset_left = 12.0
 offset_top = 12.0
 offset_right = 120.0
 offset_bottom = 36.0
 script = ExtResource("3_fps")
 
-[node name="PlayerStatus" type="Node" parent="UI" unique_id=569830386]
-script = ExtResource("5_ps")
+[node name="PlayerStatus" type="Node" parent="UI" unique_id=1044724957]
+script = ExtResource("4_ps")

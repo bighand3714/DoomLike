@@ -52,9 +52,8 @@ var _camera: Camera3D
 # _ready() — 初始化所有武器
 # ==============================================================================
 func _ready() -> void:
-	# 从 Player 节点下找到摄像机
-	# 路径：WeaponManager → WeaponHolder → Player → Camera3D
-	_camera = get_node("../../Camera3D")
+	# WeaponManager → WeaponHolder → Camera3D
+	_camera = get_parent().get_parent() as Camera3D
 
 	# 如果编辑器中没配置武器数据，自动加载默认武器
 	if weapon_datas.is_empty():

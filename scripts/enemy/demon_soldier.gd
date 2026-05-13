@@ -13,6 +13,12 @@
 extends "res://scripts/enemy/enemy.gd"
 class_name DemonSoldier
 
+# 编辑器直接放置时自动加载默认配置
+func _ready() -> void:
+	if enemy_data == null:
+		enemy_data = load("res://assets/enemies/demon_soldier.tres")
+	super()
+
 
 # ==============================================================================
 # 内部状态

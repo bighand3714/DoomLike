@@ -1,0 +1,98 @@
+[gd_scene load_steps=11 format=3]
+
+[ext_resource type="Script" path="res://scripts/enemy/demon_soldier.gd" id="1_soldier"]
+
+[sub_resource type="StandardMaterial3D" id="mat_body"]
+albedo_color = Color(0.35, 0.35, 0.4, 1.0)
+
+[sub_resource type="StandardMaterial3D" id="mat_shoulder"]
+albedo_color = Color(0.4, 0.4, 0.45, 1.0)
+
+[sub_resource type="StandardMaterial3D" id="mat_head"]
+albedo_color = Color(0.3, 0.3, 0.35, 1.0)
+
+[sub_resource type="StandardMaterial3D" id="mat_visor"]
+albedo_color = Color(1.0, 0.0, 0.0, 1.0)
+emission_enabled = true
+emission = Color(1.0, 0.0, 0.0, 1.0)
+emission_energy_multiplier = 3.0
+
+[sub_resource type="StandardMaterial3D" id="mat_limb"]
+albedo_color = Color(0.33, 0.33, 0.38, 1.0)
+
+[sub_resource type="StandardMaterial3D" id="mat_gun"]
+albedo_color = Color(0.15, 0.15, 0.18, 1.0)
+
+[sub_resource type="StandardMaterial3D" id="mat_leg"]
+albedo_color = Color(0.33, 0.33, 0.38, 1.0)
+
+[sub_resource type="CapsuleShape3D" id="capsule_soldier"]
+radius = 0.5
+height = 2.1
+
+[node name="DemonSoldier" type="CharacterBody3D"]
+script = ExtResource("1_soldier")
+
+[node name="Body" type="CSGBox3D" parent="."]
+size = Vector3(0.9, 0.9, 0.5)
+position = Vector3(0, 1.2, 0)
+use_collision = false
+material_override = SubResource("mat_body")
+
+[node name="LeftShoulder" type="CSGBox3D" parent="."]
+size = Vector3(0.3, 0.3, 0.35)
+position = Vector3(-0.6, 1.45, 0)
+use_collision = false
+material_override = SubResource("mat_shoulder")
+
+[node name="RightShoulder" type="CSGBox3D" parent="."]
+size = Vector3(0.3, 0.3, 0.35)
+position = Vector3(0.6, 1.45, 0)
+use_collision = false
+material_override = SubResource("mat_shoulder")
+
+[node name="Head" type="CSGBox3D" parent="."]
+size = Vector3(0.45, 0.4, 0.4)
+position = Vector3(0, 1.95, 0)
+use_collision = false
+material_override = SubResource("mat_head")
+
+[node name="Visor" type="CSGBox3D" parent="."]
+size = Vector3(0.3, 0.12, 0.02)
+position = Vector3(0, 1.97, -0.21)
+use_collision = false
+material_override = SubResource("mat_visor")
+
+[node name="LeftArm" type="CSGBox3D" parent="."]
+size = Vector3(0.25, 0.8, 0.25)
+position = Vector3(-0.6, 1.1, 0)
+use_collision = false
+material_override = SubResource("mat_limb")
+
+[node name="RightArm" type="CSGBox3D" parent="."]
+size = Vector3(0.25, 0.8, 0.25)
+position = Vector3(0.6, 1.1, 0)
+use_collision = false
+material_override = SubResource("mat_limb")
+
+[node name="Gun" type="CSGBox3D" parent="."]
+size = Vector3(0.12, 0.12, 0.5)
+position = Vector3(0.85, 1.1, -0.2)
+use_collision = false
+material_override = SubResource("mat_gun")
+
+[node name="LeftLeg" type="CSGBox3D" parent="."]
+size = Vector3(0.3, 0.65, 0.3)
+position = Vector3(-0.25, 0.4, 0)
+use_collision = false
+material_override = SubResource("mat_leg")
+
+[node name="RightLeg" type="CSGBox3D" parent="."]
+size = Vector3(0.3, 0.65, 0.3)
+position = Vector3(0.25, 0.4, 0)
+use_collision = false
+material_override = SubResource("mat_leg")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = SubResource("capsule_soldier")
+position = Vector3(0, 1.2, 0)

@@ -12,6 +12,12 @@
 extends "res://scripts/enemy/enemy.gd"
 class_name Imp
 
+# 编辑器直接放置时自动加载默认配置
+func _ready() -> void:
+	if enemy_data == null:
+		enemy_data = load("res://assets/enemies/imp.tres")
+	super()
+
 # 预加载投射物类
 const ProjectileClass = preload("res://scripts/enemy/projectile.gd")
 
