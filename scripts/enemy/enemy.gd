@@ -203,7 +203,7 @@ func _state_patrol(_delta: float) -> void:
 # 状态：CHASE — 追击
 # ==============================================================================
 # 朝玩家方向移动。当进入攻击距离时切换到 ATTACK。
-func _state_chase(delta: float) -> void:
+func _state_chase(_delta: float) -> void:
 	# 朝向玩家（只在 XZ 平面转向，DOOM 2.5D 传统）
 	var to_player := _player.global_position - global_position
 	to_player.y = 0.0

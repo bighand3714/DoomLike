@@ -26,7 +26,6 @@ const ProjectileClass = preload("res://scripts/enemy/projectile.gd")
 # 内部变量
 # ==============================================================================
 
-var _fireball_scene: PackedScene = null
 
 
 # ==============================================================================
