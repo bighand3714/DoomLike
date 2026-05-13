@@ -27,7 +27,10 @@ const DemonSoldierConst = preload("res://scripts/enemy/demon_soldier.gd")
 @onready var _player: CharacterBody3D = %Player
 
 var _level_builder: LevelBuilder = null
+var _level_data: LevelData = null
 
+## 当前关卡的文件路径（导出时自动更新）
+var _current_level_path: String = "res://assets/levels/test_room.tres"
 
 # ==============================================================================
 # _ready() — 游戏启动
@@ -46,6 +49,9 @@ func _load_level() -> void:
 	# === 第一步：检测 Godot 编辑器中是否已搭建关卡几何体 ===
 	# 如果 Level 节点下有 Wall_ / Floor_ 开头的 CSG 节点，
 	# 说明是"编辑器搭建模式"——先导出为 .tres，再走正常加载流程。
+	# 确定关卡文件路径（导出时会被覆盖，加载时作为默认值）
+	var save_path: String = _current_level_path
+
 	if LevelExporter.has_editor_geometry(_level_root):
 		print("[main] 检测到编辑器关卡几何体，正在导出...")
 		# 从 LevelName_xxx 节点获取关卡名称（用于文件名）
@@ -54,7 +60,7 @@ func _load_level() -> void:
 			if child.name.begins_with("LevelName_"):
 				level_file = child.name.substr(10) + ".tres"  # LevelName_地牢 → 地牢.tres
 				break
-		var save_path := "res://assets/levels/" + level_file
+		save_path = "res://assets/levels/" + level_file
 		# 确保目录存在
 		if not DirAccess.dir_exists_absolute("res://assets/levels"):
 			DirAccess.make_dir_recursive_absolute("res://assets/levels")
@@ -67,8 +73,8 @@ func _load_level() -> void:
 				# 清理实体标记节点（Enemy_xxx, PlayerStart 等）
 				if child.name == "PlayerStart" or child.name.begins_with("Enemy_") or child.name.begins_with("Pickup_") or child.name.begins_with("Deco_"):
 					child.queue_free()
-		# 更新当前关卡路径，导出完成后走下面的"加载 .tres"流程
-	_current_level_path = save_path
+			# 更新当前关卡路径，导出完成后走下面的"加载 .tres"流程
+		_current_level_path = save_path
 
 	# === 第二步：加载关卡数据（优先 .tres，回退到代码构建）===
 	var level_data: LevelData = null
