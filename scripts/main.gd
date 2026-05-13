@@ -48,8 +48,17 @@ func _load_level() -> void:
 	# 说明是"编辑器搭建模式"——先导出为 .tres，再走正常加载流程。
 	if LevelExporter.has_editor_geometry(_level_root):
 		print("[main] 检测到编辑器关卡几何体，正在导出...")
-		# 导出为 .tres，覆盖旧的测试关卡文件
-		LevelExporter.export_from_scene(_level_root, "res://assets/levels/test_room.tres")
+		# 从 LevelName_xxx 节点获取关卡名称（用于文件名）
+		var level_file := "test_room.tres"
+		for child in _level_root.get_children():
+			if child.name.begins_with("LevelName_"):
+				level_file = child.name.substr(10) + ".tres"  # LevelName_地牢 → 地牢.tres
+				break
+		var save_path := "res://assets/levels/" + level_file
+		# 确保目录存在
+		if not DirAccess.dir_exists_absolute("res://assets/levels"):
+			DirAccess.make_dir_recursive_absolute("res://assets/levels")
+		LevelExporter.export_from_scene(_level_root, save_path)
 		# 清理编辑器 CSG 节点——避免和 LevelBuilder 生成的重复
 		for child in _level_root.get_children():
 			if child is CSGBox3D or child is MeshInstance3D or child is OmniLight3D or child is DirectionalLight3D:
@@ -58,12 +67,13 @@ func _load_level() -> void:
 				# 清理实体标记节点（Enemy_xxx, PlayerStart 等）
 				if child.name == "PlayerStart" or child.name.begins_with("Enemy_") or child.name.begins_with("Pickup_") or child.name.begins_with("Deco_"):
 					child.queue_free()
-		# 导出完成后，走下面的"加载 .tres"流程
+		# 更新当前关卡路径，导出完成后走下面的"加载 .tres"流程
+	_current_level_path = save_path
 
 	# === 第二步：加载关卡数据（优先 .tres，回退到代码构建）===
 	var level_data: LevelData = null
-	if ResourceLoader.exists("res://assets/levels/test_room.tres"):
-		level_data = load("res://assets/levels/test_room.tres") as LevelData
+	if ResourceLoader.exists(_current_level_path):
+		level_data = load(_current_level_path) as LevelData
 
 	if level_data == null:
 		# fallback：用代码构建测试关卡

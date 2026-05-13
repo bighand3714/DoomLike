@@ -35,7 +35,13 @@ static func export_from_scene(scene_root: Node3D, save_path: String = "") -> Lev
 	print("[LevelExporter] 开始扫描关卡...")
 
 	var data := LevelData.new()
-	data.metadata["name"] = "编辑器关卡"
+	# 检测 LevelName_xxx 节点——用节点名作为关卡文件名
+	var level_name := "编辑器关卡"
+	for child in scene_root.get_children():
+		if child.name.begins_with("LevelName_"):
+			level_name = child.name.substr(10)  # 去掉 "LevelName_" 前缀
+			break
+	data.metadata["name"] = level_name
 	data.metadata["author"] = ""
 
 	# === 第一步：按父节点分组，识别扇区 ===

@@ -1,67 +1,68 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene format=3 uid="uid://bfnf0tlp76kw7"]
 
-[ext_resource type="Script" path="res://scripts/main.gd" id="1_main"]
-[ext_resource type="Script" path="res://scripts/player/player_controller.gd" id="2_player"]
-[ext_resource type="Script" path="res://scripts/utils/fps_counter.gd" id="3_fps"]
-[ext_resource type="Script" path="res://scripts/weapon/weapon_manager.gd" id="4_wm"]
-[ext_resource type="Script" path="res://scripts/ui/player_status.gd" id="5_ps"]
-[ext_resource type="Script" path="res://scripts/enemy/enemy_manager.gd" id="6_em"]
+[ext_resource type="Script" uid="uid://cc0085xwrw74f" path="res://scripts/main.gd" id="1_main"]
+[ext_resource type="Script" uid="uid://y8bg1s06by74" path="res://scripts/player/player_controller.gd" id="2_player"]
+[ext_resource type="Script" uid="uid://dgl801sm08a3d" path="res://scripts/utils/fps_counter.gd" id="3_fps"]
+[ext_resource type="Script" uid="uid://b45tacvgihrd8" path="res://scripts/weapon/weapon_manager.gd" id="4_wm"]
+[ext_resource type="Script" uid="uid://bq7mxaap7n220" path="res://scripts/ui/player_status.gd" id="5_ps"]
+[ext_resource type="Script" uid="uid://bafh4ybw4u2ud" path="res://scripts/enemy/enemy_manager.gd" id="6_em"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_pshp"]
 radius = 0.4
 height = 1.8
 
-[node name="Main" type="Node3D"]
+[node name="Main" type="Node3D" unique_id=1059792330]
 script = ExtResource("1_main")
 
-[node name="Player" type="CharacterBody3D" parent="."]
+[node name="Player" type="CharacterBody3D" parent="." unique_id=1796245549]
 unique_name_in_owner = true
 script = ExtResource("2_player")
 
-[node name="Camera3D" type="Camera3D" parent="Player"]
+[node name="Camera3D" type="Camera3D" parent="Player" unique_id=324063636]
 unique_name_in_owner = true
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, 0)
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="Player"]
-shape = SubResource("CapsuleShape3D_pshp")
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Player" unique_id=1544640637]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+shape = SubResource("CapsuleShape3D_pshp")
 
-[node name="WeaponHolder" type="Node3D" parent="Player"]
+[node name="WeaponHolder" type="Node3D" parent="Player" unique_id=1894337507]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, -0.3, -0.6)
 
-[node name="WeaponManager" type="Node3D" parent="Player/WeaponHolder"]
+[node name="WeaponManager" type="Node3D" parent="Player/WeaponHolder" unique_id=1258190514]
 script = ExtResource("4_wm")
 
-[node name="Level" type="Node3D" parent="."]
+[node name="Level" type="Node3D" parent="." unique_id=590183104]
 unique_name_in_owner = true
 
-[node name="EnemyManager" type="Node" parent="Level"]
+[node name="EnemyManager" type="Node" parent="Level" unique_id=2091762417]
 unique_name_in_owner = true
 script = ExtResource("6_em")
 
-[node name="UI" type="CanvasLayer" parent="."]
+[node name="Wall-1" type="CSGBox3D" parent="Level" unique_id=560081253]
+transform = Transform3D(0.9696332, -0.19983435, 0.140988, 0.21472004, 0.9715826, -0.09961201, -0.11707558, 0.12686008, 0.9849872, 1.7727461, 0.9424759, -1.5551553)
+size = Vector3(8, 4, 0.3)
 
-[node name="DamageFlash" type="ColorRect" parent="UI"]
+[node name="UI" type="CanvasLayer" parent="." unique_id=1674855606]
+
+[node name="DamageFlash" type="ColorRect" parent="UI" unique_id=1736799305]
 unique_name_in_owner = true
-anchors_preset = 15
 color = Color(1, 0, 0, 0)
 
-[node name="Crosshair" type="ColorRect" parent="UI"]
+[node name="Crosshair" type="ColorRect" parent="UI" unique_id=2054595423]
 unique_name_in_owner = true
-anchors_preset = 0
 offset_left = 638.0
 offset_top = 358.0
 offset_right = 642.0
 offset_bottom = 362.0
 color = Color(0, 1, 0, 0.7)
 
-[node name="FPS" type="Label" parent="UI"]
-anchors_preset = 0
+[node name="FPS" type="Label" parent="UI" unique_id=147960760]
 offset_left = 12.0
 offset_top = 12.0
 offset_right = 120.0
 offset_bottom = 36.0
 script = ExtResource("3_fps")
 
-[node name="PlayerStatus" type="Node" parent="UI"]
+[node name="PlayerStatus" type="Node" parent="UI" unique_id=569830386]
 script = ExtResource("5_ps")
