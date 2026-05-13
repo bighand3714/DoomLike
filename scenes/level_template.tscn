@@ -1,0 +1,23 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/editor/level_exporter.gd" id="1_exp"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_grid"]
+albedo_color = Color(0.4, 0.4, 0.4, 0.3)
+shading_mode = 0
+transparency = 3
+
+[node name="LevelRoot" type="Node3D"]
+
+; 参考地板——半透明灰色平面，标记 Y=0 地面高度
+; 搭关卡时把这个平面当作"地面"，墙壁放在它上面
+[node name="FloorRef" type="CSGBox3D" parent="."]
+use_collision = false
+size = Vector3(20, 0.1, 20)
+material_override = SubResource("StandardMaterial3D_grid")
+
+; 补光——让编辑器中能看到几何体
+[node name="EditLight" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 10, 3)
+rotation_degrees = Vector3(-45, -30, 0)
+light_energy = 0.6
