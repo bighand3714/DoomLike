@@ -1,6 +1,6 @@
 # DoomLike 项目路线图 — 原子化任务拆解
 
-> **当前进度：第四阶段（关卡管线）已完成** — 核心移动 + 武器/射击/伤害 + 敌人AI/投射物 + 关卡数据驱动加载系统已可运行，地图编辑器等系统待实现。总进度 95/156 任务（61%）。
+> **当前进度：第六阶段（UI/HUD+菜单+拾取）已完成** — 核心移动 + 武器/射击 + 敌人AI + 菜单/拾取/护甲系统已可运行。关卡在编辑器中手动搭建（CSG），Phase 5（导出.tres管线）待实现。总进度 92/134 任务（69%）。
 
 ---
 
@@ -498,262 +498,158 @@ assets/
 
 ## 第四阶段：关卡管线连接（Phase 4）
 
-> **目标**：打通 `LevelData → 3D场景` 的完整管线，将硬编码测试房间替换为从 .tres 关卡文件加载的正式流程。同时实现反向序列化，为地图编辑器打好数据基础。
+> **目标**：从代码生成关卡转向 Godot 编辑器直接搭关卡。玩家/敌人改为 .tscn 场景文件，关卡几何体在编辑器中用 CSG 节点手动搭建，`main.gd` 启动时自动开启碰撞 + 定位出生点。
 >
-> **不在此阶段**：编辑器 UI（Phase 5）、纹理贴图（Phase 7）、多关卡切换菜单（Phase 6）。
-
----
-
-### 4.1 墙壁几何体生成（`LevelBuilder._build_wall()`）
-
-从数据层面的 `WallDef`（起点、终点、三段纹理、Portal引用）生成实际可见的 3D 墙壁面片。
-
-- [ ] **4.1.1** 墙壁面片生成
-  - 每面墙是一个四边形（2 个三角形），用 `MeshInstance3D` + `ArrayMesh` 构建
-  - 面片的四个顶点：`(start.x, floor_h, start.y)` → `(end.x, floor_h, end.y)` → `(end.x, ceiling_h, end.y)` → `(start.x, ceiling_h, start.y)`
-  - 法线方向朝外（垂直于墙壁面朝玩家）
-  - 面片用 `SurfaceTool` 构建（Godot 内置的便捷 Mesh 构建工具）：`begin(Mesh.PRIMITIVE_TRIANGLES)` → `add_vertex()` 4 次 → `index()` 6 次 → `commit()`
-
-- [ ] **4.1.2** 三段纹理区域（DOOM 经典墙面结构）
-  - 普通实墙（`portal_to = -1`）：整面墙使用 `texture_middle`（或无纹理时的纯色材质）
-  - Portal 墙壁（`portal_to >= 0`，通道/门洞）：只在高于/低于相邻扇区高度的区域贴 `texture_upper` / `texture_lower`，通道部分留空
-  - Phase 4 暂用纯色材质代替纹理（`texture_upper/middle/lower` 只存路径字符串，但不加载图片），颜色根据路径后缀区分：`*brick*` = 棕色，`*metal*` = 灰色，`*stone*` = 青灰色
-
-- [ ] **4.1.3** 墙壁碰撞体
-  - 实墙（`portal_to = -1`）：创建 `StaticBody3D` 子节点 + `CollisionShape3D`（薄盒子形状，覆盖整面墙）
-  - Portal 墙壁：不生成碰撞体（玩家可以穿过），或生成部分碰撞体（只挡上下段，中间通道开放）
-
----
-
-### 4.2 地板与天花板生成（`LevelBuilder._build_floor_ceiling()`）
-
-- [ ] **4.2.1** 地板生成
-  - 用扇区墙的顶点计算出"包围多边形"，用 `CSGPolygon3D` 或 `ArrayMesh` 生成地板面
-  - 简化方案（Phase 4）：用墙顶点列表的 AABB（包围盒）放一个 `CSGBox3D`，厚度 0.2m，位置在 `floor_height - 0.1`
-  - 材质：纯色 `Color(0.3, 0.28, 0.25)`（深灰棕）
-
-- [ ] **4.2.2** 天花板生成
-  - 同地板逻辑，`CSGBox3D` 放在 `ceiling_height + 0.1`，厚度 0.2m
-  - 材质：纯色 `Color(0.35, 0.33, 0.3)`（中灰）
-  - 天花板碰撞体（`use_collision = true`，防止玩家跳穿）
-
----
-
-### 4.3 扇区构建（`LevelBuilder._build_sector()` 完整实现）
-
-把所有子步骤串起来，为每个 Sector 生成一套完整的 3D 几何体。
-
-- [ ] **4.3.1** 扇区构建主流程
-  - 遍历 `sector.walls`：
-    1. 为每面墙调用 `_build_wall()` 生成墙壁面片
-    2. 如果墙是 Portal，记录相邻扇区引用（供后续可见性剔除使用，Phase 4 先记录不剔除）
-  - 调用 `_build_floor_ceiling()` 生成地板和天花板
-  - 根据 `sector.light_level`（0-255）设置扇区内的环境光强度：在扇区中心放 `OmniLight3D`，`light_energy = light_level / 255.0 * 1.5`
-
-- [ ] **4.3.2** 扇区包围盒预计算
-  - 遍历 `sector.walls` 的所有顶点（start + end），计算 AABB
-  - 用于快速判断"哪个 Target/Enemy 在哪个扇区"、后续可见性剔除等
-  - 存储在 `LevelBuilder` 的临时字典中：`_sector_bounds: Dictionary = {sector_index: AABB}`
-
-- [ ] **4.3.3** 扇区根节点
-  - 每个扇区生成一个 `Node3D` 作为容器（命名如 `Sector_0`、`Sector_1`），挂在 `LevelBuilder` 下
-  - 扇区的墙壁/地板/天花板/灯光都挂在这个容器下
-  - 方便调试——在场景树中可以直接看到每个扇区的子结构
-
----
-
-### 4.4 Thing 生成（`LevelBuilder._place_thing()` 实现）
-
-从 `ThingDef` 数据生成实际的游戏对象。
-
-- [ ] **4.4.1** PLAYER_START 处理
-  - 不直接生成对象，而是记录 spawn 位置 + 角度
-  - `LevelBuilder` 加一个属性：`var player_spawn: Transform3D`
-  - `main.gd` 在关卡加载完后读取 `player_spawn`，把 Player 传送过去
-  - 如果关卡没有 PLAYER_START → 警告并默认放到 `(0, 0, 0)`
-
-- [ ] **4.4.2** ENEMY 生成
-  - 根据 `thing.subtype` 字符串加载对应的 EnemyData（如 `"imp"` → `res://assets/enemies/imp.tres`）
-  - 根据 `thing.subtype` 选择 Enemy 子类（`"imp"` → `Imp`，`"demon_soldier"` → `DemonSoldier`）
-  - 调用 `EnemyManager.spawn_enemy()` 生成敌人，传入位置和角度
-  - 加载失败时打印警告但不崩溃
-
-- [ ] **4.4.3** PICKUP 生成（占位）
-  - Phase 4 暂不实现完整拾取系统
-  - 生成一个彩色发光小方块（`CSGBox3D` + emissive material）放在 Thing 位置
-  - 颜色按 subtype 区分：`"health_bonus"` = 蓝色，`"armor_bonus"` = 绿色，`"weapon"` = 黄色
-  - 为 Phase 6 拾取系统预留接口（`_spawn_pickup(thing: ThingDef)` 方法）
-
-- [ ] **4.4.4** DECORATION 生成（占位）
-  - 生成纯视觉占位物——如柱子、火把、残骸的简单 CSG 组合
-  - `"pillar"` = 细长立方体，`"torch"` = 小立方体 + 发光材质，`"debris"` = 随机堆叠小方块
-  - 这些节点没有碰撞，纯装饰
-
----
-
-### 4.5 关卡文件创建
-
-在 Godot 编辑器中创建第一个正式的 `.tres` 关卡数据文件，手动定义与当前硬编码测试房间相同的数据。
-
-- [ ] **4.5.1** 创建 `test_room.tres`
-  - 路径：`assets/levels/test_room.tres`
-  - 复制当前硬编码房间的尺寸：12×12×4m，四面墙，中央柱子
-  - 定义 1 个 Sector：
-    - `floor_height = 0.0`, `ceiling_height = 4.0`
-    - `light_level = 160`
-    - 4 面 WallDef：分别在 Z=-6, Z=+6, X=-6, X=+6
-    - 中央柱子暂时不表示（柱子不是扇区概念，而是 Thing/DECORATION）
-
-- [ ] **4.5.2** 定义 Things
-  - 1 个 `PLAYER_START`：位置 `(0, 1.6, 0)`，角度 `0`
-  - 2 个 `ENEMY`（`subtype = "imp"`）：位置 `(-4, 0, -3)` 和 `(4, 0, 3)`
-  - 1 个 `ENEMY`（`subtype = "demon_soldier"`）：位置 `(-3, 0, 3)`
-  - 2 个 `DECORATION`（`subtype = "pillar"`）：位置 `(-2, 2, 2)` 和 `(3, 2, -2)`（替掉原来的靶子位置）
-  - 1 个 `DECORATION`（`subtype = "pillar"`）：位置 `(0, 2, 0)`（中央柱子）
-
-- [ ] **4.5.3** 设置关卡元数据
-  - `metadata.name = "测试房间"`
-  - `metadata.author = "Developer"`
-  - `metadata.bgm = ""`（暂无）
-
----
-
-### 4.6 第一人称玩家的出生点系统
-
-让 Player 在关卡加载时自动出现在 `PLAYER_START` 位置。
-
-- [ ] **4.6.1** `main.gd` 中实现玩家传送
-  - 在 `_ready()` 中：构建 LevelData → 查找 `player_spawn` → 移动 Player
-  - `_player.global_position = spawn.position`
-  - `_player.rotation.y = deg_to_rad(spawn.angle)`（重置 Y 轴朝向）
-  - Camera 的 pitch 重置为 0（平视前方）
-
----
-
-### 4.7 main.gd 重构
-
-移除硬编码的 `_build_test_room()`，改为通用的关卡加载流程。
-
-- [ ] **4.7.1** 创建 `_load_level(level_path: String)` 方法
-  - `var level_data := load(level_path) as LevelData`
-  - `var builder := LevelBuilder.new()`
-  - `builder.enemy_manager = _enemy_manager`（注入 EnemyManager 引用）
-  - `builder.level_data = level_data`
-  - `_level_root.add_child(builder)`
-  - `builder.build()` → 生成所有几何体 + Things
-  - 返回值：builder（供后续卸载使用）
-
-- [ ] **4.7.2** 移除 `_build_test_room()` 及相关辅助函数
-  - 删除 `_build_test_room()`、`_floor()`、`_ceiling()`、`_wall()` 方法
-  - 保留 `_csg_box()` 和 `_make_color_material()`（LevelBuilder 可能会用）
-  - `_spawn_target()` 也可以移除（目标靶子由 DECORATION 替代）
-
-- [ ] **4.7.3** 保留测试房间作为回退
-  - 如果 `test_room.tres` 不存在或加载失败 → 打印错误并保持旧 `_build_test_room()` 作为 fallback
-  - 实现方式：try-catch（`if level_data == null` → fallback）
-
-- [ ] **4.7.4** 关卡卸载流程（`_unload_level()`）
-  - 清除 `_level_root` 下的所有子节点
-  - 清除 EnemyManager 的 active_enemies 列表
-  - 为 Phase 6 关卡切换做准备
-
----
-
-### 4.8 反向序列化（`LevelBuilder.serialize()` 实现）
-
-把已构建的 3D 场景逆向提取回 LevelData——地图编辑器的核心功能。
-
-- [ ] **4.8.1** 扇区提取
-  - 遍历 `LevelBuilder` 下所有 `Sector_N` 容器节点
-  - 从 `Sector_N` 的子节点中提取：
-    - 地板：从其 `CSGBox3D` 的 position.y + size.y/2 推算 `floor_height`
-    - 天花板：从其 `CSGBox3D` 的 position.y - size.y/2 推算 `ceiling_height`
-    - 墙壁：从 `MeshInstance3D` 或 `CSG` 节点提取顶点位置，重建 `WallDef` 数组
-    - 灯光：从 `OmniLight3D` 的 `light_energy` 反推 `light_level`
-
-- [ ] **4.8.2** 实体提取
-  - 遍历场景中的 Enemy 节点 → 提取为 `ThingDef(type=ENEMY, subtype=enemy_data.enemy_name)`
-  - 遍历 Pickup 装饰占位 → 提取为 `ThingDef(type=PICKUP, subtype=...)`
-  - 遍历 Decoration 占位 → 提取为 `ThingDef(type=DECORATION, subtype=...)`
-  - 从上次的 `player_spawn` 属性提取为 `ThingDef(type=PLAYER_START)`
-
-- [ ] **4.8.3** 元数据保留
-  - 序列化时保留原始 `metadata`（名称、作者、BGM）
-  - 如果原始 LevelData 不存在，创建新的 metadata（name = "未命名关卡"）
-
----
-
-### 4.9 集成与验证
-
-- [ ] **4.9.1** 创建 `test_room.tres` 并在编辑器中验证数据正确
-  - 打开 `.tres` 文件，确认 Sector 数组非空，WallDef 坐标正确
-
-- [ ] **4.9.2** 运行游戏，验证关卡加载
-  - 房间外观与之前的硬编码版本一致（地板、天花板、四面墙、中央柱子）
-  - 玩家出生在正确位置
-  - 3 个敌人生成在正确位置，行为正常（发现玩家 → 追击 → 攻击）
-  - 装饰物（柱子）正确放置
-
-- [ ] **4.9.3** 端到端测试清单
-  - 加载 `test_room.tres` → 无报错
-  - 玩家出生在 PLAYER_START 位置，视角朝向定义的角度
-  - 4 面墙壁可见且有碰撞（玩家撞墙不会穿模）
-  - 地板和天花板可见
-  - 2 Imp + 1 Soldier 生成在指定位置
-  - 射击验证：子弹仍能命中敌人和墙壁
-  - 击杀所有敌人 → EnemyManager 清场检测通过
-  - `serialize()` 单步测试：构建场景后调 serialize → 得到与原 LevelData 结构一致的 LevelData
-  - 旧硬编码房间 fallback 测试：删除/改名 `test_room.tres` → 游戏回退到旧硬编码房间
-
-- [ ] **4.9.4** 性能基准
-  - 关卡加载时间（从 `build()` 开始到所有几何体生成完毕）< 100ms
-  - 12×12m 房间 + 3 敌人 + 5 装饰物保持在 60 FPS
-
----
-
-### Phase 4 新增文件清单
-
-```
-assets/
-  levels/
-    test_room.tres        # 第一张正式关卡数据（替换硬编码房间）
-scripts/
-  level/
-    sector_geometry.gd     # 新增：扇区几何体生成工具（墙壁 mesh、地板/天花板、碰撞体）
-```
-
-### Phase 4 修改文件清单
-
-```
-scripts/level/level_builder.gd   # 从骨架变为完整实现（_build_sector/_build_wall/_place_thing/serialize）
-scripts/main.gd                   # 移除硬编码房间，改为 load_level() 流程
-scenes/main.tscn                  # 可能不需要 EnemyManager 手动挂载（由 level builder 创建）
-```
-
----
-
-## 第五阶段：Godot编辑器关卡搭建 + 导出管线（Phase 5）
-
-> **核心思路**：不写内置编辑器，直接用 Godot 3D 编辑器搭关卡（CSG 几何体 + 实体标记节点），运行游戏时 `LevelBuilder.serialize()` 扫描场景树生成 `.tres` 关卡文件。
+> **实际实现方式**：删除 `LevelData`/`LevelBuilder`/`GameModeManager` 等数据驱动代码，改为更务实的"编辑器所见即所得"方案。
 >
-> Godot 编辑器自带专业级功能（3D 正交/透视视图、选择/移动/旋转/缩放、吸附网格、场景树面板、Inspector 属性编辑、撤销/重做），比手写编辑器强得多。本阶段只做"识别命名约定 + 导出 `.tres`"。
+> **不在此阶段**：关卡导出/保存工具（Phase 5）、纹理贴图（Phase 7）。
+
+---
+
+### 4.1 场景文件化 ✅
+
+将原来纯代码创建的 Player 和敌人改为 `.tscn` 场景文件，可在编辑器中独立编辑和预览。
+
+- [x] **4.1.1** Player 场景化
+  - 创建 `scenes/player/player.tscn`：CharacterBody3D + Camera3D + CollisionShape3D + WeaponHolder/WeaponManager
+  - `main.tscn` 中通过 `instance=ExtResource("player.tscn")` 引用
+  - Player 节点的 `Damageable` 子节点由 `player_controller.gd._ready()` 自动创建（100HP, 100护甲）
+
+- [x] **4.1.2** 敌人场景化
+  - 创建 `scenes/enemies/imp.tscn` 和 `scenes/enemies/demon_soldier.tscn`
+  - 每个 .tscn 引用对应脚本（`imp.gd` / `demon_soldier.gd`）+ 配置数据（`.tres`）
+  - 编辑器中可直接拖入场景放置敌人
+
+---
+
+### 4.2 编辑器关卡搭建 ✅
+
+直接在 Godot 3D 编辑器中用 CSG 节点搭建关卡几何体。
+
+- [x] **4.2.1** CSG 几何体直接放置
+  - 在 `main.tscn` 的 `Level` 节点下直接放置 `CSGBox3D` 作为地板/墙壁/柱子
+  - 当前测试关卡：40×40m 大地板 + 手动放置的墙壁和柱子
+  - 编辑器中可实时看到关卡外观，无需运行游戏
+
+- [x] **4.2.2** 碰撞自动启用
+  - `main.gd._enable_csg_collision(node)` 递归遍历 `Level` 下所有子节点
+  - 对 `CSGBox3D`/`CSGPolygon3D`/`CSGCombiner3D` 自动设置 `use_collision = true`
+  - 编辑器搭建时保留 `use_collision = false`（方便编辑），运行时自动开启
+
+- [x] **4.2.3** PlayerStart 出生点
+  - 在 `Level` 下放置一个 `Node3D` 节点，命名为 `PlayerStart`
+  - `main.gd._load_level()` 遍历找名为 `PlayerStart` 的子节点，读取其 `global_position` 和 `global_rotation`
+  - 传送玩家到该位置
+
+- [x] **4.2.4** 灯光处理
+  - 优先使用编辑器中已放置的灯光节点（`DirectionalLight3D` / `OmniLight3D`）
+  - 如果没有任何灯光 → `main.gd._add_global_lights()` 自动创建默认方向光 + 补光
+  - 不做 `light_level` 映射
+
+---
+
+### 4.3 关卡模板 ✅
+
+- [x] **4.3.1** `scenes/level_template.tscn` 创建
+  - 半透明参考地板（`CSGBox3D` 20×0.1×20m，标记 Y=0 地面高度）+ 编辑辅助灯光
+  - 用于新建关卡时快速开始
+
+---
+
+### Phase 4 不再存在的文件
+
+```
+scripts/level/level_data.gd       ❌ 已删除（数据结构层不再使用）
+scripts/level/level_builder.gd    ❌ 已删除（建造器不再使用）
+scripts/editor/game_mode.gd       ❌ 已删除（PLAY/EDIT 模式切换不再使用）
+```
+
+---
+
+## 第五阶段：关卡导出工具 + 数据结构重建（Phase 5）
+
+> **目标**：重建 `LevelData` 数据结构 + 编写 `LevelExporter` 工具，将 Godot 编辑器搭建的 CSG 关卡扫描导出为 `.tres` 关卡文件。为后续的关卡分享、程序化生成、多关卡管理打基础。
 >
-> **不在此阶段**：纹理/材质编辑（Phase 7）、多关卡菜单（Phase 6）。
+> **背景**：Phase 4 删除了 `LevelData`/`LevelBuilder` 改用编辑器直接搭关卡。现在需要把"编辑器场景"→"数据文件"这条管线补回来，否则每张关卡都绑定在 .tscn 里无法独立管理。
+>
+> **不在此阶段**：编辑器 UI 面板（Phase 8）、纹理导出。
 
-### 关卡搭建命名约定
+---
 
-在 Godot 编辑器中，关卡几何体和实体通过**节点名称前缀**识别：
+### 5.1 LevelData 数据结构重建（`scripts/level/level_data.gd`）
 
-| 节点名前缀 | 对应数据 | 说明 |
-|-----------|---------|------|
-| `Wall_` | Sector.walls（实墙） | CSGBox3D，薄长方体。必须有碰撞 |
-| `Portal_` | Sector.walls（门洞） | CSGBox3D，位置=开口位置。无碰撞 |
-| `Floor_` | Sector.floor_height | CSGBox3D，Y 位置 = 地板高度 |
-| `Ceiling_` | Sector.ceiling_height | CSGBox3D，Y 位置 = 天花板高度 |
-| `Enemy_xxx` | ThingDef(ENEMY) | Node3D（占位标记），后缀=子类型（imp/demon_soldier） |
-| `PlayerStart` | ThingDef(PLAYER_START) | Node3D（占位标记），关卡必须至少有一个 |
-| `Pickup_xxx` | ThingDef(PICKUP) | Node3D（占位标记） |
-| `Deco_xxx` | ThingDef(DECORATION) | Node3D（占位标记） |
+从零重建，比 Phase 1 版本更精简实用。
+
+- [ ] **5.1.1** 创建 `LevelData` Resource 类
+  - `class_name LevelData extends Resource`
+  - `@export var level_name: String = "未命名"`
+  - `@export var author: String = ""`
+  - 数据结构：`sectors: Array[Sector]`、`things: Array[ThingDef]`（同 DOOM WAD 设计，但暂不做复杂扇区）
+
+- [ ] **5.1.2** `Sector` 内部类（简化为 AABB 扇区）
+  - `floor_height: float`、`ceiling_height: float`
+  - `bounds: AABB` — 扇区包围盒（从 CSG 几何体自动计算）
+  - `light_level: int`（0-255）
+  - `walls: Array[WallDef]`
+
+- [ ] **5.1.3** `WallDef` 内部类
+  - `start: Vector2`、`end: Vector2`（XZ 平面 2D 线段）
+  - `portal_to: int`（-1=实墙, >=0=通向其他扇区）
+
+- [ ] **5.1.4** `ThingDef` 内部类
+  - `type: enum { PLAYER_START, ENEMY, PICKUP, DECORATION }`
+  - `position: Vector3`、`angle: float`、`subtype: StringName`
+
+---
+
+### 5.2 LevelExporter 导出工具（`scripts/editor/level_exporter.gd`）
+
+扫描 `Level` 节点树，按命名约定识别几何体和实体，生成 `LevelData`。
+
+- [ ] **5.2.1** 创建 `LevelExporter` 类
+  - `static func export_from(node: Node3D) -> LevelData`
+  - 遍历 `node` 的所有子节点（递归），按名称前缀分类
+
+- [ ] **5.2.2** CSG 几何体识别
+  - `Wall_*` → CSGBox3D → 提取为 `WallDef`（从 position + size + rotation 反算 2D 线段端点）
+  - `Floor_*` / `Ceiling_*` → CSGBox3D → 提取 Y 位置作为 `floor_height` / `ceiling_height`
+  - 没有前缀的 CSG 节点 → 忽略或归入最近扇区
+
+- [ ] **5.2.3** 实体标记识别
+  - `PlayerStart` → `ThingDef(PLAYER_START)`，读取 `global_position` + `global_rotation.y`
+  - `Enemy_imp` / `Enemy_demon_soldier` → `ThingDef(ENEMY, subtype)`
+  - `Pickup_health` / `Pickup_armor` / `Pickup_ammo` → `ThingDef(PICKUP, subtype)`
+  - `Deco_*` → `ThingDef(DECORATION, subtype)`
+
+- [ ] **5.2.4** 导出到 .tres 文件
+  - `static func save_to_file(level_data: LevelData, path: String) -> void`
+  - 使用 `ResourceSaver.save(level_data, path)`
+  - 默认导出到 `assets/levels/` 目录
+
+---
+
+### 5.3 集成到 main.gd
+
+- [ ] **5.3.1** 导出调用入口
+  - 在 `main.gd` 中检测按键（如 Ctrl+E）触发导出
+  - 调用 `LevelExporter.export_from(_level_root)` → `ResourceSaver.save()`
+  - 导出后打印文件路径到控制台
+
+- [ ] **5.3.2** 加载 .tres 关卡（替换编辑器关卡）
+  - 修改 `_load_level()`：优先尝试加载 `res://assets/levels/test_room.tres`
+  - 如果存在 → 用 `LevelBuilder.build()` 重建场景（Phase 5 不做，留到 Phase 8 多关卡系统）
+  - 如果不存在 → 使用当前编辑器 CSG 关卡（现有逻辑）
+
+---
+
+### 5.4 修复 level_template.tscn
+
+- [ ] **5.4.1** 移除对 `level_exporter.gd` 的引用
+  - `level_template.tscn` 第 3 行引用了不存在的 `res://scripts/editor/level_exporter.gd`
+  - 删除该 `ext_resource` 行——模板场景不需要脚本
+
+- [ ] **5.4.2** 验证模板场景可用
+  - 在编辑器中新建场景 → 继承 `level_template.tscn` → 应无报错
 
 **工作流**：
 ```
@@ -1125,30 +1021,27 @@ scripts/level/level_data.gd  # 如果 WallDef 需要从 CSGBox3D 提取的新字
 | Phase 1 | 原型搭建 | 13 | 13 | 100% |
 | Phase 2 | 武器与射击 | 24 | 24 | 100% |
 | Phase 3 | 敌人系统 | 31 | 31 | 100% |
-| Phase 4 | 关卡管线 | 27 | 27 | 100% |
-| Phase 5 | Godot编辑器+导出管线 | 14 | 0 | 0% |
-| Phase 6 | UI/HUD+菜单+拾取 | 17 | 0 | 0% |
+| Phase 4 | 关卡管线 | 7 | 7 | 100% |
+| Phase 5 | 关卡导出+数据重建 | 12 | 0 | 0% |
+| Phase 6 | UI/HUD+菜单+拾取 | 17 | 17 | 100% |
 | Phase 7 | 资源与音频 | 16 | 0 | 0% |
 | Phase 8 | 打磨与发布 | 14 | 0 | 0% |
-| **总计** | | **156** | **95** | **61%** |
+| **总计** | | **134** | **92** | **69%** |
 
 ---
 
 ## 下一步建议
 
-Phase 4 已全部完成。当前进度：**155 个任务中完成 95 个（61%）**。
+Phase 4 + Phase 6 已全部完成。当前进度：**134 个任务中完成 92 个（69%）**。
 
-下一阶段：**Phase 5（Godot编辑器关卡搭建 + 导出管线）**——14 个原子化任务，分 5 个子模块：
+下一阶段：**Phase 5（关卡导出工具 + 数据结构重建）**——12 个原子化任务：
 
-1. **LevelExporter 导出工具** — 扫描 Godot 编辑器搭建的 CSG 节点 → 生成 LevelData
-2. **导出工作流集成** — main.gd 自动检测编辑器几何体 → 导出 `.tres` → 加载
-3. **关卡模板场景** — 预配置灯光 + 参考平面的 level_template.tscn
-4. **验证测试** — 简单房间、多扇区、导出→游玩完整流程
-5. **编辑器增强（可选）** — Inspector 插件、缩略图
+1. **5.1 LevelData 重建** — 从零重建数据结构（Sector/WallDef/ThingDef）
+2. **5.2 LevelExporter 导出工具** — 扫描 CSG 节点树 → 生成 LevelData → 保存 .tres
+3. **5.3 main.gd 集成** — Ctrl+E 触发导出
+4. **5.4 修复模板** — level_template.tscn 已修复（移除损坏引用）
 
-**核心理念变化**：不写内置编辑器，直接用 Godot 3D 编辑器搭关卡，通过命名约定（`Wall_*`、`Enemy_*` 等）识别几何体和实体，`serialize()` 扫描导出 `.tres`。
-
-已实现的基础设施（可直接被 Phase 5 复用）：
+**当前关卡搭建方式**：在 Godot 编辑器中直接放 CSG 节点 + 拖入敌人 .tscn，`main.gd` 启动时自动开碰撞 + 找 PlayerStart。Phase 5 补上"导出为 .tres 文件"这条管线。
 - `LevelBuilder.build()` 完整管线：数据 → 3D 场景
 - `LevelBuilder.serialize()` 反向管线：3D 场景 → 数据
 - Godot 编辑器自带：3D 正交/透视视图、选择/移动/旋转/缩放、网格吸附、撤销/重做
