@@ -1,9 +1,43 @@
 [gd_resource type="Resource" script_class="LevelData" format=3]
 
-[ext_resource type="Script" path="res://scripts/level/level_data.gd" id="1_t7a3h"]
+[ext_resource type="Script" path="res://scripts/level/level_data.gd" id="1_in4iv"]
+[ext_resource type="Script" path="res://scripts/level/data/sector.gd" id="2_f44do"]
+[ext_resource type="Script" path="res://scripts/level/data/wall_def.gd" id="3_jt0w7"]
+[ext_resource type="Script" path="res://scripts/level/data/thing_def.gd" id="4_u0g7o"]
+
+[sub_resource type="Resource" id="Resource_jkl30"]
+script = ExtResource("3_jt0w7")
+start = Vector2(-4, -11.436946)
+end = Vector2(4, -11.436946)
+
+[sub_resource type="Resource" id="Resource_ki34h"]
+script = ExtResource("3_jt0w7")
+start = Vector2(5.814522, 7.4910097)
+end = Vector2(13.814522, 7.4910097)
+
+[sub_resource type="Resource" id="Resource_e4kpn"]
+script = ExtResource("3_jt0w7")
+start = Vector2(-4.8526926, -3.366102)
+end = Vector2(-5.020093, 4.632147)
+
+[sub_resource type="Resource" id="Resource_tg7xm"]
+script = ExtResource("3_jt0w7")
+start = Vector2(19.283981, -3.999685)
+end = Vector2(19.183594, 3.999685)
+
+[sub_resource type="Resource" id="Resource_y60vh"]
+script = ExtResource("2_f44do")
+floor_height = 0.1
+walls = Array[ExtResource("3_jt0w7")]([SubResource("Resource_jkl30"), SubResource("Resource_ki34h"), SubResource("Resource_e4kpn"), SubResource("Resource_tg7xm")])
+
+[sub_resource type="Resource" id="Resource_uuxrc"]
+script = ExtResource("4_u0g7o")
+position = Vector3(0, 1.6, 3)
 
 [resource]
-script = ExtResource("1_t7a3h")
+script = ExtResource("1_in4iv")
+sectors = [SubResource("Resource_y60vh")]
+things = [SubResource("Resource_uuxrc")]
 metadata = {
 &"author": "",
 &"bgm": "",

@@ -21,6 +21,10 @@
 
 class_name LevelExporter extends RefCounted
 
+const SectorClass = preload("res://scripts/level/data/sector.gd")
+const WallDefClass = preload("res://scripts/level/data/wall_def.gd")
+const ThingDefClass = preload("res://scripts/level/data/thing_def.gd")
+
 
 # ==============================================================================
 # export_from_scene(scene_root) — 主入口：扫描场景树 → 生成 LevelData
@@ -59,7 +63,7 @@ static func export_from_scene(scene_root: Node3D, save_path: String = "") -> Lev
 
 	# === 第二步：遍历每个扇区组，提取墙壁和尺寸信息 ===
 	for group in sector_groups:
-		var sector := LevelData.Sector.new()
+		var sector := SectorClass.new()
 		sector.light_level = 160  # 默认亮度
 
 		# 收集该组下所有 Wall_ / Portal_ / Floor_ / Ceiling_ 节点
@@ -77,7 +81,7 @@ static func export_from_scene(scene_root: Node3D, save_path: String = "") -> Lev
 	# === 第四步：输出统计信息 ===
 	print("[LevelExporter] 导出完成：%d 扇区, %d 实体" % [data.sectors.size(), data.things.size()])
 	for i in range(data.sectors.size()):
-		var s: LevelData.Sector = data.sectors[i]
+		var s: SectorClass = data.sectors[i]
 		print("[LevelExporter]   扇区 %d：%d 面墙, 地板 %.1f, 天花板 %.1f, 亮度 %d" % [
 			i, s.walls.size(), s.floor_height, s.ceiling_height, s.light_level
 		])
@@ -96,7 +100,7 @@ static func export_from_scene(scene_root: Node3D, save_path: String = "") -> Lev
 # ==============================================================================
 # _scan_group(parent, sector) — 扫描一个节点组，提取墙壁/地板/天花板信息
 # ==============================================================================
-static func _scan_group(parent: Node, sector: LevelData.Sector) -> void:
+static func _scan_group(parent: Node, sector: SectorClass) -> void:
 	for child in parent.get_children():
 		var name: String = child.name
 
@@ -144,7 +148,7 @@ static func _scan_group(parent: Node, sector: LevelData.Sector) -> void:
 #   1. 取盒子局部坐标下的左右端点：(-size.x/2, 0, 0) 和 (+size.x/2, 0, 0)
 #   2. 用盒子的全局变换 matrix 转换到世界坐标
 #   3. 提取 XZ 分量作为 WallDef 的 start 和 end
-static func _add_wall_from_box(box: CSGBox3D, sector: LevelData.Sector, portal_to: int) -> void:
+static func _add_wall_from_box(box: CSGBox3D, sector: SectorClass, portal_to: int) -> void:
 	# 获取全局变换矩阵
 	var t := box.global_transform
 
@@ -158,7 +162,7 @@ static func _add_wall_from_box(box: CSGBox3D, sector: LevelData.Sector, portal_t
 	var world_end := t * local_end
 
 	# 创建墙壁定义（2D 线段）
-	var wall := LevelData.WallDef.new()
+	var wall := WallDefClass.new()
 	wall.start = Vector2(world_start.x, world_start.z)
 	wall.end = Vector2(world_end.x, world_end.z)
 	wall.portal_to = portal_to
@@ -189,7 +193,7 @@ static func _scan_entities_recursive(node: Node, data: LevelData) -> void:
 
 		# --- 玩家出生点 ---
 		if name == "PlayerStart":
-			var thing := _make_thing(LevelData.ThingDef.Type.PLAYER_START, &"", child_3d)
+			var thing := _make_thing(ThingDefClass.Type.PLAYER_START, &"", child_3d)
 			data.things.append(thing)
 			print("[LevelExporter]   找到出生点: (%.1f, %.1f, %.1f)" % [
 				thing.position.x, thing.position.y, thing.position.z
@@ -198,7 +202,7 @@ static func _scan_entities_recursive(node: Node, data: LevelData) -> void:
 		# --- 敌人：Enemy_子类型 ---
 		elif name.begins_with("Enemy_"):
 			var subtype: String = name.substr(6)  # 去掉 "Enemy_" 前缀
-			var thing := _make_thing(LevelData.ThingDef.Type.ENEMY, subtype, child_3d)
+			var thing := _make_thing(ThingDefClass.Type.ENEMY, subtype, child_3d)
 			data.things.append(thing)
 			print("[LevelExporter]   找到敌人 %s: (%.1f, %.1f, %.1f)" % [
 				subtype, thing.position.x, thing.position.y, thing.position.z
@@ -207,13 +211,13 @@ static func _scan_entities_recursive(node: Node, data: LevelData) -> void:
 		# --- 拾取物：Pickup_子类型 ---
 		elif name.begins_with("Pickup_"):
 			var subtype: String = name.substr(7)
-			var thing := _make_thing(LevelData.ThingDef.Type.PICKUP, subtype, child_3d)
+			var thing := _make_thing(ThingDefClass.Type.PICKUP, subtype, child_3d)
 			data.things.append(thing)
 
 		# --- 装饰物：Deco_子类型 ---
 		elif name.begins_with("Deco_"):
 			var subtype: String = name.substr(5)
-			var thing := _make_thing(LevelData.ThingDef.Type.DECORATION, subtype, child_3d)
+			var thing := _make_thing(ThingDefClass.Type.DECORATION, subtype, child_3d)
 			data.things.append(thing)
 
 		# 递归子节点
@@ -224,9 +228,9 @@ static func _scan_entities_recursive(node: Node, data: LevelData) -> void:
 # ==============================================================================
 # _make_thing(type, subtype, node) — 从标记节点创建 ThingDef
 # ==============================================================================
-static func _make_thing(type: int, subtype: StringName, node: Node3D) -> LevelData.ThingDef:
-	var thing := LevelData.ThingDef.new()
-	thing.type = type as LevelData.ThingDef.Type
+static func _make_thing(type: int, subtype: StringName, node: Node3D) -> ThingDef:
+	var thing := ThingDefClass.new()
+	thing.type = type as ThingDef.Type
 	thing.subtype = subtype
 	thing.position = node.global_position
 	thing.angle = node.global_rotation.y   # 取绕 Y 轴的旋转角度

@@ -10,6 +10,9 @@ class_name LevelBuilder extends Node3D
 # 预加载敌人相关类
 const ImpClass = preload("res://scripts/enemy/imp.gd")
 const SoldierClass = preload("res://scripts/enemy/demon_soldier.gd")
+const SectorClass = preload("res://scripts/level/data/sector.gd")
+const WallDefClass = preload("res://scripts/level/data/wall_def.gd")
+const ThingDefClass = preload("res://scripts/level/data/thing_def.gd")
 
 
 # ==============================================================================
@@ -53,7 +56,7 @@ func build() -> void:
 # ==============================================================================
 # _build_sector(sector, index) — 建造一个扇区
 # ==============================================================================
-func _build_sector(sector: LevelData.Sector, index: int) -> void:
+func _build_sector(sector: SectorClass, index: int) -> void:
 	# 扇区容器节点
 	var container := Node3D.new()
 	container.name = "Sector_%d" % index
@@ -90,7 +93,7 @@ func _calc_aabb(walls: Array, floor_h: float, ceiling_h: float) -> AABB:
 	var max_z := -INF
 
 	for wall in walls:
-		var w: LevelData.WallDef = wall
+		var w: WallDefClass = wall
 		min_x = min(min_x, w.start.x, w.end.x)
 		min_z = min(min_z, w.start.y, w.end.y)  # WallDef 中 Vector2.y = Z轴
 		max_x = max(max_x, w.start.x, w.end.x)
@@ -108,7 +111,7 @@ func _calc_aabb(walls: Array, floor_h: float, ceiling_h: float) -> AABB:
 # ==============================================================================
 # _build_floor(sector, bounds, parent) — 生成地板
 # ==============================================================================
-func _build_floor(sector: LevelData.Sector, bounds: AABB, parent: Node3D) -> void:
+func _build_floor(sector: SectorClass, bounds: AABB, parent: Node3D) -> void:
 	var thickness := 0.2
 	var box := CSGBox3D.new()
 	box.name = "Floor"
@@ -122,7 +125,7 @@ func _build_floor(sector: LevelData.Sector, bounds: AABB, parent: Node3D) -> voi
 # ==============================================================================
 # _build_ceiling(sector, bounds, parent) — 生成天花板
 # ==============================================================================
-func _build_ceiling(sector: LevelData.Sector, bounds: AABB, parent: Node3D) -> void:
+func _build_ceiling(sector: SectorClass, bounds: AABB, parent: Node3D) -> void:
 	var thickness := 0.2
 	var box := CSGBox3D.new()
 	box.name = "Ceiling"
@@ -140,16 +143,16 @@ func _build_ceiling(sector: LevelData.Sector, bounds: AABB, parent: Node3D) -> v
 #
 # WallDef 坐标：Vector2(start.x, start.y) 中，x=X轴位置，y=Z轴位置
 # 墙壁从 floor_h 延伸到 ceiling_h
-func _build_wall(wall: LevelData.WallDef, floor_h: float, ceiling_h: float, parent: Node3D) -> void:
+func _build_wall(wall: WallDefClass, floor_h: float, ceiling_h: float, parent: Node3D) -> void:
 	var thickness := 0.3  # 墙壁厚度
 
 	# 线段的中点（XZ 平面）
-	var mid_x := (wall.start.x + wall.end.x) / 2.0
-	var mid_z := (wall.start.y + wall.end.y) / 2.0  # Vector2.y = Z轴
+	var mid_x: float = (wall.start.x + wall.end.x) / 2.0
+	var mid_z: float = (wall.start.y + wall.end.y) / 2.0  # Vector2.y = Z轴
 
 	# 线段长度和方向
-	var dx := wall.end.x - wall.start.x
-	var dz := wall.end.y - wall.start.y  # Vector2.y = Z轴
+	var dx: float = wall.end.x - wall.start.x
+	var dz: float = wall.end.y - wall.start.y  # Vector2.y = Z轴
 	var length := sqrt(dx * dx + dz * dz)
 
 	if length < 0.01:
@@ -182,7 +185,7 @@ func _build_wall(wall: LevelData.WallDef, floor_h: float, ceiling_h: float, pare
 # ==============================================================================
 # _build_light(sector, bounds, parent) — 根据 light_level 建灯光
 # ==============================================================================
-func _build_light(sector: LevelData.Sector, bounds: AABB, parent: Node3D) -> void:
+func _build_light(sector: SectorClass, bounds: AABB, parent: Node3D) -> void:
 	# 在扇区中心上方放置点光源
 	var light := OmniLight3D.new()
 	light.name = "SectorLight"
@@ -195,23 +198,23 @@ func _build_light(sector: LevelData.Sector, bounds: AABB, parent: Node3D) -> voi
 # ==============================================================================
 # _place_thing(thing) — 放置实体
 # ==============================================================================
-func _place_thing(thing: LevelData.ThingDef) -> void:
+func _place_thing(thing: ThingDefClass) -> void:
 	match thing.type:
-		LevelData.ThingDef.Type.PLAYER_START:
+		ThingDef.Type.PLAYER_START:
 			_place_player_start(thing)
-		LevelData.ThingDef.Type.ENEMY:
+		ThingDef.Type.ENEMY:
 			_place_enemy(thing)
-		LevelData.ThingDef.Type.PICKUP:
+		ThingDef.Type.PICKUP:
 			_place_pickup(thing)
-		LevelData.ThingDef.Type.DECORATION:
+		ThingDef.Type.DECORATION:
 			_place_decoration(thing)
 
 
 # ==============================================================================
 # _place_player_start(thing) — 记录玩家出生点
 # ==============================================================================
-func _place_player_start(thing: LevelData.ThingDef) -> void:
-	var pos := thing.position
+func _place_player_start(thing: ThingDefClass) -> void:
+	var pos: Vector3 = thing.position
 	player_spawn = Transform3D(
 		Basis.from_euler(Vector3(0, deg_to_rad(thing.angle), 0)),
 		pos
@@ -221,7 +224,7 @@ func _place_player_start(thing: LevelData.ThingDef) -> void:
 # ==============================================================================
 # _place_enemy(thing) — 生成敌人
 # ==============================================================================
-func _place_enemy(thing: LevelData.ThingDef) -> void:
+func _place_enemy(thing: ThingDefClass) -> void:
 	if enemy_manager == null:
 		push_warning("LevelBuilder: 没有 EnemyManager 引用，跳过敌人生成")
 		return
@@ -252,7 +255,7 @@ func _place_enemy(thing: LevelData.ThingDef) -> void:
 # ==============================================================================
 # _place_pickup(thing) — 放置拾取物占位
 # ==============================================================================
-func _place_pickup(thing: LevelData.ThingDef) -> void:
+func _place_pickup(thing: ThingDefClass) -> void:
 	var color: Color
 	match thing.subtype:
 		"health_bonus":
@@ -278,7 +281,7 @@ func _place_pickup(thing: LevelData.ThingDef) -> void:
 # ==============================================================================
 # _place_decoration(thing) — 放置装饰物占位
 # ==============================================================================
-func _place_decoration(thing: LevelData.ThingDef) -> void:
+func _place_decoration(thing: ThingDefClass) -> void:
 	match thing.subtype:
 		"pillar":
 			var box := CSGBox3D.new()
@@ -343,8 +346,8 @@ static func serialize(scene_root: Node3D) -> LevelData:
 # ==============================================================================
 # _extract_sector(container) — 从场景节点提取扇区数据
 # ==============================================================================
-static func _extract_sector(container: Node) -> LevelData.Sector:
-	var sector := LevelData.Sector.new()
+static func _extract_sector(container: Node) -> Sector:
+	var sector := SectorClass.new()
 
 	var floor_h := 0.0
 	var ceiling_h := 4.0
@@ -364,7 +367,7 @@ static func _extract_sector(container: Node) -> LevelData.Sector:
 						walls.append(wall)
 		elif child is OmniLight3D:
 			var light: OmniLight3D = child
-			sector.light_level = clamp(light.light_energy / 1.5 * 255.0, 0, 255) as int
+			sector.light_level = clamp(light.light_energy / 1.5 * 255.0, 0, 255)
 
 	sector.floor_height = floor_h
 	sector.ceiling_height = ceiling_h
@@ -375,8 +378,8 @@ static func _extract_sector(container: Node) -> LevelData.Sector:
 # ==============================================================================
 # _extract_wall(box, floor_h, ceiling_h) — 从 CSGBox3D 提取 WallDef
 # ==============================================================================
-static func _extract_wall(box: CSGBox3D, _floor_h: float, _ceiling_h: float) -> LevelData.WallDef:
-	var wall := LevelData.WallDef.new()
+static func _extract_wall(box: CSGBox3D, _floor_h: float, _ceiling_h: float) -> WallDef:
+	var wall := WallDefClass.new()
 
 	# 墙壁盒子的中心在 XZ 平面上，size.x = 沿墙长度，size.z = 厚度
 	var half_length := box.size.x / 2.0

@@ -14,6 +14,9 @@ extends Node3D
 const EnemyConst = preload("res://scripts/enemy/enemy.gd")
 const ImpConst = preload("res://scripts/enemy/imp.gd")
 const DemonSoldierConst = preload("res://scripts/enemy/demon_soldier.gd")
+const SectorClass = preload("res://scripts/level/data/sector.gd")
+const WallDefClass = preload("res://scripts/level/data/wall_def.gd")
+const ThingDefClass = preload("res://scripts/level/data/thing_def.gd")
 
 
 # ==============================================================================
@@ -130,7 +133,7 @@ func _create_test_level() -> LevelData:
 	# 北墙中间开口(3m宽)通往 Sector 1
 	# 东墙中间开口(3m宽)通往 Sector 2
 	# ======================================================================
-	var s0 := LevelData.Sector.new()
+	var s0 := SectorClass.new()
 	s0.floor_height = 0.0
 	s0.ceiling_height = 4.0
 	s0.light_level = 160
@@ -155,7 +158,7 @@ func _create_test_level() -> LevelData:
 	# 范围: X:-3~3, Z:-9~-3
 	# 南墙中间开口通往 Sector 0
 	# ======================================================================
-	var s1 := LevelData.Sector.new()
+	var s1 := SectorClass.new()
 	s1.floor_height = 0.0
 	s1.ceiling_height = 3.0
 	s1.light_level = 120
@@ -174,7 +177,7 @@ func _create_test_level() -> LevelData:
 	# 范围: X:5~10, Z:-5~5
 	# 西墙中间开口通往 Sector 0
 	# ======================================================================
-	var s2 := LevelData.Sector.new()
+	var s2 := SectorClass.new()
 	s2.floor_height = 0.0
 	s2.ceiling_height = 5.0
 	s2.light_level = 200
@@ -193,24 +196,24 @@ func _create_test_level() -> LevelData:
 	# ======================================================================
 
 	# 玩家出生点——Sector 0 南侧，面朝北（看向门洞方向）
-	var ps := _thing(LevelData.ThingDef.Type.PLAYER_START, &"", Vector3(0, 1.6, 3), 0)
+	var ps := _thing(ThingDefClass.Type.PLAYER_START, &"", Vector3(0, 1.6, 3), 0)
 	data.things.append(ps)
 
 	# Sector 0 敌人：2只Imp 守在门洞附近
-	data.things.append(_thing(LevelData.ThingDef.Type.ENEMY, &"imp", Vector3(-3.5, 0, -2), 0))
-	data.things.append(_thing(LevelData.ThingDef.Type.ENEMY, &"imp", Vector3(3.5, 0, 1), 0))
+	data.things.append(_thing(ThingDefClass.Type.ENEMY, &"imp", Vector3(-3.5, 0, -2), 0))
+	data.things.append(_thing(ThingDefClass.Type.ENEMY, &"imp", Vector3(3.5, 0, 1), 0))
 
 	# Sector 1 敌人：1只Demon Soldier 守在北室
-	data.things.append(_thing(LevelData.ThingDef.Type.ENEMY, &"demon_soldier", Vector3(0, 0, -6), 0))
+	data.things.append(_thing(ThingDefClass.Type.ENEMY, &"demon_soldier", Vector3(0, 0, -6), 0))
 
 	# Sector 2 敌人：1只Imp 守在东翼
-	data.things.append(_thing(LevelData.ThingDef.Type.ENEMY, &"imp", Vector3(8, 0, 3), 0))
+	data.things.append(_thing(ThingDefClass.Type.ENEMY, &"imp", Vector3(8, 0, 3), 0))
 
 	# 装饰柱子——分散在各扇区
-	data.things.append(_thing(LevelData.ThingDef.Type.DECORATION, &"pillar", Vector3(-2.5, 2, 0), 0))
-	data.things.append(_thing(LevelData.ThingDef.Type.DECORATION, &"pillar", Vector3(2.5, 2, 0), 0))
-	data.things.append(_thing(LevelData.ThingDef.Type.DECORATION, &"pillar", Vector3(0, 1.5, -6), 0))
-	data.things.append(_thing(LevelData.ThingDef.Type.DECORATION, &"pillar", Vector3(7.5, 2.5, 0), 0))
+	data.things.append(_thing(ThingDefClass.Type.DECORATION, &"pillar", Vector3(-2.5, 2, 0), 0))
+	data.things.append(_thing(ThingDefClass.Type.DECORATION, &"pillar", Vector3(2.5, 2, 0), 0))
+	data.things.append(_thing(ThingDefClass.Type.DECORATION, &"pillar", Vector3(0, 1.5, -6), 0))
+	data.things.append(_thing(ThingDefClass.Type.DECORATION, &"pillar", Vector3(7.5, 2.5, 0), 0))
 
 	return data
 
@@ -219,8 +222,8 @@ func _create_test_level() -> LevelData:
 # _wd() — 快捷创建 WallDef（减少重复代码）
 # ==============================================================================
 # sx,sz = 起点XZ,  ex,ez = 终点XZ,  portal = 通向的扇区(-1=实墙)
-func _wd(sx: float, sz: float, ex: float, ez: float, portal: int = -1) -> LevelData.WallDef:
-	var w := LevelData.WallDef.new()
+func _wd(sx: float, sz: float, ex: float, ez: float, portal: int = -1) -> WallDef:
+	var w := WallDefClass.new()
 	w.start = Vector2(sx, sz)
 	w.end = Vector2(ex, ez)
 	w.portal_to = portal
@@ -230,8 +233,8 @@ func _wd(sx: float, sz: float, ex: float, ez: float, portal: int = -1) -> LevelD
 # ==============================================================================
 # _thing() — 快捷创建 ThingDef
 # ==============================================================================
-func _thing(type: int, subtype: StringName, pos: Vector3, angle: float) -> LevelData.ThingDef:
-	var t := LevelData.ThingDef.new()
+func _thing(type: int, subtype: StringName, pos: Vector3, angle: float) -> ThingDef:
+	var t := ThingDefClass.new()
 	t.type = type
 	t.subtype = subtype
 	t.position = pos
