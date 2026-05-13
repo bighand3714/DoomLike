@@ -251,7 +251,16 @@ static func _extract_portal_index(name: String) -> int:
 # ==============================================================================
 # main.gd 用这个函数判断是否需要导出。
 static func has_editor_geometry(root: Node3D) -> bool:
+	# 检测 Level 下是否有人工放置的关卡内容
+	# 三种情况都算"编辑器关卡"：
+	#   1. CSGBox3D 子节点（墙壁/地板/天花板）
+	#   2. LevelName_ 开头的节点（关卡元数据）
+	#   3. PlayerStart 或 Enemy_ 开头的标记节点
 	for child in root.get_children():
-		if child.name.begins_with("Wall_") or child.name.begins_with("Floor_"):
+		if child is CSGBox3D:
+			return true
+		if child.name.begins_with("LevelName_"):
+			return true
+		if child.name == "PlayerStart" or child.name.begins_with("Enemy_"):
 			return true
 	return false

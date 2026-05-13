@@ -39,9 +39,12 @@ unique_name_in_owner = true
 unique_name_in_owner = true
 script = ExtResource("6_em")
 
-[node name="Wall-1" type="CSGBox3D" parent="Level" unique_id=560081253]
-transform = Transform3D(0.9696332, -0.19983435, 0.140988, 0.21472004, 0.9715826, -0.09961201, -0.11707558, 0.12686008, 0.9849872, 1.7727461, 0.9424759, -1.5551553)
-size = Vector3(8, 4, 0.3)
+[node name="LevelName_测试" type="CSGBox3D" parent="Level" unique_id=1313412667]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.00092720985, 0.0048322678, -0.0027093887)
+size = Vector3(12, 0.2, 12)
+
+[node name="PlayerStart" type="Node3D" parent="Level" unique_id=822135487]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.1383731, 1.244948, 6.894206)
 
 [node name="UI" type="CanvasLayer" parent="." unique_id=1674855606]
 
