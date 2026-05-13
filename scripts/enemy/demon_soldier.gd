@@ -159,5 +159,5 @@ func _on_death_visual() -> void:
 
 	# 缓慢缩小
 	var tween := create_tween()
-	tween.tween_property(self, "scale", Vector3(0.6, 0.4, 0.6), enemy_data.death_duration)
+	tween.tween_property(self, "scale", Vector3(0.5, 0.5, 0.5), enemy_data.death_duration)
 	tween.parallel().tween_property(self, "position:y", position.y - 0.4, enemy_data.death_duration)

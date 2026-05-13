@@ -732,33 +732,165 @@ scenes/main.tscn                  # 可能不需要 EnemyManager 手动挂载（
 
 ---
 
-## 第五阶段：地图编辑器（Phase 5）
+## 第五阶段：Godot编辑器关卡搭建 + 导出管线（Phase 5）
 
-### 5.1 编辑器基础框架
-- [ ] 将 `GameModeManager` 挂载到场景树
-- [ ] Tab 键切换 PLAY / EDIT 模式
-- [ ] EDIT 模式下释放鼠标、切换为自由视角（fly cam）
-- [ ] PLAY 模式下恢复 FPS 控制和准星
+> **核心思路**：不写内置编辑器，直接用 Godot 3D 编辑器搭关卡（CSG 几何体 + 实体标记节点），运行游戏时 `LevelBuilder.serialize()` 扫描场景树生成 `.tres` 关卡文件。
+>
+> Godot 编辑器自带专业级功能（3D 正交/透视视图、选择/移动/旋转/缩放、吸附网格、场景树面板、Inspector 属性编辑、撤销/重做），比手写编辑器强得多。本阶段只做"识别命名约定 + 导出 `.tres`"。
+>
+> **不在此阶段**：纹理/材质编辑（Phase 7）、多关卡菜单（Phase 6）。
 
-### 5.2 编辑器 UI 面板
-- [ ] 编辑器主面板（侧边栏/底部栏）
-- [ ] 工具选择（放置墙壁、放置实体、选择/移动、删除）
-- [ ] 扇区列表面板（选中/高亮/编辑属性）
-- [ ] 实体属性面板（类型、位置、子类型）
-- [ ] 关卡属性面板（名称、作者、BGM）
+### 关卡搭建命名约定
 
-### 5.3 编辑器核心操作
-- [ ] 放置墙壁（点击两点创建一面墙）
-- [ ] 墙壁编辑（移动端点、修改纹理/Portal 属性）
-- [ ] 放置实体（从调色板拖拽到地面）
-- [ ] 选择/移动/旋转/删除工具
-- [ ] 撤销/重做系统（命令模式）
+在 Godot 编辑器中，关卡几何体和实体通过**节点名称前缀**识别：
 
-### 5.4 关卡文件管理
-- [ ] 新建关卡（生成空白 `.tres`）
-- [ ] 保存关卡（`ResourceSaver.save()`）
-- [ ] 加载关卡（`ResourceLoader.load()`）
-- [ ] 关卡文件列表/浏览器
+| 节点名前缀 | 对应数据 | 说明 |
+|-----------|---------|------|
+| `Wall_` | Sector.walls（实墙） | CSGBox3D，薄长方体。必须有碰撞 |
+| `Portal_` | Sector.walls（门洞） | CSGBox3D，位置=开口位置。无碰撞 |
+| `Floor_` | Sector.floor_height | CSGBox3D，Y 位置 = 地板高度 |
+| `Ceiling_` | Sector.ceiling_height | CSGBox3D，Y 位置 = 天花板高度 |
+| `Enemy_xxx` | ThingDef(ENEMY) | Node3D（占位标记），后缀=子类型（imp/demon_soldier） |
+| `PlayerStart` | ThingDef(PLAYER_START) | Node3D（占位标记），关卡必须至少有一个 |
+| `Pickup_xxx` | ThingDef(PICKUP) | Node3D（占位标记） |
+| `Deco_xxx` | ThingDef(DECORATION) | Node3D（占位标记） |
+
+**工作流**：
+```
+Godot 3D 编辑器搭关卡（CSGBox3D + 标记节点）
+  → 运行游戏 → serialize() 扫描场景树 → 生成 LevelData
+  → ResourceSaver.save("关卡.tres")
+  → 正常游玩时 load("关卡.tres") → LevelBuilder.build()
+```
+
+---
+
+### 5.1 编辑器导出脚本（`scripts/editor/level_exporter.gd`）
+
+在 `main.gd` 旁边新建一个导出工具类，把"扫描场景树 → 生成 LevelData"的逻辑封装起来。
+
+- [ ] **5.1.1** 创建 `LevelExporter` 类（`extends RefCounted`）
+  - 文件路径：`scripts/editor/level_exporter.gd`
+  - `static func export_from_scene(scene_root: Node) -> LevelData` — 主入口
+  - 扫描 `scene_root` 下所有子节点，按命名前缀分类
+
+- [ ] **5.1.2** CSG 几何体 → 墙壁识别
+  - 遍历所有 `CSGBox3D` 节点，匹配名称前缀：
+    - `Wall_` 开头 → 提取 `position` 和 `size`，计算墙壁的起止点（2D 线段）和高度
+    - `Portal_` 开头 → 同墙壁，但 `portal_to` 需要额外处理（手动在 metadata 中指定目标扇区）
+  - 墙壁线段计算：CSGBox3D 位置在墙壁中心，`size.x` = 墙长，`size.z` = 墙厚
+    - `wall_start = Vector2(center.x - size.x/2, center.z)`（取墙壁前表面）
+    - `wall_end = Vector2(center.x + size.x/2, center.z)`
+
+- [ ] **5.1.3** 扇区自动识别
+  - 从 `Floor_` / `Ceiling_` 节点获取地板/天花板高度
+  - 用 `OmniLight3D` 或自定义 Light 节点的 `light_energy` 推算扇区亮度
+  - 简化方案：关卡只有一个大扇区（手动定义扇区范围），墙壁自动归入
+  - 进阶方案（可选）：根据墙壁围成的封闭多边形自动划分扇区
+
+- [ ] **5.1.4** 实体标记节点识别
+  - 遍历所有 `Node3D` 节点（非 CSG）：
+    - 名称 `PlayerStart` → `ThingDef(PLAYER_START)`
+    - 名称 `Enemy_imp` / `Enemy_demon_soldier` → `ThingDef(ENEMY, subtype)`
+    - 名称 `Pickup_*` → `ThingDef(PICKUP)`
+    - 名称 `Deco_*` → `ThingDef(DECORATION, subtype)`
+  - 提取 `global_position` 和 `rotation.y` 填入 `ThingDef`
+
+---
+
+### 5.2 导出工作流集成（`main.gd` 修改）
+
+让游戏启动时检测关卡模式：如果 Level 节点下已有 CSG 几何体（编辑器搭的），就导出 `.tres` 再加载；如果没有就正常加载 `.tres`。
+
+- [ ] **5.2.1** 编辑器关卡检测
+  - 在 `main.gd._ready()` 中检查 `%Level` 下是否存在 `CSGBox3D` 子节点
+  - 如果存在 → 认为这是"编辑器搭建模式" → 调用 `LevelExporter.export_from_scene()`
+  - 如果不存在 → 正常流程：加载 `.tres` 或代码构建
+
+- [ ] **5.2.2** 导出模式下的用户提示
+  - 导出完成后在控制台打印：`已导出关卡：3 面墙, 1 出生点, 2 敌人 → 保存为 xxx.tres`
+  - 导出成功后将关卡 `.tres` 保存到 `res://assets/levels/` 目录
+  - 然后走正常加载管线：`load("xxx.tres") → LevelBuilder.build()`
+
+- [ ] **5.2.3** 导出模式键位开关（可选）
+  - 按 F5：仅导出（生成 `.tres` 但不游玩）
+  - 按 F6：导出并立即游玩
+  - 正常启动（无按键）：检测到编辑器几何体 → 自动导出 → 游玩
+
+---
+
+### 5.3 关卡模板场景（`scenes/level_template.tscn`）
+
+提供一个预配置的关卡模板场景，包含基本灯光和参考网格，方便在 Godot 编辑器中直接开始搭关卡。
+
+- [ ] **5.3.1** 创建模板场景
+  - 新建 `scenes/level_template.tscn`
+  - 根节点 `LevelRoot (Node3D)` + 方向光 + 补光
+  - 参考平面（半透明灰色 plane，标记地面高度 Y=0）
+  - 模板中不放任何墙壁/实体——让用户自己搭
+
+- [ ] **5.3.2** 模板使用说明
+  - 在编辑器中打开模板 → 另存为新关卡名
+  - 用 CSGBox3D 搭墙壁（命名 `Wall_*`）、地板（`Floor_*`）、天花板（`Ceiling_*`）
+  - 用 Node3D 放置实体标记（命名 `Enemy_imp`、`PlayerStart`）
+  - 运行游戏 → 自动导出 `.tres` → 立刻可玩
+
+---
+
+### 5.4 验证与测试
+
+- [ ] **5.4.1** 导出测试——简单方房间
+  - 在 Godot 编辑器中搭一个 10×10m 方房间（4 面 `Wall_*` + 1 个 `Floor_` + 1 个 `Ceiling_`）
+  - 放 1 个 `PlayerStart` + 1 个 `Enemy_imp`
+  - 运行游戏 → 检查控制台输出 → 确认 `.tres` 文件生成
+  - 验证：生成的 `.tres` 包含 1 扇区、4 面墙、1 出生点、1 敌人
+
+- [ ] **5.4.2** 导出测试——多扇区连通空间
+  - 搭两个相邻房间（中间用 `Portal_` 标记门洞）
+  - 运行游戏 → 检查生成的 `.tres` 包含 2 扇区，Port 墙 `portal_to` 正确指向相邻扇区
+  - 验证：玩家可以穿过门洞在两个房间间移动
+  - 验证：敌人可以跨扇区追击玩家
+
+- [ ] **5.4.3** 导出→游玩完整流程测试
+  - 搭关卡 → 运行 → 自动导出 `.tres`
+  - 第二次运行（Level 下无 CSG 几何体）→ 走正常加载管线 → 加载刚导出的 `.tres`
+  - 验证：两个流程生成的 3D 场景外观一致
+  - 射击验证：子弹能命中墙壁和敌人
+  - 删除导出的 `.tres` → 运行 → 回退到代码构建的测试关卡（fallback 机制）
+
+---
+
+### 5.5 编辑器增强（可选优化）
+
+这些任务不是必需的，但能大大提升编辑器搭关卡的体验。
+
+- [ ] **5.5.1** 编辑器 Inspector 辅助插件（`@tool` 脚本）
+  - 在 Godot 编辑器的 Inspector 面板中为关卡节点增加自定义控件
+  - 例如：选中 `Enemy_imp` 节点 → 显示敌人类型下拉框、朝向角度滑块
+  - 这是 Godot 编辑器插件开发，比写内置编辑器简单
+
+- [ ] **5.5.2** 关卡缩略图自动生成
+  - 导出时从 EditorCamera 角度拍一张俯视截图
+  - 保存为 `关卡名_thumb.png`，用于关卡选择菜单
+
+---
+
+### Phase 5 新增文件清单
+
+```
+scripts/
+  editor/
+    level_exporter.gd      # LevelExporter 导出工具类（扫描场景树 → LevelData）
+scenes/
+  level_template.tscn      # 关卡模板场景（预配置灯光 + 参考平面）
+```
+
+### Phase 5 修改文件清单
+
+```
+scripts/main.gd             # 集成导出模式检测：CSG 几何体存在 → 导出 → 加载
+scripts/level/level_data.gd  # 如果 WallDef 需要从 CSGBox3D 提取的新字段
+```
 
 ---
 
@@ -850,24 +982,31 @@ scenes/main.tscn                  # 可能不需要 EnemyManager 手动挂载（
 | Phase 2 | 武器与射击 | 24 | 24 | 100% |
 | Phase 3 | 敌人系统 | 31 | 31 | 100% |
 | Phase 4 | 关卡管线 | 27 | 27 | 100% |
-| Phase 5 | 地图编辑器 | 15 | 0 | 0% |
+| Phase 5 | Godot编辑器+导出管线 | 14 | 0 | 0% |
 | Phase 6 | UI/HUD | 16 | 0 | 0% |
 | Phase 7 | 资源与音频 | 16 | 0 | 0% |
 | Phase 8 | 打磨与发布 | 14 | 0 | 0% |
-| **总计** | | **156** | **95** | **61%** |
+| **总计** | | **155** | **95** | **61%** |
 
 ---
 
 ## 下一步建议
 
-Phase 4 已全部完成。当前进度：**156 个任务中完成 95 个（61%）**。
+Phase 4 已全部完成。当前进度：**155 个任务中完成 95 个（61%）**。
 
-下一阶段：**Phase 5（地图编辑器）**——15 个原子化任务，将 `GameModeManager` 挂载到场景树，实现 Tab 键切换 PLAY/EDIT 模式，EDIT 模式下自由视角 + 放置墙壁/实体。
+下一阶段：**Phase 5（Godot编辑器关卡搭建 + 导出管线）**——14 个原子化任务，分 5 个子模块：
+
+1. **LevelExporter 导出工具** — 扫描 Godot 编辑器搭建的 CSG 节点 → 生成 LevelData
+2. **导出工作流集成** — main.gd 自动检测编辑器几何体 → 导出 `.tres` → 加载
+3. **关卡模板场景** — 预配置灯光 + 参考平面的 level_template.tscn
+4. **验证测试** — 简单房间、多扇区、导出→游玩完整流程
+5. **编辑器增强（可选）** — Inspector 插件、缩略图
+
+**核心理念变化**：不写内置编辑器，直接用 Godot 3D 编辑器搭关卡，通过命名约定（`Wall_*`、`Enemy_*` 等）识别几何体和实体，`serialize()` 扫描导出 `.tres`。
 
 已实现的基础设施（可直接被 Phase 5 复用）：
 - `LevelBuilder.build()` 完整管线：数据 → 3D 场景
 - `LevelBuilder.serialize()` 反向管线：3D 场景 → 数据
-- `GameModeManager` 枚举和信号已就位
-- `_wd()` / `_thing()` 快捷构建函数可作为编辑器的数据生成器
+- Godot 编辑器自带：3D 正交/透视视图、选择/移动/旋转/缩放、网格吸附、撤销/重做
 
 

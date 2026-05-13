@@ -161,5 +161,5 @@ func _on_death_visual() -> void:
 
 	# 用 Tween 缩小并下沉
 	var tween := create_tween().set_parallel(true)
-	tween.tween_property(self, "scale", Vector3(0.7, 0.5, 0.7), enemy_data.death_duration)
+	tween.tween_property(self, "scale", Vector3(0.6, 0.6, 0.6), enemy_data.death_duration)
 	tween.tween_property(self, "position:y", position.y - 0.3, enemy_data.death_duration)
