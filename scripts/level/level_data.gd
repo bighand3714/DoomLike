@@ -93,10 +93,10 @@ class ThingDef:
 # ==============================================================================
 
 ## 扇区列表——关卡里的所有房间/区域
-var sectors: Array = []
+@export var sectors: Array = []
 
 ## 实体列表——关卡里所有可交互的东西
-var things: Array = []
+@export var things: Array = []
 
 ## 元数据——关卡的描述信息
 # @export 让它可以在 Godot 编辑器中直接修改。

@@ -38,12 +38,28 @@ unique_name_in_owner = true
 [node name="LevelName_测试" type="CSGBox3D" parent="Level" unique_id=1313412667]
 size = Vector3(12, 0.2, 12)
 
+[node name="Floor_地面" type="CSGBox3D" parent="Level" unique_id=295777801]
+size = Vector3(12, 0.2, 12)
+
 [node name="PlayerStart" type="Node3D" parent="Level" unique_id=822135487]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, 3)
 
 [node name="EnemyManager" type="Node" parent="Level" unique_id=2091762417]
 unique_name_in_owner = true
 script = ExtResource("6_em")
+
+[node name="Wall_墙" type="CSGBox3D" parent="Level" unique_id=562140617]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, -4)
+size = Vector3(8, 4, 0.3)
+
+[node name="Wall_墙2" type="CSGBox3D" parent="Level" unique_id=224129505]
+size = Vector3(12, 0.2, 12)
+
+[node name="Wall_墙3" type="CSGBox3D" parent="Level" unique_id=1447678583]
+size = Vector3(12, 0.2, 12)
+
+[node name="Wall_墙4" type="CSGBox3D" parent="Level" unique_id=329187742]
+size = Vector3(12, 0.2, 12)
 
 [node name="UI" type="CanvasLayer" parent="." unique_id=1674855606]
 
