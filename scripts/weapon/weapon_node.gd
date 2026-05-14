@@ -511,3 +511,34 @@ func _on_unequip() -> void:
 	# 0.4：递增 token 使旧 timer 失效
 	_reload_token += 1
 	_pump_token += 1
+
+
+# ==============================================================================
+# reset_ammo() — 重置弹药到满弹匣+满备弹（关卡重启/重新开始时调用）
+# ==============================================================================
+# 弹药系统中有两个独立的数量需要重置：
+#   _current_mag     = 当前弹匣里的子弹数（比如手枪 8 发）
+#   _current_reserve = 后备弹药数（比如手枪 50 发）
+#
+# 这两种弹药在游戏过程中会被消耗：
+#   - 每次开枪：_current_mag 减 1（弹匣打光自动换弹或手动 R 换弹）
+#   - 每次换弹：从 _current_reserve 取出子弹填满 _current_mag
+#
+# 当关卡重启时，需要把弹药恢复到开局状态——弹匣装满、备弹补满。
+# 这和 setup() 中的初始化逻辑完全一样，但 setup() 只在新创建武器时
+# 调用一次（在 WeaponManager._ready() 中）。
+#
+# 调用时机（Phase 2+）：
+#   - 选关后进入新关卡时（由 WeaponManager.reset_all_weapons() 遍历调用）
+#   - 结算界面点击"重新开始"时
+#
+# 为什么需要发射 ammo_changed 信号：
+#   重置后弹药数量变了，HUD 需要立即更新弹药显示（比如从 "2/15" 变回 "8/50"）。
+#   如果不发射信号，HUD 要等到下次开枪或换弹才会刷新，看上去像是"没重置"。
+#
+# 类比：
+#   打了一局后子弹打光了 → 重新开始 → 上膛装弹，子弹回到初始状态。
+func reset_ammo() -> void:
+	_current_mag = weapon_data.mag_size
+	_current_reserve = weapon_data.reserve_ammo
+	ammo_changed.emit(_current_mag, _current_reserve)
