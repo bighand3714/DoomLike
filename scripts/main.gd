@@ -10,6 +10,7 @@
 
 extends Node3D
 
+const RunStatsClass = preload("res://scripts/core/run_stats.gd")
 const MainMenuClass = preload("res://scripts/ui/main_menu.gd")
 const PauseMenuClass = preload("res://scripts/ui/pause_menu.gd")
 const LevelSelectClass = preload("res://scripts/ui/level_select.gd")
@@ -28,10 +29,7 @@ var _game_state: GameState.State = GameState.State.BOOT
 var _current_level_id: String = ""
 var _hit_marker_connected := false
 
-# 简易本局统计（1.5 RunStats 完成后替换）
-var _run_score: int = 0
-var _run_kills: int = 0
-var _run_start_time: float = 0.0
+var _run_stats := RunStatsClass.new()
 
 
 # ==============================================================================
@@ -164,13 +162,19 @@ func _start_level(_level_id: String) -> void:
 
 
 # ==============================================================================
-# 简易本局统计（1.5 RunStats 完成后替换）
+# _process(delta) — 更新 RunStats
+# ==============================================================================
+func _process(delta: float) -> void:
+	if _game_state == GameState.State.PLAYING and _run_stats.is_running:
+		_run_stats.update(delta)
+
+
+# ==============================================================================
+# RunStats 相关方法
 # ==============================================================================
 
 func _reset_run_stats() -> void:
-	_run_score = 0
-	_run_kills = 0
-	_run_start_time = Time.get_ticks_msec() / 1000.0
+	_run_stats.start(_current_level_id)
 
 func _connect_player_death() -> void:
 	var dmg := _player.get_node_or_null("Damageable") as Damageable
@@ -184,27 +188,29 @@ func _connect_enemy_killed() -> void:
 			em.enemy_killed.connect(_on_enemy_killed_for_score)
 
 func _on_enemy_killed_for_score(_enemy_name: String) -> void:
-	_run_kills += 1
-	_run_score += 10  # 临时固定 10 分，Phase 5 接入 EnemyData.score_value
+	_run_stats.add_kill(10)  # 临时固定 10 分，Phase 5 接入 EnemyData.score_value
 
 func _on_player_died() -> void:
 	if _game_state == GameState.State.PLAYING:
+		_run_stats.stop()
 		_set_game_state(GameState.State.GAME_OVER)
 
 func _end_run() -> void:
-	var survival_time := Time.get_ticks_msec() / 1000.0 - _run_start_time
 	# 1.6 SaveData 完成后替换为真实历史数据
 	var results := {
-		level_id = _current_level_id,
-		score = _run_score,
-		kills = _run_kills,
-		survival_time = survival_time,
+		level_id = _run_stats.level_id,
+		score = _run_stats.score,
+		kills = _run_stats.kills,
+		survival_time = _run_stats.survival_time,
 		best_score = 0,
 		best_time = 0.0,
 		is_new_record = false,
 	}
 	_game_over_screen.show()
 	_game_over_screen.show_results(results)
+
+func get_run_stats() -> RefCounted:
+	return _run_stats
 
 
 # ==============================================================================

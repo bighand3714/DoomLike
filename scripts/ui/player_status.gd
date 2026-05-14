@@ -27,6 +27,8 @@ var _ammo_label: Label
 var _reload_label: Label
 var _weapon_slots_label: Label
 var _pickup_notify: Label
+var _score_label: Label
+var _time_label: Label
 
 var _update_timer: float = 0.0
 var _kill_count: int = 0
@@ -81,6 +83,12 @@ func _create_labels() -> void:
 	# 武器栏位 y=188
 	_weapon_slots_label = _make_label(188.0, 13, Color(0.6, 0.6, 0.6), 0.8)
 
+	# 分数（左上角，FPS 下方 y=36）
+	_score_label = _make_left_label(36.0, 16, Color(1.0, 0.85, 0.3))
+
+	# 时间（左上角，分数下方 y=56）
+	_time_label = _make_left_label(56.0, 14, Color(0.85, 0.85, 0.85))
+
 	# 拾取通知（屏幕中上，居中）
 	_pickup_notify = Label.new()
 	_pickup_notify.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -111,6 +119,26 @@ func _make_label(top_offset: float, font_size: int, color: Color, alpha: float) 
 	label.anchor_bottom = 0.0
 	label.offset_left = -(LABEL_W + RIGHT_MARGIN)
 	label.offset_right = -RIGHT_MARGIN
+	label.offset_top = top_offset
+	label.offset_bottom = top_offset + font_size + 6.0
+	add_child(label)
+	return label
+
+
+# ==============================================================================
+# _make_left_label(top, font_size, color) — 左上角标签
+# ==============================================================================
+func _make_left_label(top_offset: float, font_size: int, color: Color) -> Label:
+	var label := Label.new()
+	label.add_theme_color_override("font_color", color)
+	label.add_theme_font_size_override("font_size", font_size)
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	label.anchor_left = 0.0
+	label.anchor_right = 0.0
+	label.anchor_top = 0.0
+	label.anchor_bottom = 0.0
+	label.offset_left = 12.0
+	label.offset_right = 200.0
 	label.offset_top = top_offset
 	label.offset_bottom = top_offset + font_size + 6.0
 	add_child(label)
@@ -200,6 +228,9 @@ func _process(delta: float) -> void:
 
 		_armor_label.text = "护甲: %.0f / %.0f" % [_player_dmg.armor, _player_dmg.max_armor]
 
+	# 分数和时间
+	_update_score_and_time()
+
 	# 武器栏位
 	_update_weapon_slots()
 
@@ -227,6 +258,20 @@ func _get_state_text() -> String:
 	var h_speed := Vector2(_player.velocity.x, _player.velocity.z).length()
 	parts.append("移动中" if h_speed > 0.3 else "静止")
 	return "  ".join(parts)
+
+
+# ==============================================================================
+# _update_score_and_time() — 从 main.gd RunStats 读取并显示
+# ==============================================================================
+func _update_score_and_time() -> void:
+	var main := get_tree().root.get_node_or_null("Main")
+	if main == null or not main.has_method("get_run_stats"):
+		_score_label.text = ""
+		_time_label.text = ""
+		return
+	var stats = main.get_run_stats()
+	_score_label.text = "分数: %d" % stats.score
+	_time_label.text = "时间: %.1f" % stats.survival_time
 
 
 # ==============================================================================
