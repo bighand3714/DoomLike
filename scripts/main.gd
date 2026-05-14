@@ -11,6 +11,7 @@
 extends Node3D
 
 const RunStatsClass = preload("res://scripts/core/run_stats.gd")
+const SaveDataClass = preload("res://scripts/core/save_data.gd")
 const MainMenuClass = preload("res://scripts/ui/main_menu.gd")
 const PauseMenuClass = preload("res://scripts/ui/pause_menu.gd")
 const LevelSelectClass = preload("res://scripts/ui/level_select.gd")
@@ -30,6 +31,7 @@ var _current_level_id: String = ""
 var _hit_marker_connected := false
 
 var _run_stats := RunStatsClass.new()
+var _save_data := SaveDataClass.new()
 
 
 # ==============================================================================
@@ -83,7 +85,7 @@ func _set_game_state(next_state: GameState.State) -> void:
 
 		GameState.State.LEVEL_SELECT:
 			_main_menu.hide()
-			_level_select.show()
+			_level_select.show_menu()
 			_game_over_screen.hide()
 			get_tree().paused = true
 			Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
@@ -196,21 +198,24 @@ func _on_player_died() -> void:
 		_set_game_state(GameState.State.GAME_OVER)
 
 func _end_run() -> void:
-	# 1.6 SaveData 完成后替换为真实历史数据
+	var record := _save_data.submit_run(_run_stats.level_id, _run_stats.score, _run_stats.survival_time)
 	var results := {
 		level_id = _run_stats.level_id,
 		score = _run_stats.score,
 		kills = _run_stats.kills,
 		survival_time = _run_stats.survival_time,
-		best_score = 0,
-		best_time = 0.0,
-		is_new_record = false,
+		best_score = record.best_score,
+		best_time = record.best_time,
+		is_new_record = record.is_new_record,
 	}
 	_game_over_screen.show()
 	_game_over_screen.show_results(results)
 
 func get_run_stats() -> RefCounted:
 	return _run_stats
+
+func get_save_data() -> RefCounted:
+	return _save_data
 
 
 # ==============================================================================

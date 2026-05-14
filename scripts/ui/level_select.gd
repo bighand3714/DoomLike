@@ -10,10 +10,15 @@ extends CanvasLayer
 signal level_selected(level_id: String)
 signal back_requested()
 
+const SaveDataClass = preload("res://scripts/core/save_data.gd")
+
 const LEVELS: Array[Dictionary] = [
 	{ id = "desert", name = "第一关：荒漠", desc = "枯树作为掩体\n视野开阔，适合入门", color = Color(0.76, 0.66, 0.4) },
 	{ id = "lava",   name = "第二关：熔岩地狱", desc = "熔岩河流持续伤害\n柱状岩石提供掩体", color = Color(0.7, 0.2, 0.1) },
 ]
+
+var _score_labels: Array[Label] = []
+var _time_labels: Array[Label] = []
 
 
 func _ready() -> void:
@@ -153,6 +158,10 @@ func _create_level_panel(index: int, data: Dictionary) -> void:
 	time_label.offset_bottom = 205.0
 	bg.add_child(time_label)
 
+	# 保存引用以便后续从 SaveData 更新
+	_score_labels.append(score_label)
+	_time_labels.append(time_label)
+
 	# 选择按钮
 	var select_btn := Button.new()
 	select_btn.text = "选择此关"
@@ -172,3 +181,26 @@ func _on_level_selected(level_id: String) -> void:
 
 func _on_back() -> void:
 	back_requested.emit()
+
+
+# ==============================================================================
+# show_menu() — 显示时刷新历史记录
+# ==============================================================================
+func show_menu() -> void:
+	show()
+	_refresh_records()
+
+
+func _refresh_records() -> void:
+	var main := get_tree().root.get_node_or_null("Main")
+	if main == null or not main.has_method("get_save_data"):
+		return
+	var save = main.get_save_data()
+	for i in range(LEVELS.size()):
+		var level_id: String = LEVELS[i].id
+		var best_score: int = save.get_best_score(level_id)
+		var best_time: float = save.get_best_time(level_id)
+		if _score_labels.size() > i:
+			_score_labels[i].text = "最高分: %d" % best_score
+		if _time_labels.size() > i:
+			_time_labels[i].text = "最长时间: %.1f 秒" % best_time
