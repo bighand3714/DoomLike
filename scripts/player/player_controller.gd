@@ -91,17 +91,25 @@ var _pitch := 0.0
 # Godot 会在场景加载完、第一帧开始前，自动调用所有节点的 _ready()。
 # 适合做"初始化"工作，比如隐藏鼠标、设置初始状态等。
 func _ready() -> void:
+	# 0.5：加入 "player" group，供其他节点通过 get_first_node_in_group 查找
+	add_to_group("player")
+
 	# 锁定鼠标
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
-	# 给玩家创建 Damageable 子节点（敌人攻击时用它扣血）
-	var dmg := Damageable.new()
-	dmg.name = "Damageable"
-	dmg.max_health = 100.0
-	add_child(dmg)
+	# 0.5：先检查是否已有 Damageable，避免重复创建
+	var existing := get_node_or_null("Damageable")
+	if existing != null and existing is Damageable:
+		existing.max_health = 100.0
+		existing.damaged.connect(_on_player_damaged)
+	else:
+		var dmg := Damageable.new()
+		dmg.name = "Damageable"
+		dmg.max_health = 100.0
+		add_child(dmg)
 
-	# 受伤时触发屏幕闪红
-	dmg.damaged.connect(_on_player_damaged)
+		# 受伤时触发屏幕闪红
+		dmg.damaged.connect(_on_player_damaged)
 
 
 # ==============================================================================

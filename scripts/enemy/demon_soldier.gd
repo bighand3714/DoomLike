@@ -123,7 +123,10 @@ func _execute_attack() -> void:
 func _do_shoot() -> void:
 	_is_aiming = false
 
+	# 0.4：有效性检查——敌人死亡、玩家为空、状态不允许时不再造成伤害
 	if _player == null:
+		return
+	if _state == EnemyState.DEATH or _state == EnemyState.PAIN:
 		return
 
 	# 从敌人"眼睛"位置向玩家发射瞬时射线

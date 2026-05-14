@@ -2,7 +2,7 @@
 
 ## 项目概览
 
-Godot 4.6 项目，正在构建一款DOOM风格的第一人称射击游戏。当前处于**第六阶段（UI/HUD+菜单+拾取）进行中**——核心移动 + 武器/射击/伤害 + 敌人AI/投射物 + 菜单/拾取系统已可运行。总进度 95/156 任务（61%）。
+Godot 4.6 项目，正在构建一款DOOM风格的第一人称射击游戏。当前处于**Roadmap 2 Phase 0 已完成**——核心移动 + 武器/射击/伤害 + 敌人AI/投射物 + 菜单/拾取系统已可运行。Phase 5/6（旧路线图）暂缓，新方向以 `docs/project_roadmap2.md` 为准。下一步 Phase 1：游戏流程、菜单与记录。
 
 - **引擎**：Godot 4.6 (Forward Plus, D3D12)
 - **物理**：Jolt Physics
@@ -14,6 +14,7 @@ Godot 4.6 项目，正在构建一款DOOM风格的第一人称射击游戏。当
 ```
 scripts/        GDScript 源代码
   main.gd           主游戏控制器（关卡加载/CSG碰撞/出生点/菜单协调/命中标记/拾取通知）
+  core/             运行状态、存档、统计（Phase 1+ 实现）
   player/           玩家相关（player_controller.gd）
   ui/               UI系统
     player_status.gd  战斗HUD（位置/状态/生命条/护甲/击杀/武器/弹药/拾取通知）
@@ -21,7 +22,7 @@ scripts/        GDScript 源代码
     pause_menu.gd     暂停菜单（继续/返回主菜单）
   weapon/           武器系统
     weapon_data.gd     WeaponData Resource + DamageType/FireMode 枚举
-    weapon_node.gd     武器基类（射线射击、散布、弹药、换弹、后坐力）
+    weapon_node.gd     武器基类（射线射击、散布、弹药、换弹、后坐力、_is_equipped/token机制）
     weapon_manager.gd  武器栏位管理（切换、输入转发）
     pistol.gd          手枪（半自动，CSG占位模型）
     shotgun.gd         霰弹枪（泵动式+多弹丸散射，CSG占位模型）
@@ -33,24 +34,29 @@ scripts/        GDScript 源代码
     enemy.gd           Enemy 基类（CharacterBody3D，6状态机、视线检测、追击、受击、死亡）
     projectile.gd      投射物基类（Area3D，飞行、碰撞、伤害、火球外观）
     imp.gd             小恶魔（远程火球投射物 + 近战爪击，CSG人形模型）
-    demon_soldier.gd   恶魔士兵（hitscan射击 + 举枪前摇，装甲外观）
-    enemy_manager.gd   敌人生成与管理（追踪存活、击杀信号、all_clear检测）
-  pickup/           拾取系统（Phase 6）
+    demon_soldier.gd   恶魔士兵（hitscan射击 + 举枪前摇+有效性检查，装甲外观）
+    enemy_manager.gd   敌人生成与管理（register/unregister/spawn、存活追踪、击杀信号）
+  pickup/           拾取系统
     pickup.gd          Pickup 基类（Area3D + 悬浮旋转动画）
     health_pickup.gd   血包（红色，恢复生命）
     armor_pickup.gd    护甲（蓝色，装备护甲）
     ammo_pickup.gd     弹药（黄色，补充备弹）
+  level/            关卡系统（Roadmap 2 Phase 2+ 实现）
+    props/             枯树、岩柱等掩体（Phase 3/4）
+    hazards/           熔岩等危险区域（Phase 4）
   utils/            FPS计数器（fps_counter.gd）
 scenes/         Godot 场景文件
   main.tscn          主场景
   player/            player.tscn（Player 场景）
   enemies/           imp.tscn, demon_soldier.tscn
+  levels/            关卡场景（Phase 2+ 实现）
+  ui/                UI场景（Phase 1+ 实现）
 assets/         游戏资源
   weapons/          WeaponData .tres（pistol.tres, shotgun.tres）
   enemies/          EnemyData .tres（imp.tres, demon_soldier.tres）
   audio/fonts/textures 子目录（当前为空）
 shaders/        自定义着色器（当前为空）
-docs/           文档（project_roadmap.md 路线图）
+docs/           文档（project_roadmap.md 原路线图, project_roadmap2.md 新路线图）
 ```
 
 ## 场景树结构
@@ -66,10 +72,10 @@ Main (Node3D)                          ← main.gd
 │           ├── Pistol (WeaponNode)    ← pistol.gd (半自动)
 │           └── Shotgun (WeaponNode)   ← shotgun.gd (泵动式)
 ├── Level (Node3D)                     [%Level] ← 编辑器手动搭建的关卡几何体
-│   ├── CSGBox3D ×N                    (地板/墙壁/柱子等)
+│   ├── Ground_MainFloor (CSGBox3D)    地板（level_geometry group）
 │   ├── PlayerStart (Node3D)           玩家出生点标记
-│   ├── EnemyManager (Node)            [%EnemyManager] ← 敌人实例化 + 追踪
-│   └── Imp / DemonSoldier             敌人实例（通过 .tscn 拖入）
+│   ├── EnemyManager (Node)            [%EnemyManager] ← register/unregister/spawn
+│   └── Imp / DemonSoldier             敌人实例（通过 .tscn 拖入，_ready 自动注册）
 ├── UI (CanvasLayer)
 │   ├── DamageFlash (ColorRect)         [%DamageFlash] ← 全屏受伤闪红
 │   ├── Crosshair (ColorRect)           [%Crosshair] ← 4×4像素绿色准星
@@ -102,10 +108,10 @@ Main (Node3D)                          ← main.gd
 ## 当前架构说明
 
 - **无自动加载（Autoload）**，所有节点手动实例化
-- **关卡在编辑器中手动搭建**：CSG 节点直接放在 `Level` 下，`main.gd` 启动时用 `_enable_csg_collision()` 递归开启碰撞。通过 `PlayerStart` 节点标记出生点
-- **武器系统已实现**：`WeaponData`(Resource) → `WeaponNode`(基类) → `WeaponManager`(栏位管理)。射击使用 `PhysicsRayQueryParameters3D` 从摄像机发射线，支持半自动/全自动/泵动式三种模式，弹药/换弹/散布/后坐力全部可配
-- **伤害系统已实现**：`Damageable` 可受伤接口（血量/护甲/减伤）。护甲吸收 50% 伤害（经典 DOOM 规则）。Player 自动创建 Damageable（100HP/100护甲）
-- **敌人系统已实现**：`Enemy` 基类 6 状态机（IDLE→CHASE→ATTACK→PAIN→DEATH），视线射线检测，`Imp`（火球+近战）和 `DemonSoldier`（hitscan+前摇）两种敌人。`EnemyManager` 追踪击杀并检测清场
+- **关卡在编辑器中手动搭建**：CSG 节点放在 `Level` 下，`main.gd` 用 `_enable_csg_collision()` 只对 `level_geometry` group 或 `Ground_`/`Wall_`/`Boundary_` 前缀节点启用碰撞。通过 `PlayerStart` 节点标记出生点
+- **武器系统已实现**：`WeaponData`(Resource) → `WeaponNode`(基类) → `WeaponManager`(栏位管理)。射击使用 `PhysicsRayQueryParameters3D` 从摄像机发射线，支持半自动/全自动/泵动式三种模式。**Phase 0 修复**：`_is_equipped` 检查（未装备武器不响应输入）、`_reload_token`/`_pump_token` 机制（切武器后旧 timer 失效）
+- **伤害系统已实现**：`Damageable` 可受伤接口（血量/护甲/减伤）。护甲吸收 50% 伤害（经典 DOOM 规则）。Player 自动创建 Damageable（100HP/100护甲），先检查已有节点避免重复创建
+- **敌人系统已实现**：`Enemy` 基类 6 状态机（IDLE→CHASE→ATTACK→PAIN→DEATH），视线射线检测，`Imp`（火球+近战）和 `DemonSoldier`（hitscan+前摇+有效性检查）两种敌人。**Phase 0 修复**：玩家引用优先使用 `get_first_node_in_group("player")`（Player 在 `_ready` 中加入 `player` group）；`EnemyManager` 通过 `register_enemy()`/`unregister_enemy()` 统一管理敌人注册，`_ready` 中扫描已有敌人
 - **投射物系统已实现**：`Projectile` Area3D 基类，飞行移动、碰撞伤害、生命周期。Imp 火球 10m/s
 - **战斗HUD已实现**：生命条（绿→橙→红+闪烁）、护甲（蓝色）、击杀计数（黄色）、武器栏位指示器、命中标记（准星闪红）、受伤效果（全屏闪红）、拾取通知（中上浮出淡入淡出）
 - **菜单系统已实现**：主菜单（开始游戏/退出）、暂停菜单（继续/返回主菜单，Esc 快捷键）

@@ -38,6 +38,43 @@ var total_kills: int = 0
 
 
 # ==============================================================================
+# _ready() — 扫描关卡中已存在的敌人并注册
+# ==============================================================================
+func _ready() -> void:
+	# 0.6：扫描父节点下已有 Enemy 实例并注册（支持手动摆放和动态生成）
+	for child in get_parent().get_children():
+		if child is EnemyClass:
+			register_enemy(child)
+
+
+# ==============================================================================
+# register_enemy(enemy) — 注册敌人到追踪列表
+# ==============================================================================
+# 0.6：统一的注册入口，避免重复注册和重复连接信号
+func register_enemy(enemy: Node) -> void:
+	if enemy == null:
+		return
+	if active_enemies.has(enemy):
+		return
+	# 连接前先检查是否已连接，避免重复
+	if not enemy.enemy_died.is_connected(_on_enemy_died):
+		enemy.enemy_died.connect(_on_enemy_died)
+	active_enemies.append(enemy)
+
+
+# ==============================================================================
+# unregister_enemy(enemy) — 从追踪列表移除敌人
+# ==============================================================================
+# 0.6：用于敌人死亡或关卡卸载时清理
+func unregister_enemy(enemy: Node) -> void:
+	if enemy == null:
+		return
+	if enemy.enemy_died.is_connected(_on_enemy_died):
+		enemy.enemy_died.disconnect(_on_enemy_died)
+	active_enemies.erase(enemy)
+
+
+# ==============================================================================
 # spawn_enemy(enemy_class, position, enemy_data) — 生成一个敌人
 # ==============================================================================
 # 参数：
@@ -50,15 +87,11 @@ func spawn_enemy(enemy_class: GDScript, position: Vector3, enemy_data: Resource)
 		push_error("EnemyManager: 无法创建敌人实例")
 		return null
 
-	# 先加入场景树（才能设置 global_position）
-	add_child(enemy)
-
-	# 注入配置数据（EnemyData Resource）
+	# 0.6：先设置数据，再 add_child，最后 register
 	enemy.set("enemy_data", enemy_data)
 	enemy.set("global_position", position)
-	enemy.connect("enemy_died", _on_enemy_died)
-
-	active_enemies.append(enemy)
+	add_child(enemy)
+	register_enemy(enemy)
 
 	return enemy
 
@@ -67,7 +100,8 @@ func spawn_enemy(enemy_class: GDScript, position: Vector3, enemy_data: Resource)
 # _on_enemy_died(enemy) — 敌人死亡回调
 # ==============================================================================
 func _on_enemy_died(enemy: Node) -> void:
-	active_enemies.erase(enemy)
+	# 0.6：使用 unregister_enemy 统一清理
+	unregister_enemy(enemy)
 	total_kills += 1
 
 	var enemy_name: String = enemy.get("enemy_data").get("enemy_name") if enemy.get("enemy_data") != null else "未知敌人"

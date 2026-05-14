@@ -76,8 +76,11 @@ func toggle_pause() -> void:
 # ==============================================================================
 # _load_level() — 初始化关卡
 # ==============================================================================
+# 说明：此方法只初始化场景内已有 Level 节点，不再视为 LevelData 加载管线。
+# LevelData 加载管线（Phase 5）暂缓，新方向以 project_roadmap2.md 为准。
 func _load_level() -> void:
-	# 1. 开启所有 CSG 碰撞体
+	# 1. 只对 level_geometry group 或 Ground_/Wall_/Boundary_ 前缀的节点开启 CSG 碰撞
+	#    避免错误开启敌人、武器、装饰模型的视觉 CSG 碰撞
 	_enable_csg_collision(_level_root)
 
 	# 2. 找 PlayerStart 标记 → 设置出生点
@@ -98,13 +101,23 @@ func _load_level() -> void:
 
 
 # ==============================================================================
-# _enable_csg_collision(node) — 递归开启所有 CSG 节点的碰撞
+# _enable_csg_collision(node) — 只对 level_geometry group 或关卡几何命名前缀启用 CSG 碰撞
 # ==============================================================================
+# 0.7：不再对整个 Level 递归启用所有 CSG 碰撞。
+# 只处理属于 level_geometry group 或名称以 Ground_/Wall_/Boundary_ 开头的节点。
 func _enable_csg_collision(node: Node) -> void:
 	for child in node.get_children():
 		if child is CSGBox3D or child is CSGPolygon3D or child is CSGCombiner3D:
-			child.use_collision = true
+			if _is_level_geometry(child):
+				child.use_collision = true
 		_enable_csg_collision(child)
+
+
+func _is_level_geometry(node: Node) -> bool:
+	if node.is_in_group("level_geometry"):
+		return true
+	var n := node.name
+	return n.begins_with("Ground_") or n.begins_with("Wall_") or n.begins_with("Boundary_")
 
 
 # ==============================================================================

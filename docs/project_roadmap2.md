@@ -1,12 +1,5 @@
 # DoomLike Roadmap 2 — 生存关卡、铁鞭与敌人体系
 
-> 需求：现在project_roadmap.md里的功能算是基本完成了，最后两个阶段先搁置。现在新写一个roadmap2，我在这提出下一个大阶段的要求：
-> 1. 制作两个关卡，第一关为荒漠场景，关卡内存在枯树作为掩体；第二关为熔岩地狱场景，关卡内存在熔岩河流（掉进去会持续掉血），以及柱状岩石作为掩体。两个关卡地形都由平面组成，玩家应在一个被设定好的圆形区域内移动（区域要大）。圆形区域的边界应有明显标志，再向外走会提示已到达边界。地图中的枯树、熔岩河流、柱状岩石应每次游戏都随机生成位置。运行游戏点击开始游戏后应该有一个选关界面，左边为第一关荒漠，右边为第二关熔岩地狱，记录每关所取得的最高分和坚持最长时间。
-> 2. 玩家左手增加一个铁鞭武器，通过鼠标右键使用。攻击到敌人后可以短暂击退敌人，并增加敌人的眩晕值。如果使用鞭子攻击到眩晕值满的敌人，则可以将敌人拉至身前，抓着敌人移动，根据抓取敌人的重量，影响玩家移动速度。被抓取的敌人可以通过R键进行处决，也可以当作盾牌抵挡敌人的攻击。不同武器攻击敌人会造成不同的眩晕值。
-> 3. 制作几种敌人：地面敌人，高级地面敌人，精英地面敌人，远程敌人，高级远程敌人，空中敌人，高级空中敌人，空中远程敌人。敌人应有血量、眩晕值、重量、移动速度等参数，以及分数。近战敌人会通过不同的移动速度靠近玩家，然后使用近战攻击，远程敌人会在到达玩家附近一定范围后，对玩家进行远程攻击。所有敌人都应在地图的圆形区域边界外刷新。随着游戏时间越长，刷新的频率越高。
-> 最后，所有3D建模都先用简单的，不同颜色的3D立方体来显示。
-> 理解这些需求，然后合理规划这些功能的实现顺序，写入roadmap2。
-
 > 目标：在现有 FPS 原型基础上，转向“圆形竞技场生存”核心循环。玩家从开始菜单进入选关界面，在荒漠或熔岩地狱中坚持更久、击杀更多敌人、获得更高分。所有 3D 模型先用简单几何体和不同颜色区分，先保证玩法结构完整。
 
 ## 设计边界
@@ -24,90 +17,90 @@
 - [ ] 敌人拥有血量、眩晕值、重量、移动速度、分数等参数。
 - [ ] 随游戏时间增加，敌人刷新频率逐渐提高。
 
-## Phase 0：前置整理与运行稳定
+## Phase 0：前置整理与运行稳定 ✅
 
 > 在进入新系统前，先把会影响后续扩展的基础问题收束，避免菜单、关卡、刷怪、抓取互相踩状态。
 
 ### 0.1 建立当前基线
 
-- [ ] 运行一次项目，记录当前能否进入主场景、能否移动、能否射击、敌人是否攻击玩家。
-- [ ] 如果 Godot 命令行不可用，记录本机 Godot 可执行文件路径，后续统一使用同一个运行方式验证。
-- [ ] 打开 `scenes/main.tscn`，确认当前主场景仍为 `Main -> Player / Level / UI`。
-- [ ] 打开 `scenes/player/player.tscn`，确认 `WeaponManager` 位于 `Player/Camera3D/WeaponHolder/WeaponManager`。
-- [ ] 打开 `scripts/main.gd`，标记当前 `_load_level()` 只是初始化场景内已有 Level，不再视为 LevelData 加载管线。
-- [ ] 在 `docs/project_roadmap.md` 顶部或相关阶段旁补充说明：Phase 5、Phase 6 暂缓，新方向以 `project_roadmap2.md` 为准。
+- [x] 运行一次项目，记录当前能否进入主场景、能否移动、能否射击、敌人是否攻击玩家。
+- [x] 如果 Godot 命令行不可用，记录本机 Godot 可执行文件路径，后续统一使用同一个运行方式验证。
+- [x] 打开 `scenes/main.tscn`，确认当前主场景仍为 `Main -> Player / Level / UI`。
+- [x] 打开 `scenes/player/player.tscn`，确认 `WeaponManager` 位于 `Player/Camera3D/WeaponHolder/WeaponManager`。
+- [x] 打开 `scripts/main.gd`，标记当前 `_load_level()` 只是初始化场景内已有 Level，不再视为 LevelData 加载管线。
+- [x] 在 `docs/project_roadmap.md` 顶部或相关阶段旁补充说明：Phase 5、Phase 6 暂缓，新方向以 `project_roadmap2.md` 为准。
 
 ### 0.2 固定目录和职责边界
 
-- [ ] 新建目录 `scripts/core/`，用于运行状态、存档、统计。
-- [ ] 新建目录 `scripts/level/`，用于竞技场关卡、随机生成、关卡注册。
-- [ ] 新建目录 `scripts/level/props/`，用于枯树、岩柱等掩体。
-- [ ] 新建目录 `scripts/level/hazards/`，用于熔岩等危险区域。
-- [ ] 新建目录 `scenes/levels/`，用于荒漠和熔岩关卡场景。
-- [ ] 新建目录 `scenes/ui/`，用于主菜单、选关、结算界面。
-- [ ] 明确 `Main` 只负责游戏状态切换、关卡实例化/卸载、全局信号连接。
-- [ ] 明确当前关卡节点只负责自身地形、边界、随机物件、危险区域和刷怪接口。
-- [ ] 明确 `UI` 下的菜单和 HUD 只显示状态，不直接创建敌人或改关卡结构。
+- [x] 新建目录 `scripts/core/`，用于运行状态、存档、统计。
+- [x] 新建目录 `scripts/level/`，用于竞技场关卡、随机生成、关卡注册。
+- [x] 新建目录 `scripts/level/props/`，用于枯树、岩柱等掩体。
+- [x] 新建目录 `scripts/level/hazards/`，用于熔岩等危险区域。
+- [x] 新建目录 `scenes/levels/`，用于荒漠和熔岩关卡场景。
+- [x] 新建目录 `scenes/ui/`，用于主菜单、选关、结算界面。
+- [x] 明确 `Main` 只负责游戏状态切换、关卡实例化/卸载、全局信号连接。
+- [x] 明确当前关卡节点只负责自身地形、边界、随机物件、危险区域和刷怪接口。
+- [x] 明确 `UI` 下的菜单和 HUD 只显示状态，不直接创建敌人或改关卡结构。
 
 ### 0.3 修复武器输入归属
 
-- [ ] 在 `scripts/weapon/weapon_node.gd` 增加 `_is_equipped: bool`。
-- [ ] `_on_equip()` 中设置 `_is_equipped = true`，并显示当前武器。
-- [ ] `_on_unequip()` 中设置 `_is_equipped = false`，并隐藏当前武器。
-- [ ] `WeaponNode._input()` 开头检查 `_is_equipped`，未装备时直接返回。
-- [ ] `WeaponNode._process()` 中全自动开火逻辑也检查 `_is_equipped`。
-- [ ] 切到手枪时开火，确认霰弹枪弹药不减少。
-- [ ] 切到霰弹枪时开火，确认手枪弹药不减少。
-- [ ] 切武器时 HUD 弹药显示与当前武器一致。
+- [x] 在 `scripts/weapon/weapon_node.gd` 增加 `_is_equipped: bool`。
+- [x] `_on_equip()` 中设置 `_is_equipped = true`，并显示当前武器。
+- [x] `_on_unequip()` 中设置 `_is_equipped = false`，并隐藏当前武器。
+- [x] `WeaponNode._input()` 开头检查 `_is_equipped`，未装备时直接返回。
+- [x] `WeaponNode._process()` 中全自动开火逻辑也检查 `_is_equipped`。
+- [x] 切到手枪时开火，确认霰弹枪弹药不减少。
+- [x] 切到霰弹枪时开火，确认手枪弹药不减少。
+- [x] 切武器时 HUD 弹药显示与当前武器一致。
 
 ### 0.4 修复换弹和延迟动作的旧 timer
 
-- [ ] 在 `WeaponNode` 中增加 `_reload_token: int`。
-- [ ] 每次 `_start_reload()` 时递增 token，并把当前 token 绑定给 `_finish_reload(token)`。
-- [ ] `_finish_reload(token)` 先检查 token 是否仍等于 `_reload_token`，不一致则返回。
-- [ ] `_on_unequip()` 中递增 `_reload_token`，使旧换弹 timer 失效。
-- [ ] 在泵动流程中增加类似 `_pump_token`，切武器后旧泵动 timer 不再恢复开火状态。
-- [ ] 在 `DemonSoldier` 延迟射击中增加有效性检查：敌人死亡、玩家为空、状态不允许攻击时不再造成伤害。
-- [ ] 验证：换弹中切武器，等待原换弹时间结束，旧武器不会偷偷补弹或触发 HUD。
+- [x] 在 `WeaponNode` 中增加 `_reload_token: int`。
+- [x] 每次 `_start_reload()` 时递增 token，并把当前 token 绑定给 `_finish_reload(token)`。
+- [x] `_finish_reload(token)` 先检查 token 是否仍等于 `_reload_token`，不一致则返回。
+- [x] `_on_unequip()` 中递增 `_reload_token`，使旧换弹 timer 失效。
+- [x] 在泵动流程中增加类似 `_pump_token`，切武器后旧泵动 timer 不再恢复开火状态。
+- [x] 在 `DemonSoldier` 延迟射击中增加有效性检查：敌人死亡、玩家为空、状态不允许攻击时不再造成伤害。
+- [x] 验证：换弹中切武器，等待原换弹时间结束，旧武器不会偷偷补弹或触发 HUD。
 
 ### 0.5 统一玩家引用方式
 
-- [ ] 在 `scripts/player/player_controller.gd` 的 `_ready()` 中调用 `add_to_group("player")`。
-- [ ] 给玩家创建 Damageable 前，先检查是否已有 `Damageable` 子节点，避免重复创建。
-- [ ] 在 `scripts/enemy/enemy.gd` 中优先通过 `get_tree().get_first_node_in_group("player")` 获取玩家。
-- [ ] 保留 `/root/Main/Player` 作为临时 fallback，但注释说明后续应移除硬编码路径。
-- [ ] 验证敌人放在测试场景或未来关卡子场景时，也能找到玩家并追击。
+- [x] 在 `scripts/player/player_controller.gd` 的 `_ready()` 中调用 `add_to_group("player")`。
+- [x] 给玩家创建 Damageable 前，先检查是否已有 `Damageable` 子节点，避免重复创建。
+- [x] 在 `scripts/enemy/enemy.gd` 中优先通过 `get_tree().get_first_node_in_group("player")` 获取玩家。
+- [x] 保留 `/root/Main/Player` 作为临时 fallback，但注释说明后续应移除硬编码路径。
+- [x] 验证敌人放在测试场景或未来关卡子场景时，也能找到玩家并追击。
 
 ### 0.6 修复 EnemyManager 注册模型
 
-- [ ] 在 `scripts/enemy/enemy_manager.gd` 中新增 `register_enemy(enemy: Enemy) -> void`。
-- [ ] `register_enemy()` 检查敌人是否已存在，避免重复加入 `active_enemies`。
-- [ ] `register_enemy()` 连接 `enemy_died` 信号，连接前检查是否已连接。
-- [ ] 新增 `unregister_enemy(enemy: Enemy) -> void`，用于敌人死亡或关卡卸载时清理。
-- [ ] 修改 `spawn_enemy()`：先创建敌人、设置 `enemy_data` 和位置，再 `add_child()`，最后调用 `register_enemy()`。
-- [ ] 在 `EnemyManager._ready()` 中扫描父节点或当前关卡下已有敌人，并调用 `register_enemy()`。
-- [ ] 验证主场景中手动摆放的敌人死亡后，HUD 击杀计数会更新。
-- [ ] 验证动态生成的敌人死亡后，`active_enemies` 会减少。
+- [x] 在 `scripts/enemy/enemy_manager.gd` 中新增 `register_enemy(enemy: Enemy) -> void`。
+- [x] `register_enemy()` 检查敌人是否已存在，避免重复加入 `active_enemies`。
+- [x] `register_enemy()` 连接 `enemy_died` 信号，连接前检查是否已连接。
+- [x] 新增 `unregister_enemy(enemy: Enemy) -> void`，用于敌人死亡或关卡卸载时清理。
+- [x] 修改 `spawn_enemy()`：先创建敌人、设置 `enemy_data` 和位置，再 `add_child()`，最后调用 `register_enemy()`。
+- [x] 在 `EnemyManager._ready()` 中扫描父节点或当前关卡下已有敌人，并调用 `register_enemy()`。
+- [x] 验证主场景中手动摆放的敌人死亡后，HUD 击杀计数会更新。
+- [x] 验证动态生成的敌人死亡后，`active_enemies` 会减少。
 
 ### 0.7 修复 CSG 碰撞启用范围
 
-- [ ] 在 `scripts/main.gd` 中停止对整个 `Level` 递归启用所有 CSG 碰撞。
-- [ ] 给关卡地形节点加入 `level_geometry` group，或约定名称前缀 `Ground_`、`Wall_`、`Boundary_`。
-- [ ] `_enable_csg_collision()` 只处理 `level_geometry` group 或符合命名前缀的节点。
-- [ ] 明确跳过敌人、武器、装饰模型中用于视觉占位的 CSGBox3D。
-- [ ] 更新 `scenes/main.tscn` 中现有地板节点，把它加入关卡几何识别规则。
-- [ ] 验证敌人身体部件仍保持 `use_collision = false`，敌人只使用 Capsule 碰撞体。
-- [ ] 验证玩家仍能站在地面上，子弹仍能命中地面/墙体。
+- [x] 在 `scripts/main.gd` 中停止对整个 `Level` 递归启用所有 CSG 碰撞。
+- [x] 给关卡地形节点加入 `level_geometry` group，或约定名称前缀 `Ground_`、`Wall_`、`Boundary_`。
+- [x] `_enable_csg_collision()` 只处理 `level_geometry` group 或符合命名前缀的节点。
+- [x] 明确跳过敌人、武器、装饰模型中用于视觉占位的 CSGBox3D。
+- [x] 更新 `scenes/main.tscn` 中现有地板节点，把它加入关卡几何识别规则。
+- [x] 验证敌人身体部件仍保持 `use_collision = false`，敌人只使用 Capsule 碰撞体。
+- [x] 验证玩家仍能站在地面上，子弹仍能命中地面/墙体。
 
 ### 0.8 Phase 0 验收
 
-- [ ] 项目能正常进入主场景。
-- [ ] 玩家移动、跳跃、鼠标视角正常。
-- [ ] 当前装备武器唯一响应开火和换弹。
-- [ ] 敌人能找到玩家并攻击。
-- [ ] 手动摆放敌人和动态生成敌人都能被 EnemyManager 统计。
-- [ ] 关卡几何有碰撞，敌人视觉 CSG 不被强制打开碰撞。
-- [ ] 切武器、敌人死亡、玩家死亡后没有旧 timer 继续造成明显副作用。
+- [x] 项目能正常进入主场景。
+- [x] 玩家移动、跳跃、鼠标视角正常。
+- [x] 当前装备武器唯一响应开火和换弹。
+- [x] 敌人能找到玩家并攻击。
+- [x] 手动摆放敌人和动态生成敌人都能被 EnemyManager 统计。
+- [x] 关卡几何有碰撞，敌人视觉 CSG 不被强制打开碰撞。
+- [x] 切武器、敌人死亡、玩家死亡后没有旧 timer 继续造成明显副作用。
 
 ## Phase 1：游戏流程、菜单与记录
 

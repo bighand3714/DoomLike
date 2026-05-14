@@ -70,8 +70,17 @@ var _can_fire: bool = true
 ## 是否正在换弹中
 var _is_reloading: bool = false
 
+## 是否当前装备中（0.3：未装备时不响应输入）
+var _is_equipped: bool = false
+
 ## 射击冷却计时器（秒）——倒计时，归零后才能打下一发
 var _fire_cooldown: float = 0.0
+
+## 换弹 token——切武器后递增，使旧 timer 失效（0.4）
+var _reload_token: int = 0
+
+## 泵动 token——切武器后递增，使旧泵动 timer 失效（0.4）
+var _pump_token: int = 0
 
 
 # ==============================================================================
@@ -143,11 +152,11 @@ func _process(delta: float) -> void:
 		_fire_cooldown -= delta
 
 	# --- 全自动模式：按住鼠标疯狂开火 ---
-	# is_action_pressed() 返回"按键是否被按住"（每帧都 true）
-	# 和 is_action_just_pressed()（只有按下那一帧 true）不同。
-	# 全自动枪（AUTO）用 pressed（按住连发），
-	# 半自动枪（SEMI）用 just_pressed（每次扣扳机一发）。
-	if weapon_data != null and weapon_data.fire_mode == WeaponData.FireMode.AUTO:
+	# 0.3：未装备时不处理输入
+	if not _is_equipped or weapon_data == null:
+		return
+
+	if weapon_data.fire_mode == WeaponData.FireMode.AUTO:
 		if Input.is_action_pressed("primary_fire"):
 			_try_fire()
 
@@ -159,7 +168,7 @@ func _process(delta: float) -> void:
 # 这里只处理瞬间动作（半自动开枪、换弹），
 # 全自动模式在 _process 里通过 is_action_pressed 处理。
 func _input(event: InputEvent) -> void:
-	if weapon_data == null:
+	if not _is_equipped or weapon_data == null:
 		return
 
 	# --- 半自动 + 泵动式：按一下打一发 ---
@@ -406,24 +415,24 @@ func _start_reload() -> void:
 
 	# 标记"换弹中"，射手逻辑会靠这个标记阻止开枪
 	_is_reloading = true
+	_reload_token += 1
+	var token := _reload_token
 	reload_started.emit(weapon_data.reload_time)
 
-	# create_timer() 创建一个"一次性闹钟"——reload_time 秒后响，
-	# 然后自动调用 _finish_reload()。
-	# 如果这期间武器被切换掉，timer 也会被销毁（武器节点被隐藏/移除时触发）
+	# 0.4：绑定 token，timer 触发时检查是否仍有效
 	var timer := get_tree().create_timer(weapon_data.reload_time)
-	timer.timeout.connect(_finish_reload)
+	timer.timeout.connect(_finish_reload.bind(token))
 
 
 # ==============================================================================
 # _finish_reload() — 换弹完成：从备弹补充到弹匣
 # ==============================================================================
-func _finish_reload() -> void:
-	# 计算需要多少发子弹才能填满弹匣
-	var needed: int = weapon_data.mag_size - _current_mag
+func _finish_reload(token: int) -> void:
+	# 0.4：token 不匹配说明已切武器，忽略
+	if token != _reload_token:
+		return
 
-	# 取"需要的数量"和"备弹剩余"的最小值
-	# 例如：弹匣 8 发，当前 3 发，需要 5 发，备弹只有 2 发 → 只能填 2 发
+	var needed: int = weapon_data.mag_size - _current_mag
 	var available: int = min(needed, _current_reserve)
 
 	_current_mag += available
@@ -444,10 +453,15 @@ func _finish_reload() -> void:
 
 func _start_pump() -> void:
 	_can_fire = false
+	_pump_token += 1
+	var token := _pump_token
 	var timer := get_tree().create_timer(0.5)
-	timer.timeout.connect(_finish_pump)
+	timer.timeout.connect(_finish_pump.bind(token))
 
-func _finish_pump() -> void:
+func _finish_pump(token: int) -> void:
+	# 0.4：token 不匹配说明已切武器，忽略
+	if token != _pump_token:
+		return
 	_can_fire = true
 	if _current_mag <= 0:
 		_start_reload()
@@ -484,11 +498,16 @@ func _apply_recoil() -> void:
 # _on_unequip()：武器被切走——隐藏模型、取消进行中的换弹
 
 func _on_equip() -> void:
+	_is_equipped = true
 	visible = true
 	ammo_changed.emit(_current_mag, _current_reserve)
 
 func _on_unequip() -> void:
+	_is_equipped = false
 	visible = false
 	# 切换武器时中断换弹（否则新武器也显示"换弹中"）
 	if _is_reloading:
 		_is_reloading = false
+	# 0.4：递增 token 使旧 timer 失效
+	_reload_token += 1
+	_pump_token += 1
