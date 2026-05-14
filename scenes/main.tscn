@@ -56,5 +56,5 @@ offset_right = 120.0
 offset_bottom = 36.0
 script = ExtResource("3_fps")
 
-[node name="PlayerStatus" type="Node" parent="UI" unique_id=1044724957]
+[node name="PlayerStatus" type="Control" parent="UI" unique_id=1044724957]
 script = ExtResource("4_ps")

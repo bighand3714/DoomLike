@@ -1,20 +1,19 @@
 # ==============================================================================
 # MainMenu — 主菜单
 # ==============================================================================
-# CanvasLayer，挂在 UI 下。游戏启动时显示，点击"开始游戏"后隐藏。
+# CanvasLayer，挂在 UI 下。启动时显示"DOOM-LIKE"标题 + 按钮。
+# 点击"开始游戏"发出 start_requested，由 main.gd 状态机处理。
 # ==============================================================================
 
 extends CanvasLayer
 
-signal game_started()
+signal start_requested()
+signal quit_requested()
 
 
 func _ready() -> void:
-	# PROCESS_MODE_ALWAYS 确保暂停时按钮仍可点击
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_create_ui()
-	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-	get_tree().paused = true
 
 
 func _create_ui() -> void:
@@ -73,18 +72,12 @@ func _add_button(text: String, y: float, callback: Callable) -> void:
 
 
 func _on_start() -> void:
-	# 隐藏自己，恢复游戏
-	hide()
-	get_tree().paused = false
-	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
-	game_started.emit()
+	start_requested.emit()
 
 
 func _on_quit() -> void:
-	get_tree().quit()
+	quit_requested.emit()
 
 
 func show_menu() -> void:
 	show()
-	get_tree().paused = true
-	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE

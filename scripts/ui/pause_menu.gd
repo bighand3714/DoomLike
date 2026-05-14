@@ -2,6 +2,7 @@
 # PauseMenu — 暂停菜单
 # ==============================================================================
 # 游戏中按 Esc 显示，覆盖在当前画面上。
+# 按钮操作通过信号通知 main.gd 状态机，不直接控制游戏状态。
 # ==============================================================================
 
 extends CanvasLayer
@@ -57,25 +58,18 @@ func _add_button(text: String, y: float, callback: Callable) -> void:
 
 
 func _on_resume() -> void:
-	hide()
-	get_tree().paused = false
-	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	resumed.emit()
 
 
 func _on_back_to_menu() -> void:
-	hide()
-	get_tree().paused = false
 	back_to_menu.emit()
 
 
 func _input(event: InputEvent) -> void:
-	# Esc 键恢复游戏
+	# Esc 键恢复游戏——通过信号通知状态机
 	if event.is_action_pressed("ui_cancel") and visible:
-		_on_resume()
+		resumed.emit()
 
 
 func show_pause() -> void:
 	show()
-	get_tree().paused = true
-	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE

@@ -1,7 +1,7 @@
 # ==============================================================================
 # PlayerStatus — 玩家状态 HUD + 生命条 + 护甲 + 武器栏位 + 拾取通知
 # ==============================================================================
-extends Node
+extends Control
 
 const EnemyManagerClass = preload("res://scripts/enemy/enemy_manager.gd")
 
@@ -38,6 +38,8 @@ const RIGHT_MARGIN := 12.0
 const LABEL_W := 280.0
 
 func _ready() -> void:
+	# 填满全屏——否则 Control 默认 0×0，子节点锚点全部塌缩到原点
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_create_labels()
 	call_deferred("_connect_signals")
 	call_deferred("_connect_enemy_manager")
