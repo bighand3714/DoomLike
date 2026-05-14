@@ -168,6 +168,7 @@
 - [ ] 添加 `add_score(amount: int)`。
 - [ ] 添加 `add_kill(score_value: int)`，同时增加击杀数和分数。
 - [ ] 在 `main.gd` 的 `_process(delta)` 中更新当前 RunStats。
+- [ ] 让这些数据都实时显示到左上角FPS下面。
 - [ ] 敌人死亡时先临时按固定分数加分，后续 Phase 5 再接入 `EnemyData.score_value`。
 
 ### 1.6 存档 SaveData

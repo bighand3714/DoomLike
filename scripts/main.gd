@@ -13,6 +13,7 @@ extends Node3D
 const MainMenuClass = preload("res://scripts/ui/main_menu.gd")
 const PauseMenuClass = preload("res://scripts/ui/pause_menu.gd")
 const LevelSelectClass = preload("res://scripts/ui/level_select.gd")
+const GameOverClass = preload("res://scripts/ui/game_over_screen.gd")
 
 @onready var _level_root: Node3D = %Level
 @onready var _crosshair: ColorRect = %Crosshair
@@ -22,9 +23,15 @@ const LevelSelectClass = preload("res://scripts/ui/level_select.gd")
 var _main_menu: CanvasLayer
 var _pause_menu: CanvasLayer
 var _level_select: CanvasLayer
+var _game_over_screen: CanvasLayer
 var _game_state: GameState.State = GameState.State.BOOT
 var _current_level_id: String = ""
 var _hit_marker_connected := false
+
+# 简易本局统计（1.5 RunStats 完成后替换）
+var _run_score: int = 0
+var _run_kills: int = 0
+var _run_start_time: float = 0.0
 
 
 # ==============================================================================
@@ -41,6 +48,8 @@ func _ready() -> void:
 	ui.add_child(_pause_menu)
 	_level_select = _create_level_select()
 	ui.add_child(_level_select)
+	_game_over_screen = _create_game_over_screen()
+	ui.add_child(_game_over_screen)
 
 	# 信号连接
 	_main_menu.start_requested.connect(_on_start_requested)
@@ -49,6 +58,9 @@ func _ready() -> void:
 	_pause_menu.back_to_menu.connect(_on_back_to_menu)
 	_level_select.level_selected.connect(_on_level_selected)
 	_level_select.back_requested.connect(_on_level_select_back)
+	_game_over_screen.restart_requested.connect(_on_restart_requested)
+	_game_over_screen.level_select_requested.connect(_on_game_over_level_select)
+	_game_over_screen.main_menu_requested.connect(_on_game_over_main_menu)
 
 	# 启动流程：BOOT → MAIN_MENU
 	_set_game_state(GameState.State.MAIN_MENU)
@@ -65,6 +77,7 @@ func _set_game_state(next_state: GameState.State) -> void:
 		GameState.State.MAIN_MENU:
 			_main_menu.show_menu()
 			_level_select.hide()
+			_game_over_screen.hide()
 			_pause_menu.hide()
 			_hide_hud()
 			get_tree().paused = true
@@ -73,17 +86,21 @@ func _set_game_state(next_state: GameState.State) -> void:
 		GameState.State.LEVEL_SELECT:
 			_main_menu.hide()
 			_level_select.show()
+			_game_over_screen.hide()
 			get_tree().paused = true
 			Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
 		GameState.State.PLAYING:
 			if prev != GameState.State.PAUSED:
-				# 新游戏：初始化关卡
 				_load_level()
+				_reset_run_stats()
+				_connect_player_death()
 				if not _hit_marker_connected:
 					_connect_hit_marker()
+				_connect_enemy_killed()
 			_main_menu.hide()
 			_level_select.hide()
+			_game_over_screen.hide()
 			_pause_menu.hide()
 			_show_hud()
 			get_tree().paused = false
@@ -95,11 +112,10 @@ func _set_game_state(next_state: GameState.State) -> void:
 			Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
 		GameState.State.GAME_OVER:
-			# 1.4 结算界面实现前，先回主菜单
 			get_tree().paused = true
 			Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 			_hide_hud()
-			_set_game_state(GameState.State.MAIN_MENU)
+			_end_run()
 
 
 # ==============================================================================
@@ -123,6 +139,16 @@ func _on_level_selected(level_id: String) -> void:
 func _on_level_select_back() -> void:
 	_set_game_state(GameState.State.MAIN_MENU)
 
+func _on_restart_requested() -> void:
+	_start_level(_current_level_id)
+	_set_game_state(GameState.State.PLAYING)
+
+func _on_game_over_level_select() -> void:
+	_set_game_state(GameState.State.LEVEL_SELECT)
+
+func _on_game_over_main_menu() -> void:
+	_set_game_state(GameState.State.MAIN_MENU)
+
 func _on_back_to_menu() -> void:
 	_set_game_state(GameState.State.MAIN_MENU)
 
@@ -135,6 +161,50 @@ func _start_level(_level_id: String) -> void:
 	# TODO: Phase 2 — 通过 LevelRegistry 加载对应 .tscn 并实例化到 CurrentLevelRoot
 	# 目前使用场景中已搭建的 Level 节点
 	pass
+
+
+# ==============================================================================
+# 简易本局统计（1.5 RunStats 完成后替换）
+# ==============================================================================
+
+func _reset_run_stats() -> void:
+	_run_score = 0
+	_run_kills = 0
+	_run_start_time = Time.get_ticks_msec() / 1000.0
+
+func _connect_player_death() -> void:
+	var dmg := _player.get_node_or_null("Damageable") as Damageable
+	if dmg != null and not dmg.died.is_connected(_on_player_died):
+		dmg.died.connect(_on_player_died)
+
+func _connect_enemy_killed() -> void:
+	var em := _level_root.get_node_or_null("EnemyManager")
+	if em != null and em.has_signal("enemy_killed"):
+		if not em.enemy_killed.is_connected(_on_enemy_killed_for_score):
+			em.enemy_killed.connect(_on_enemy_killed_for_score)
+
+func _on_enemy_killed_for_score(_enemy_name: String) -> void:
+	_run_kills += 1
+	_run_score += 10  # 临时固定 10 分，Phase 5 接入 EnemyData.score_value
+
+func _on_player_died() -> void:
+	if _game_state == GameState.State.PLAYING:
+		_set_game_state(GameState.State.GAME_OVER)
+
+func _end_run() -> void:
+	var survival_time := Time.get_ticks_msec() / 1000.0 - _run_start_time
+	# 1.6 SaveData 完成后替换为真实历史数据
+	var results := {
+		level_id = _current_level_id,
+		score = _run_score,
+		kills = _run_kills,
+		survival_time = survival_time,
+		best_score = 0,
+		best_time = 0.0,
+		is_new_record = false,
+	}
+	_game_over_screen.show()
+	_game_over_screen.show_results(results)
 
 
 # ==============================================================================
@@ -165,6 +235,11 @@ func _create_pause_menu() -> CanvasLayer:
 func _create_level_select() -> CanvasLayer:
 	var menu := LevelSelectClass.new()
 	menu.name = "LevelSelect"
+	return menu
+
+func _create_game_over_screen() -> CanvasLayer:
+	var menu := GameOverClass.new()
+	menu.name = "GameOverScreen"
 	return menu
 
 
