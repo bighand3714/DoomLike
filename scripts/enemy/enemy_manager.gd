@@ -96,6 +96,10 @@ func is_all_cleared() -> bool:
 	return active_enemies.is_empty()
 
 
+func get_active_count() -> int:
+	return active_enemies.size()
+
+
 func reset() -> void:
 	for enemy in active_enemies:
 		if enemy.enemy_died.is_connected(_on_enemy_died):

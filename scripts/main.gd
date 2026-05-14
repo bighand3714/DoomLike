@@ -18,6 +18,7 @@ const LevelSelectClass = preload("res://scripts/ui/level_select.gd")
 const GameOverClass = preload("res://scripts/ui/game_over_screen.gd")
 const ArenaLevelClass = preload("res://scripts/level/arena_level.gd")
 const LevelRegistryClass = preload("res://scripts/level/level_registry.gd")
+const SpawnManagerClass = preload("res://scripts/enemy/spawn_manager.gd")
 
 @onready var _level_root: Node3D = %Level
 @onready var _crosshair: ColorRect = %Crosshair
@@ -32,6 +33,7 @@ var _game_state: GameState.State = GameState.State.BOOT
 var _current_level_id: String = ""
 var _current_level: Node3D = null
 var _current_arena: ArenaLevel = null
+var _spawn_manager: Node = null
 var _hit_marker_connected := false
 
 var _run_stats := RunStatsClass.new()
@@ -184,6 +186,9 @@ func _start_level(level_id: String) -> void:
 # _unload_current_level() — 卸载当前关卡
 # ==============================================================================
 func _unload_current_level() -> void:
+	if _spawn_manager != null:
+		_spawn_manager.stop()
+		_spawn_manager = null
 	if _current_arena != null:
 		if _current_arena.boundary_warning_requested.is_connected(_on_boundary_warning):
 			_current_arena.boundary_warning_requested.disconnect(_on_boundary_warning)
@@ -213,6 +218,9 @@ func _load_arena_level(level_id: String) -> void:
 		if not _current_arena.boundary_warning_requested.is_connected(_on_boundary_warning):
 			_current_arena.boundary_warning_requested.connect(_on_boundary_warning)
 
+	# 创建/设置 SpawnManager
+	_setup_spawn_manager()
+
 
 # ==============================================================================
 # _reset_player_for_level() — 重置玩家状态到关卡初始值
@@ -241,6 +249,54 @@ func _reset_player_for_level() -> void:
 	var ps := get_node_or_null("UI/PlayerStatus")
 	if ps != null and ps.has_method("reset_kill_count"):
 		ps.reset_kill_count()
+
+	# 启动刷怪
+	if _spawn_manager != null:
+		_spawn_manager.start()
+
+
+# ==============================================================================
+# _setup_spawn_manager —— 创建/配置 SpawnManager（Phase 7）
+# ==============================================================================
+func _setup_spawn_manager() -> void:
+	# 清除旧的
+	if _spawn_manager != null:
+		_spawn_manager.stop()
+		_spawn_manager = null
+
+	var em := _level_root.get_node_or_null("EnemyManager")
+	if em == null:
+		return
+
+	var sm := SpawnManagerClass.new()
+	sm.name = "SpawnManager"
+
+	# 根据关卡选择刷怪 profile
+	var profile := "default"
+	if _current_level_id == "desert":
+		profile = "desert"
+	elif _current_level_id == "lava":
+		profile = "lava"
+
+	sm.setup(_current_arena, em, _run_stats, profile)
+
+	# 连接强度变化信号 → HUD
+	if sm.intensity_changed.is_connected(_on_intensity_changed):
+		sm.intensity_changed.disconnect(_on_intensity_changed)
+	sm.intensity_changed.connect(_on_intensity_changed)
+
+	# 挂在 Level 节点下
+	_level_root.add_child(sm)
+	_spawn_manager = sm
+
+
+# ==============================================================================
+# _on_intensity_changed —— 强度变化 → 更新 HUD
+# ==============================================================================
+func _on_intensity_changed(new_intensity: int) -> void:
+	var ps := get_node_or_null("UI/PlayerStatus")
+	if ps != null and ps.has_method("update_intensity"):
+		ps.update_intensity(new_intensity)
 
 
 # ==============================================================================

@@ -49,6 +49,7 @@ var _boundary_warning: Label
 
 var _update_timer: float = 0.0
 var _kill_count: int = 0
+var _current_intensity: int = 1
 var _notify_timer: float = 0.0
 var _boundary_warning_timer: float = 0.0
 
@@ -109,7 +110,7 @@ func _create_labels() -> void:
 
 	# 强度（左上角，时间下方 y=76），Phase 7 前固定显示 1
 	_intensity_label = _make_left_label(76.0, 14, Color(0.9, 0.5, 0.3))
-	_intensity_label.text = "强度: 1"
+	_intensity_label.text = "强度: %d" % _current_intensity
 
 	# 拾取通知（屏幕中上，居中）
 	_pickup_notify = Label.new()
@@ -323,7 +324,7 @@ func _update_score_and_time() -> void:
 	var stats = main.get_run_stats()
 	_score_label.text = "分数: %d" % stats.score
 	_time_label.text = "时间: %.1f" % stats.survival_time
-	_intensity_label.text = "强度: 1"
+	_intensity_label.text = "强度: %d" % _current_intensity
 
 
 # ==============================================================================
@@ -410,7 +411,16 @@ func show_boundary_warning() -> void:
 #   - 结算界面点击"重新开始"后
 func reset_kill_count() -> void:
 	_kill_count = 0
+	_current_intensity = 1
 	_kills_label.text = "击杀: 0"
+
+
+# ==============================================================================
+# update_intensity —— SpawnManager 调用，更新 HUD 强度显示
+# ==============================================================================
+func update_intensity(new_intensity: int) -> void:
+	_current_intensity = new_intensity
+	_intensity_label.text = "强度: %d" % _current_intensity
 
 
 # ==============================================================================
