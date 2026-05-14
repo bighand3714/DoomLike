@@ -1,25 +1,30 @@
 # ==============================================================================
-# ArenaLevel — 圆形竞技场关卡基类（Phase 2.2）
+# ArenaLevel — 圆形竞技场关卡基类（Phase 2.2-2.4）
 # ==============================================================================
 # 所有竞技场关卡（荒漠、熔岩地狱）的共同父类，提供：
 #   1. 圆形区域的半径参数（可玩区域 + 刷怪外环）
 #   2. 场景树容器节点（几何/边界/道具/危险区/刷怪点）
 #   3. 随机数生成器初始化
-#   4. 基础地面 + 边界标志的生成框架
-#   5. 玩家越界检测（Phase 2.5）
+#   4. 基础地面生成（大平面 CSGBox3D）
+#   5. 边界标志柱生成（沿圆周均匀排列的细高柱子）
+#   6. 玩家越界检测（Phase 2.5）
 #
 # 子类（DesertArena、LavaArena）覆写：
-#   - _get_ground_material()    → 地面颜色/材质
-#   - _get_boundary_material()  → 边界柱颜色
+#   - _get_ground_color()       → 地面颜色
+#   - _get_boundary_color()     → 边界柱颜色
 #   - _spawn_props()            → 生成本关特有的道具/危险区
 #
 # 场景树结构（_ready 后自动构建）：
 #   DesertArena / LavaArena (ArenaLevel)
-#   ├── GeometryRoot    (_geometry_root)   —— 地面、墙壁
-#   ├── BoundaryRoot    (_boundary_root)   —— 边界柱
-#   ├── PropsRoot       (_props_root)      —— 枯树、岩柱等掩体
-#   ├── HazardsRoot     (_hazards_root)    —— 熔岩河流等危险区
-#   └── SpawnRoot       (_spawn_root)      —— 刷怪标记点
+#   ├── GeometryRoot    (_geometry_root)
+#   │    └── Ground_ArenaFloor (CSGBox3D, level_geometry)
+#   ├── BoundaryRoot    (_boundary_root)
+#   │    ├── BoundaryMarker_000 (CSGBox3D, level_geometry)
+#   │    ├── BoundaryMarker_001 ...
+#   │    └── ... (boundary_marker_count 根)
+#   ├── PropsRoot       (_props_root)      —— 枯树、岩柱
+#   ├── HazardsRoot     (_hazards_root)    —— 熔岩河流
+#   └── SpawnRoot       (_spawn_root)      —— 刷怪标记
 # ==============================================================================
 
 class_name ArenaLevel extends Node3D
@@ -120,9 +125,6 @@ func _ready() -> void:
 # ==============================================================================
 # _create_container_nodes() — 创建或获取五个容器节点
 # ==============================================================================
-# 每个容器用一个容易识别的名字命名，在场景树中一目了然。
-# 如果子类在 _ready() 之前已经手动创建了同名节点（比如在编辑器
-# .tscn 场景中预先放置），则复用已有节点而不是重复创建。
 func _create_container_nodes() -> void:
 	_geometry_root = _get_or_create_child("GeometryRoot")
 	_boundary_root = _get_or_create_child("BoundaryRoot")
@@ -145,13 +147,6 @@ func _get_or_create_child(node_name: String) -> Node3D:
 # ==============================================================================
 # _setup_rng() — 初始化随机数生成器
 # ==============================================================================
-# RandomNumberGenerator 是 Godot 提供的随机数工具类，每个 ArenaLevel
-# 拥有自己独立的 RNG 实例。这样做的好处：
-#   - 不同关卡的随机生成互不干扰
-#   - 使用固定 seed 时可以精确复现同一局的道具布局（调试用）
-#   - 修改一个关卡的随机逻辑不会影响另一个关卡
-#
-# seed=0 且 use_random_seed=false 时用系统时间自动生成种子。
 func _setup_rng() -> void:
 	rng = RandomNumberGenerator.new()
 	if use_random_seed and random_seed != 0:
@@ -161,22 +156,87 @@ func _setup_rng() -> void:
 
 
 # ==============================================================================
-# _build_base_arena() — 构建基础地面（Phase 2.3 实现）
+# _build_base_arena() — 构建基础地面（Phase 2.3）
 # ==============================================================================
-# 当前占位：子类会创建具体的地面几何体。
-# 基类只提供一个空方法，让 _ready() 的调用流程不出错，
-# 具体实现由 DesertArena / LavaArena 覆写（或 Phase 2.3 在基类中实现）。
+# 用一个巨大的方形 CSGBox3D 覆盖整个圆形竞技场区域。
+# 虽然是方形而非圆形，但边界柱在视觉上定义了圆形边界，
+# 方形地面在边界柱之外的区域玩家走不到（被边界限制挡住），
+# 所以实际上不影响体验。
+#
+# 地面参数：
+#   宽度/深度 = arena_radius × 2 + 4（每边多出 2m 防止边缘露馅）
+#   高度 = 0.3m（足够薄，看起来像地面而不是高台）
+#   Y 位置 = -0.15（让顶面刚好在 Y=0）
+#
+# 为什么用 CSGBox3D 而不是 PlaneMesh：
+#   CSGBox3D 自带碰撞体积，不需要额外加 CollisionShape3D。
+#   PlaneMesh 需要再挂 StaticBody3D + CollisionShape3D，多一步操作。
+#   后续替换为正式美术资源时再统一换。
 func _build_base_arena() -> void:
-	pass
+	var ground_size := arena_radius * 2.0 + 4.0  # 每边多 2m 余量
+	var ground_height := 0.3
+
+	var ground := CSGBox3D.new()
+	ground.name = "Ground_ArenaFloor"
+	ground.size = Vector3(ground_size, ground_height, ground_size)
+	ground.position = Vector3(0.0, -ground_height / 2.0, 0.0)
+	ground.use_collision = true
+	ground.add_to_group("level_geometry")
+
+	# 设置地面材质颜色
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = _get_ground_color()
+	# 粗糙度高 → 漫反射 → 看起来像土地/岩石表面，不像金属
+	mat.roughness = 0.9
+	ground.material = mat
+
+	_geometry_root.add_child(ground)
 
 
 # ==============================================================================
-# _build_boundary_markers() — 构建边界标志柱（Phase 2.4 实现）
+# _build_boundary_markers() — 构建边界标志柱（Phase 2.4）
 # ==============================================================================
-# 当前占位：沿圆周均匀放置细高柱子标记边界。
-# Phase 2.4 在基类中实现完整逻辑。
+# 沿圆周均匀放置细高柱子，让玩家一眼就能看到"这里是边界"。
+#
+# 柱子参数：
+#   宽/深 = 0.3m（细——像围栏柱，不像墙壁）
+#   高 = 4.0m（高于玩家视线，从竞技场中心也能看到）
+#   位置 = 圆周上均匀分布，柱子底面 Y=0（站在地面上）
+#
+# 为什么用这么高的柱子：
+#   玩家从竞技场中心（半径 45m）看向边界时，0.3m 宽的柱子
+#   在远处非常细。如果不做高一点（4m），容易被敌人/道具遮挡，
+#   导致玩家不知道边界在哪。4m 高 + 高亮色 = 远距离也能识别。
+#
+# 数学原理：
+#   第 i 根柱子的角度 = i × (2π ÷ boundary_marker_count)
+#   X = cos(角度) × arena_radius
+#   Z = sin(角度) × arena_radius
+#   这样所有柱子落在一个半径为 arena_radius 的正圆上。
 func _build_boundary_markers() -> void:
-	pass
+	var pillar_width := 0.3
+	var pillar_height := 4.0
+	var angle_step := TAU / float(boundary_marker_count)  # TAU = 2π
+
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = _get_boundary_color()
+	mat.roughness = 0.7
+
+	for i in range(boundary_marker_count):
+		var angle := float(i) * angle_step
+		var x := cos(angle) * arena_radius
+		var z := sin(angle) * arena_radius
+
+		var pillar := CSGBox3D.new()
+		pillar.name = "BoundaryMarker_%03d" % i  # 例：BoundaryMarker_000
+		pillar.size = Vector3(pillar_width, pillar_height, pillar_width)
+		# Y = pillar_height/2，让柱子底面贴地、柱体向上延伸
+		pillar.position = Vector3(x, pillar_height / 2.0, z)
+		pillar.use_collision = true
+		pillar.add_to_group("level_geometry")
+		pillar.material = mat
+
+		_boundary_root.add_child(pillar)
 
 
 # ==============================================================================
