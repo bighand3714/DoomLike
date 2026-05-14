@@ -21,10 +21,10 @@ unique_name_in_owner = true
 unique_name_in_owner = true
 script = ExtResource("5_em")
 
-[node name="Ground_MainFloor" type="CSGBox3D" parent="Level" groups=["level_geometry"]]
+[node name="Ground_MainFloor" type="CSGBox3D" parent="Level" unique_id=742996219 groups=["level_geometry"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.3955078, 0, -2.3243713)
-size = Vector3(40, 0.3, 40)
 use_collision = true
+size = Vector3(400, 0.3, 400)
 
 [node name="PlayerStart" type="Node3D" parent="Level" unique_id=1326714825]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -9.473101, 1.3648834, 5.883645)
@@ -57,4 +57,6 @@ offset_bottom = 36.0
 script = ExtResource("3_fps")
 
 [node name="PlayerStatus" type="Control" parent="UI" unique_id=1044724957]
+layout_mode = 3
+anchors_preset = 0
 script = ExtResource("4_ps")

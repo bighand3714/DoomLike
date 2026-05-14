@@ -94,6 +94,9 @@ var _spawn_root: Node3D
 # ==============================================================================
 var rng: RandomNumberGenerator
 
+## 玩家引用——由 main.gd 在关卡加载后通过 set_player() 注入
+var _player: CharacterBody3D = null
+
 
 # ==============================================================================
 # _ready() — 竞技场初始化主流程
@@ -264,6 +267,69 @@ func is_inside_arena(pos: Vector3) -> bool:
 	var center := get_arena_center()
 	var dist_xz := Vector2(pos.x - center.x, pos.z - center.z).length()
 	return dist_xz <= arena_radius
+
+
+# ==============================================================================
+# set_player(player_node) — 注入玩家引用（由 main.gd 在关卡加载后调用）
+# ==============================================================================
+func set_player(player_node: CharacterBody3D) -> void:
+	_player = player_node
+
+
+# ==============================================================================
+# _process(delta) — 每帧检查玩家是否越界（Phase 2.5）
+# ==============================================================================
+# 为什么用 _process 而不是 _physics_process：
+#   player_controller 在 _physics_process 中调用 move_and_slide() 移动玩家。
+#   如果用 _physics_process 来检查边界，执行顺序取决于场景树顺序（不可靠），
+#   可能在玩家移动之前就检查了，导致"上一帧的位置被本帧的边界检测拦截"。
+#
+#   _process 在所有 _physics_process 之后执行，此时玩家位置已经更新完毕，
+#   直接检查并修正即可。视觉上在渲染前完成校正，玩家不会看到"出界再弹回"。
+#
+# 夹回逻辑：
+#   1. 计算玩家到竞技场中心的 XZ 距离
+#   2. 如果超出 arena_radius：
+#      a. 从中心指向玩家的方向归一化（dir_xz）
+#      b. 把玩家位置夹回 arena_radius - 0.5（留半米缓冲，避免贴边抖动）
+#      c. 消除向外的水平速度分量（保留切向速度，让玩家能沿边界"滑行"）
+#      d. 发出 boundary_warning_requested 信号 → HUD 显示"已到达边界"
+#
+# 关于速度修正：
+#   如果不清除向外的水平速度，玩家顶着边界时 velocity 保持正值，
+#   下一帧 move_and_slide() 又会尝试往外移动，位置再次被夹回，
+#   形成"顶墙抖动"。只移除向外的分量（dot product > 0 的部分），
+#   保留切向分量，玩家就能沿边界平滑滑动。
+func _process(_delta: float) -> void:
+	if _player == null:
+		return
+
+	var center := get_arena_center()
+	var to_player := _player.global_position - center
+	var dist_xz := Vector2(to_player.x, to_player.z).length()
+
+	if dist_xz > arena_radius:
+		# 方向：从中心指向玩家（只取 XZ 平面）
+		var dir_xz := Vector2(to_player.x, to_player.z).normalized()
+
+		# 夹回位置：arena_radius - 0.5m 缓冲
+		var clamped_xz := dir_xz * (arena_radius - 0.5)
+		_player.global_position = Vector3(
+			center.x + clamped_xz.x,
+			_player.global_position.y,  # Y 轴不受影响
+			center.z + clamped_xz.y
+		)
+
+		# 消除向外的水平速度分量（dot > 0 = 正在往外走）
+		var vel := _player.velocity
+		var vel_xz := Vector2(vel.x, vel.z)
+		var outward_speed := vel_xz.dot(dir_xz)
+		if outward_speed > 0.0:
+			vel.x -= dir_xz.x * outward_speed
+			vel.z -= dir_xz.y * outward_speed
+			_player.velocity = vel
+
+		boundary_warning_requested.emit()
 
 
 # ==============================================================================
