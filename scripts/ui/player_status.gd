@@ -416,7 +416,7 @@ func reset_kill_count() -> void:
 # ==============================================================================
 # 信号回调
 # ==============================================================================
-func _on_enemy_killed(enemy_name: String) -> void:
+func _on_enemy_killed(enemy_name: String, _score_value: int) -> void:
 	_kill_count += 1
 	_kills_label.text = "击杀: %d  (%s)" % [_kill_count, enemy_name]
 

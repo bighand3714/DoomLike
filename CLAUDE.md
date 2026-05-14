@@ -2,7 +2,7 @@
 
 ## 项目概览
 
-Godot 4.6 项目，正在构建一款DOOM风格的第一人称射击游戏。当前处于**Roadmap 2 Phase 2 已完成**——圆形竞技场加载管线、关卡注册表、随机数工具、边界限制已可运行，选关后能进入荒漠/熔岩竞技场（带地面+边界柱）。下一步 Phase 3：荒漠竞技场道具生成。
+Godot 4.6 项目，正在构建一款DOOM风格的第一人称射击游戏。当前处于**Roadmap 2 Phase 5 已完成**——敌人数据模型扩展、眩晕/击退/抓取接口、三段式攻击AI、计分链路已实现。已知问题：敌人头顶调试血条/眩晕条显示为深色（CSGBox3D 在无直接光照下材质偏暗）。下一步 Phase 6：八类敌人实现。
 
 - **引擎**：Godot 4.6 (Forward Plus, D3D12)
 - **物理**：Jolt Physics
@@ -34,13 +34,13 @@ scripts/        GDScript 源代码
   damage/           伤害系统
     damageable.gd      可受伤接口（血量/护甲/减伤/重置/治疗信号）
     shooting_target.gd 射击靶子（测试用，自动创建Damageable）
-  enemy/            敌人系统
-    enemy_data.gd      EnemyData Resource 配置（生命/速度/AI/伤害参数）
-    enemy.gd           Enemy 基类（CharacterBody3D，6状态机/视线检测/追击/受击/死亡）
+  enemy/            敌人系统（Phase 5 扩展）
+    enemy_data.gd      EnemyData Resource（20+字段：生命/速度/AI/眩晕/重量/飞行/模型颜色）
+    enemy.gd           Enemy 基类（10状态机：IDLE→CHASE→ATTACK三段式→PAIN→STUNNED→DEATH等）
     projectile.gd      投射物基类（Area3D，飞行/碰撞/伤害/火球外观）
     imp.gd             小恶魔（远程火球投射物 + 近战爪击，CSG人形模型）
     demon_soldier.gd   恶魔士兵（hitscan射击 + 举枪前摇+有效性检查，装甲外观）
-    enemy_manager.gd   敌人生成与管理（register/unregister/spawn/存活追踪/重置）
+    enemy_manager.gd   敌人生成与管理（enemy_killed信号携带score_value）
   pickup/           拾取系统
     pickup.gd          Pickup 基类（Area3D + 悬浮旋转动画）
     health_pickup.gd   血包（红色，恢复生命）
@@ -126,7 +126,7 @@ Main (Node3D)                          ← main.gd
 - **关卡切换流程**：`_start_level(id)` → `_unload_current_level()`（清理旧关卡+信号）→ `_load_arena_level(id)`（PackedScene.instantiate + 连接边界信号）→ `_reset_player_for_level()`（传送出生点+重置血量/护甲/弹药/HUD）→ PLAYING
 - **武器系统**：`WeaponData`(Resource) → `WeaponNode`(基类) → `WeaponManager`(栏位管理)。支持半自动/全自动/泵动式，`reset_ammo()` 和 `reset_all_weapons()` 用于关卡重启。
 - **伤害系统**：`Damageable` 接口（血量/护甲/减伤），护甲吸收 50% 伤害（经典 DOOM 规则），`reset()` 恢复到满血满护甲。
-- **敌人系统**：`Enemy` 基类 6 状态机，`Imp`（火球+近战）和 `DemonSoldier`（hitscan+前摇）。`EnemyManager` 统一管理注册/反注册/生成，`reset()` 清理所有追踪。
+- **敌人系统（Phase 5）**：`Enemy` 基类 10 状态机（SPAWNING/IDLE/CHASE/ATTACK/PAIN/STUNNED/GRABBED/EXECUTED/DEATH），攻击采用三段式 windup→damage→recovery。眩晕系统（累积→满→STUNNED→可抓取窗口→自动恢复）、击退系统（weight/knockback_resistance 衰减）、抓取接口（can_be_grabbed/start_grab/execute）。头顶 CSGBox3D 调试条（血条+眩晕条）。`EnemyManager` 的 enemy_killed 信号携带 score_value，计分链路接入 RunStats。
 - **战斗HUD**：生命条（绿→橙→红+闪烁）、护甲（蓝色）、击杀（黄色）、武器栏位、命中标记、受伤闪红、拾取通知、分数/时间/强度（左上角，从 RunStats 读取）、边界警告（屏幕中下，橙红色大字，1.5秒自动消失）
 - **菜单系统**：主菜单 → 选关（动态读取 LevelRegistry）→ 加载竞技场 → 结算（从 LevelRegistry 获取关卡名）
 - **存档系统**：`SaveData` 用 ConfigFile 读写 `user://save.cfg`，`submit_run()` 比较并更新最高分/最长时间。选关和结算界面每次显示时刷新记录。
@@ -275,3 +275,7 @@ FPS: 60                          位置: 0.0  1.6  0.0
 - Damageable → `.reset()`（满血满护甲）
 - WeaponManager → `.reset_all_weapons()`（弹药回满 + 切回第一把武器）
 - HUD 击杀计数 → `.reset_kill_count()`（击杀数归零）
+
+## 已知问题
+
+- **敌人头顶调试条偏暗**：CSGBox3D 血条/眩晕条在无直接光照方向下材质显示为深色（近乎黑色）。根因是 CSGBox3D 用 StandardMaterial3D 且场景光照仅来自上方 DirectionalLight，条体侧面和底部无环境光补偿。待 Phase 9 集中修复（可能的方案：用 Sprite3D 替代 / 加 emission / 或等正式美术资源时一并替换）。

@@ -4,14 +4,33 @@
 
 [resource]
 script = ExtResource("1_edata")
+enemy_id = "demon_soldier"
 enemy_name = "恶魔士兵"
+enemy_role = "ground_ranged"
 max_health = 120.0
 attack_damage = 8.0
 damage_type = 0
+score_value = 20
+spawn_cost = 2
+weight = 1.5
+knockback_resistance = 0.3
+max_stun = 120.0
+stun_recovery_rate = 8.0
+stun_resistance = 0.2
 move_speed = 3.0
 attack_range = 20.0
 sight_range = 35.0
 attack_cooldown = 1.5
+preferred_range = 10.0
+min_range = 4.0
+attack_windup = 0.2
+attack_duration = 0.08
+attack_recovery = 0.4
+is_flying = false
+hover_height = 0.0
+vertical_move_speed = 0.0
 pain_duration = 0.3
 knockback_force = 3.0
 death_duration = 2.5
+stun_full_duration = 2.5
+model_color = Color(0.3, 0.35, 0.45, 1)

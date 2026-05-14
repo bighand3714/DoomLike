@@ -568,161 +568,161 @@
 
 ### 5.1 EnemyData 字段扩展
 
-- [ ] 更新 `scripts/enemy/enemy_data.gd`。
-- [ ] 添加基础分类字段：`enemy_id: String`、`enemy_role: String`。
-- [ ] 添加 `score_value: int = 10`。
-- [ ] 添加 `spawn_cost: int = 1`。
-- [ ] 添加 `weight: float = 1.0`。
-- [ ] 添加 `max_stun: float = 100.0`。
-- [ ] 添加 `stun_recovery_rate: float = 12.0`。
-- [ ] 添加 `stun_resistance: float = 0.0`，范围建议 `0.0` 到 `0.9`。
-- [ ] 添加 `knockback_resistance: float = 0.0`，范围建议 `0.0` 到 `0.9`。
-- [ ] 添加 `preferred_range: float = 2.0`，近战等于攻击距离附近，远程用于保持距离。
-- [ ] 添加 `min_range: float = 0.0`，远程敌人太近时后退。
-- [ ] 添加 `attack_windup: float = 0.2`。
-- [ ] 添加 `attack_duration: float = 0.1`。
-- [ ] 添加 `attack_recovery: float = 0.3`。
-- [ ] 添加 `is_flying: bool = false`。
-- [ ] 添加 `hover_height: float = 3.0`。
-- [ ] 添加 `vertical_move_speed: float = 4.0`。
-- [ ] 添加 `model_color: Color`，用于 Phase 6 立方体占位模型。
-- [ ] 确认已有 `imp.tres` 和 `demon_soldier.tres` 在新增字段后仍能加载。
+- [x] 更新 `scripts/enemy/enemy_data.gd`。
+- [x] 添加基础分类字段：`enemy_id: String`、`enemy_role: String`。
+- [x] 添加 `score_value: int = 10`。
+- [x] 添加 `spawn_cost: int = 1`。
+- [x] 添加 `weight: float = 1.0`。
+- [x] 添加 `max_stun: float = 100.0`。
+- [x] 添加 `stun_recovery_rate: float = 12.0`。
+- [x] 添加 `stun_resistance: float = 0.0`，范围建议 `0.0` 到 `0.9`。
+- [x] 添加 `knockback_resistance: float = 0.0`，范围建议 `0.0` 到 `0.9`。
+- [x] 添加 `preferred_range: float = 2.0`，近战等于攻击距离附近，远程用于保持距离。
+- [x] 添加 `min_range: float = 0.0`，远程敌人太近时后退。
+- [x] 添加 `attack_windup: float = 0.2`。
+- [x] 添加 `attack_duration: float = 0.1`。
+- [x] 添加 `attack_recovery: float = 0.3`。
+- [x] 添加 `is_flying: bool = false`。
+- [x] 添加 `hover_height: float = 3.0`。
+- [x] 添加 `vertical_move_speed: float = 4.0`。
+- [x] 添加 `model_color: Color`，用于 Phase 6 立方体占位模型。
+- [x] 确认已有 `imp.tres` 和 `demon_soldier.tres` 在新增字段后仍能加载。
 
 ### 5.2 伤害与眩晕接口
 
-- [ ] 在 `Enemy` 基类中新增 `_stun: float = 0.0`。
-- [ ] 新增 `_is_stun_full: bool = false`。
-- [ ] 新增信号 `stun_changed(current: float, max_value: float)`。
-- [ ] 新增信号 `stun_filled(enemy: Enemy)`。
-- [ ] 新增方法 `apply_stun(amount: float) -> void`。
-- [ ] `apply_stun()` 根据 `enemy_data.stun_resistance` 减免眩晕值。
-- [ ] 眩晕值限制在 `0` 到 `enemy_data.max_stun`。
-- [ ] 眩晕首次满时发出 `stun_filled`。
-- [ ] 新增方法 `is_stunned_or_grabbable() -> bool`。
-- [ ] 暂时不要求现有枪械都调用 `apply_stun`，Phase 8 接入武器眩晕值。
+- [x] 在 `Enemy` 基类中新增 `_stun: float = 0.0`。
+- [x] 新增 `_is_stun_full: bool = false`。
+- [x] 新增信号 `stun_changed(current: float, max_value: float)`。
+- [x] 新增信号 `stun_filled(enemy: Enemy)`。
+- [x] 新增方法 `apply_stun(amount: float) -> void`。
+- [x] `apply_stun()` 根据 `enemy_data.stun_resistance` 减免眩晕值。
+- [x] 眩晕值限制在 `0` 到 `enemy_data.max_stun`。
+- [x] 眩晕首次满时发出 `stun_filled`。
+- [x] 新增方法 `is_stunned_or_grabbable() -> bool`。
+- [x] 暂时不要求现有枪械都调用 `apply_stun`，Phase 8 接入武器眩晕值。
 
 ### 5.3 Enemy 状态机扩展
 
-- [ ] 扩展 `EnemyState`：`SPAWNING`、`STUNNED`、`GRABBED`、`EXECUTED`。
-- [ ] 新增 `_previous_state`，用于眩晕结束后返回追击或攻击。
-- [ ] 新增 `_state_entered(state)` 钩子，集中处理进入状态时的初始化。
-- [ ] 新增 `_state_exit(state)` 钩子，集中处理离开状态时的清理。
-- [ ] `_transition_to()` 调用 exit/enter 钩子。
-- [ ] `DEATH`、`GRABBED`、`EXECUTED` 状态下不再执行普通 AI。
-- [ ] `STUNNED` 状态下不移动、不攻击，但仍可被伤害。
-- [ ] 死亡后清理抓取、眩晕和延迟攻击 timer。
-- [ ] 保证旧的 `IDLE`、`CHASE`、`ATTACK`、`PAIN`、`DEATH` 流程仍能运行。
+- [x] 扩展 `EnemyState`：`SPAWNING`、`STUNNED`、`GRABBED`、`EXECUTED`。
+- [x] 新增 `_previous_state`，用于眩晕结束后返回追击或攻击。
+- [x] 新增 `_state_entered(state)` 钩子，集中处理进入状态时的初始化。
+- [x] 新增 `_state_exit(state)` 钩子，集中处理离开状态时的清理。
+- [x] `_transition_to()` 调用 exit/enter 钩子。
+- [x] `DEATH`、`GRABBED`、`EXECUTED` 状态下不再执行普通 AI。
+- [x] `STUNNED` 状态下不移动、不攻击，但仍可被伤害。
+- [x] 死亡后清理抓取、眩晕和延迟攻击 timer。
+- [x] 保证旧的 `IDLE`、`CHASE`、`ATTACK`、`PAIN`、`DEATH` 流程仍能运行。
 
 ### 5.4 眩晕恢复和可抓取窗口
 
-- [ ] 新增导出或数据字段 `stun_full_duration: float = 2.0`，可直接放 EnemyData 或 Enemy 基类。
-- [ ] 眩晕未满时，敌人每帧按 `stun_recovery_rate * delta` 恢复。
-- [ ] 眩晕满后进入 `STUNNED` 或设置可抓取窗口计时。
-- [ ] 可抓取窗口期间不自动降低眩晕值。
-- [ ] 可抓取窗口结束后，如果未被抓取，眩晕值逐步回落。
-- [ ] 再次受到眩晕伤害时刷新可抓取窗口。
-- [ ] 添加调试打印或临时头顶 Label，显示眩晕百分比。
+- [x] 新增导出或数据字段 `stun_full_duration: float = 2.0`，可直接放 EnemyData 或 Enemy 基类。
+- [x] 眩晕未满时，敌人每帧按 `stun_recovery_rate * delta` 恢复。
+- [x] 眩晕满后进入 `STUNNED` 或设置可抓取窗口计时。
+- [x] 可抓取窗口期间不自动降低眩晕值。
+- [x] 可抓取窗口结束后，如果未被抓取，眩晕值逐步回落。
+- [x] 再次受到眩晕伤害时刷新可抓取窗口。
+- [x] 添加调试打印或临时头顶 Label，显示眩晕百分比。
 
 ### 5.5 击退接口
 
-- [ ] 在 `Enemy` 基类新增 `_knockback_velocity: Vector3`。
-- [ ] 新增方法 `apply_knockback(direction: Vector3, force: float) -> void`。
-- [ ] 击退力度根据 `enemy_data.weight` 和 `enemy_data.knockback_resistance` 减免。
-- [ ] `_physics_process()` 中将击退速度叠加到移动速度。
-- [ ] 击退速度随时间衰减。
-- [ ] 死亡、抓取、处决状态下忽略普通击退。
-- [ ] 验证手动调用 `apply_knockback()` 能把敌人短暂推开。
+- [x] 在 `Enemy` 基类新增 `_knockback_velocity: Vector3`。
+- [x] 新增方法 `apply_knockback(direction: Vector3, force: float) -> void`。
+- [x] 击退力度根据 `enemy_data.weight` 和 `enemy_data.knockback_resistance` 减免。
+- [x] `_physics_process()` 中将击退速度叠加到移动速度。
+- [x] 击退速度随时间衰减。
+- [x] 死亡、抓取、处决状态下忽略普通击退。
+- [x] 验证手动调用 `apply_knockback()` 能把敌人短暂推开。
 
 ### 5.6 抓取和处决占位接口
 
-- [ ] 在 `Enemy` 基类新增 `_grab_owner: Node3D = null`。
-- [ ] 新增方法 `can_be_grabbed() -> bool`，眩晕满且未死亡时返回 true。
-- [ ] 新增方法 `start_grab(owner: Node3D) -> bool`。
-- [ ] `start_grab()` 成功后切换到 `GRABBED`。
-- [ ] 新增方法 `update_grabbed_position(target_transform: Transform3D, delta: float)`。
-- [ ] `GRABBED` 状态下关闭导航/主动移动/攻击。
-- [ ] 新增方法 `release_grab()`，释放后回到 `STUNNED` 或 `CHASE`。
-- [ ] 新增方法 `execute()`，切换到 `EXECUTED` 并造成死亡或大量伤害。
-- [ ] Phase 8 铁鞭只调用这些接口，不直接改 Enemy 内部状态。
+- [x] 在 `Enemy` 基类新增 `_grab_owner: Node3D = null`。
+- [x] 新增方法 `can_be_grabbed() -> bool`，眩晕满且未死亡时返回 true。
+- [x] 新增方法 `start_grab(owner: Node3D) -> bool`。
+- [x] `start_grab()` 成功后切换到 `GRABBED`。
+- [x] 新增方法 `update_grabbed_position(target_transform: Transform3D, delta: float)`。
+- [x] `GRABBED` 状态下关闭导航/主动移动/攻击。
+- [x] 新增方法 `release_grab()`，释放后回到 `STUNNED` 或 `CHASE`。
+- [x] 新增方法 `execute()`，切换到 `EXECUTED` 并造成死亡或大量伤害。
+- [x] Phase 8 铁鞭只调用这些接口，不直接改 Enemy 内部状态。
 
 ### 5.7 通用移动基础
 
-- [ ] 新增 `_get_player_flat_direction() -> Vector3`。
-- [ ] 新增 `_get_player_distance_xz() -> float`。
-- [ ] 新增 `_move_towards_player(delta, speed)`。
-- [ ] 新增 `_move_away_from_player(delta, speed)`。
-- [ ] 新增 `_strafe_around_player(delta, speed)`，供远程敌人横向移动。
-- [ ] 新增 `_face_player_flat()`，只绕 Y 轴看向玩家。
-- [ ] 地面敌人使用 `move_and_slide()`。
-- [ ] 飞行敌人使用高度修正后再移动，仍可用 CharacterBody3D。
+- [x] 新增 `_get_player_flat_direction() -> Vector3`。
+- [x] 新增 `_get_player_distance_xz() -> float`。
+- [x] 新增 `_move_towards_player(delta, speed)`。
+- [x] 新增 `_move_away_from_player(delta, speed)`。
+- [x] 新增 `_strafe_around_player(delta, speed)`，供远程敌人横向移动。
+- [x] 新增 `_face_player_flat()`，只绕 Y 轴看向玩家。
+- [x] 地面敌人使用 `move_and_slide()`。
+- [x] 飞行敌人使用高度修正后再移动，仍可用 CharacterBody3D。
 
 ### 5.8 近战 AI 模板
 
-- [ ] 在 `Enemy` 基类或新建 `scripts/enemy/melee_enemy_base.gd` 中实现近战模板。
-- [ ] 敌人距离玩家大于 `attack_range` 时追击。
-- [ ] 进入攻击范围后切换 `ATTACK`。
-- [ ] `ATTACK` 分为 windup、damage、recovery 三段计时。
-- [ ] windup 阶段面向玩家但不造成伤害。
-- [ ] damage 阶段检查距离和角度，命中则伤害玩家 Damageable。
-- [ ] recovery 阶段不能再次攻击。
-- [ ] 攻击结束后根据距离回到 `CHASE` 或继续 `ATTACK`。
-- [ ] 使用 `enemy_data.attack_damage` 和 `enemy_data.attack_cooldown`。
+- [x] 在 `Enemy` 基类或新建 `scripts/enemy/melee_enemy_base.gd` 中实现近战模板。
+- [x] 敌人距离玩家大于 `attack_range` 时追击。
+- [x] 进入攻击范围后切换 `ATTACK`。
+- [x] `ATTACK` 分为 windup、damage、recovery 三段计时。
+- [x] windup 阶段面向玩家但不造成伤害。
+- [x] damage 阶段检查距离和角度，命中则伤害玩家 Damageable。
+- [x] recovery 阶段不能再次攻击。
+- [x] 攻击结束后根据距离回到 `CHASE` 或继续 `ATTACK`。
+- [x] 使用 `enemy_data.attack_damage` 和 `enemy_data.attack_cooldown`。
 
 ### 5.9 远程 AI 模板
 
-- [ ] 在 `Enemy` 基类或新建 `scripts/enemy/ranged_enemy_base.gd` 中实现远程模板。
-- [ ] 距离大于 `preferred_range` 时靠近玩家。
-- [ ] 距离小于 `min_range` 时后退。
-- [ ] 位于合适距离时可横向移动或停下射击。
-- [ ] 攻击前检查视线，避免隔着掩体直接命中。
-- [ ] 远程攻击先复用现有 `Projectile` 或 hitscan 方法。
-- [ ] 投射物颜色根据敌人类型后续设置。
-- [ ] 攻击同样使用 windup、damage/fire、recovery 三段。
-- [ ] 玩家离开射程后回到 `CHASE`。
+- [x] 在 `Enemy` 基类或新建 `scripts/enemy/ranged_enemy_base.gd` 中实现远程模板。
+- [x] 距离大于 `preferred_range` 时靠近玩家。
+- [x] 距离小于 `min_range` 时后退。
+- [x] 位于合适距离时可横向移动或停下射击。
+- [x] 攻击前检查视线，避免隔着掩体直接命中。
+- [x] 远程攻击先复用现有 `Projectile` 或 hitscan 方法。
+- [x] 投射物颜色根据敌人类型后续设置。
+- [x] 攻击同样使用 windup、damage/fire、recovery 三段。
+- [x] 玩家离开射程后回到 `CHASE`。
 
 ### 5.10 空中 AI 模板
 
-- [ ] 在 `Enemy` 基类中支持 `enemy_data.is_flying`。
-- [ ] 飞行敌人目标高度为玩家高度加 `hover_height`。
-- [ ] 每帧按 `vertical_move_speed` 调整 Y 轴高度。
-- [ ] 飞行敌人仍遵守圆形边界，不飞到过远区域。
-- [ ] 空中近战敌人可使用近战模板，但允许从空中贴近。
-- [ ] 空中远程敌人可使用远程模板，并保持悬浮高度。
-- [ ] 飞行敌人被击退时允许 XZ 击退，Y 轴击退可减弱。
-- [ ] 飞行敌人被抓取时下降或直接移动到玩家身前，避免卡在空中。
+- [x] 在 `Enemy` 基类中支持 `enemy_data.is_flying`。
+- [x] 飞行敌人目标高度为玩家高度加 `hover_height`。
+- [x] 每帧按 `vertical_move_speed` 调整 Y 轴高度。
+- [x] 飞行敌人仍遵守圆形边界，不飞到过远区域。
+- [x] 空中近战敌人可使用近战模板，但允许从空中贴近。
+- [x] 空中远程敌人可使用远程模板，并保持悬浮高度。
+- [x] 飞行敌人被击退时允许 XZ 击退，Y 轴击退可减弱。
+- [x] 飞行敌人被抓取时下降或直接移动到玩家身前，避免卡在空中。
 
 ### 5.11 敌人死亡、计分和注册
 
-- [ ] `Enemy` 死亡时继续发出 `enemy_died(enemy)`。
-- [ ] `EnemyManager` 从 `enemy.enemy_data.score_value` 读取分数。
-- [ ] `EnemyManager.enemy_killed` 信号扩展为携带 `enemy_name` 和 `score_value`，或新增 `enemy_scored(score_value)`。
-- [ ] `RunStats.add_kill(score_value)` 接入 EnemyManager。
-- [ ] HUD 击杀数和分数同时更新。
-- [ ] 敌人被熔岩、枪械、铁鞭、处决杀死时都只计一次分。
-- [ ] 死亡后敌人从 `active_enemies` 移除。
+- [x] `Enemy` 死亡时继续发出 `enemy_died(enemy)`。
+- [x] `EnemyManager` 从 `enemy.enemy_data.score_value` 读取分数。
+- [x] `EnemyManager.enemy_killed` 信号扩展为携带 `enemy_name` 和 `score_value`，或新增 `enemy_scored(score_value)`。
+- [x] `RunStats.add_kill(score_value)` 接入 EnemyManager。
+- [x] HUD 击杀数和分数同时更新。
+- [x] 敌人被熔岩、枪械、铁鞭、处决杀死时都只计一次分。
+- [x] 死亡后敌人从 `active_enemies` 移除。
 
 ### 5.12 敌人调试可视化
 
-- [ ] 给 Enemy 临时添加头顶眩晕条，使用 `Label3D`、`ProgressBar` 方案或简单 CSG 条。
-- [ ] 眩晕条默认显示当前眩晕比例。
-- [ ] 血量低于满值时可临时显示血条，方便验证伤害。
-- [ ] 状态变化时可在调试模式下打印状态名。
-- [ ] 给敌人模型颜色读取 `enemy_data.model_color`。
-- [ ] 所有调试显示后续可通过导出开关关闭。
+- [x] 给 Enemy 临时添加头顶眩晕条，使用 `Label3D`、`ProgressBar` 方案或简单 CSG 条。
+- [x] 眩晕条默认显示当前眩晕比例。
+- [x] 血量低于满值时可临时显示血条，方便验证伤害。
+- [x] 状态变化时可在调试模式下打印状态名。
+- [x] 给敌人模型颜色读取 `enemy_data.model_color`。
+- [x] 所有调试显示后续可通过导出开关关闭。
 
 ### 5.13 Phase 5 验收
 
-- [ ] 旧 Imp 和 DemonSoldier 在新增字段后仍能运行。
-- [ ] 敌人能被普通伤害杀死并正确计分。
-- [ ] 手动调用 `apply_stun()` 可以让敌人进入眩晕满状态。
-- [ ] 眩晕值会随时间恢复。
-- [ ] 手动调用 `apply_knockback()` 可以击退敌人。
-- [ ] 手动调用 `start_grab()` 后敌人停止攻击和移动。
-- [ ] 手动调用 `release_grab()` 后敌人能恢复行为。
-- [ ] 近战模板能靠近玩家并造成伤害。
-- [ ] 远程模板能保持距离并发射攻击。
-- [ ] 空中模板能保持悬浮高度。
-- [ ] EnemyManager、RunStats、HUD 的击杀和分数链路正常。
+- [x] 旧 Imp 和 DemonSoldier 在新增字段后仍能运行。
+- [x] 敌人能被普通伤害杀死并正确计分。
+- [x] 手动调用 `apply_stun()` 可以让敌人进入眩晕满状态。
+- [x] 眩晕值会随时间恢复。
+- [x] 手动调用 `apply_knockback()` 可以击退敌人。
+- [x] 手动调用 `start_grab()` 后敌人停止攻击和移动。
+- [x] 手动调用 `release_grab()` 后敌人能恢复行为。
+- [x] 近战模板能靠近玩家并造成伤害。
+- [x] 远程模板能保持距离并发射攻击。
+- [x] 空中模板能保持悬浮高度。
+- [x] EnemyManager、RunStats、HUD 的击杀和分数链路正常。
 
 ## Phase 6：八类敌人实现
 

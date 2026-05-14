@@ -274,8 +274,8 @@ func _on_boundary_warning() -> void:
 	if ps != null and ps.has_method("show_boundary_warning"):
 		ps.show_boundary_warning()
 
-func _on_enemy_killed_for_score(_enemy_name: String) -> void:
-	_run_stats.add_kill(10)
+func _on_enemy_killed_for_score(_enemy_name: String, score_value: int) -> void:
+	_run_stats.add_kill(score_value)
 
 func _on_player_died() -> void:
 	if _game_state == GameState.State.PLAYING:
