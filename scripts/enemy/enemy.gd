@@ -490,7 +490,7 @@ func _on_died() -> void:
 
 func _on_death_visual() -> void:
 	var tween := create_tween()
-	tween.tween_property(self, "scale", Vector3(0.3, 0.1, 0.3), 0.3)
+	tween.tween_property(self, "scale", Vector3(0.3, 0.3, 0.3), 0.3)
 	for child in get_children():
 		if child is MeshInstance3D or child is CSGBox3D or child is CSGPolygon3D:
 			var geo: Node3D = child

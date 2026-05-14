@@ -1,6 +1,75 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene format=3 uid="uid://c2htg1l57yhuo"]
 
-[ext_resource type="Script" path="res://scripts/enemy/ranged_enemy.gd" id="1_script"]
+[ext_resource type="Script" uid="uid://ct01gkeev1pc5" path="res://scripts/enemy/ranged_enemy.gd" id="1_script"]
 
-[node name="RangedEnemy" type="CharacterBody3D"]
+[sub_resource type="StandardMaterial3D" id="mat_body"]
+albedo_color = Color(0.2, 0.35, 0.8, 1)
+
+[sub_resource type="StandardMaterial3D" id="mat_head"]
+albedo_color = Color(0.176, 0.308, 0.704, 1)
+
+[sub_resource type="StandardMaterial3D" id="mat_eye"]
+albedo_color = Color(1, 0, 0, 1)
+emission_enabled = true
+emission = Color(1, 0, 0, 1)
+emission_energy_multiplier = 1.5
+
+[sub_resource type="StandardMaterial3D" id="mat_arm"]
+albedo_color = Color(0.184, 0.322, 0.736, 1)
+
+[sub_resource type="StandardMaterial3D" id="mat_gun"]
+albedo_color = Color(0.12, 0.12, 0.15, 1)
+
+[sub_resource type="StandardMaterial3D" id="mat_leg"]
+albedo_color = Color(0.164, 0.287, 0.656, 1)
+
+[sub_resource type="CapsuleShape3D" id="capsule_ranged"]
+radius = 0.35
+height = 1.75
+
+[node name="RangedEnemy" type="CharacterBody3D" unique_id=129903035]
 script = ExtResource("1_script")
+
+[node name="Body" type="CSGBox3D" parent="." unique_id=1448313064]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.05, 0)
+material_override = SubResource("mat_body")
+size = Vector3(0.6, 0.75, 0.35)
+
+[node name="Head" type="CSGBox3D" parent="." unique_id=1645387381]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, 0)
+material_override = SubResource("mat_head")
+size = Vector3(0.32, 0.28, 0.28)
+
+[node name="Eye" type="CSGBox3D" parent="." unique_id=822218511]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.63, -0.15)
+material_override = SubResource("mat_eye")
+size = Vector3(0.1, 0.06, 0.02)
+
+[node name="LeftArm" type="CSGBox3D" parent="." unique_id=1551388220]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 1.05, 0)
+material_override = SubResource("mat_arm")
+size = Vector3(0.16, 0.6, 0.16)
+
+[node name="RightArm" type="CSGBox3D" parent="." unique_id=896116112]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 1.05, 0)
+material_override = SubResource("mat_arm")
+size = Vector3(0.16, 0.6, 0.16)
+
+[node name="Gun" type="CSGBox3D" parent="." unique_id=1148956638]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 1.05, -0.25)
+material_override = SubResource("mat_gun")
+size = Vector3(0.1, 0.1, 0.45)
+
+[node name="LeftLeg" type="CSGBox3D" parent="." unique_id=805578036]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.16, 0.4, 0)
+material_override = SubResource("mat_leg")
+size = Vector3(0.2, 0.55, 0.2)
+
+[node name="RightLeg" type="CSGBox3D" parent="." unique_id=873909842]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.16, 0.4, 0)
+material_override = SubResource("mat_leg")
+size = Vector3(0.2, 0.55, 0.2)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=1429810766]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.95, 0)
+shape = SubResource("capsule_ranged")

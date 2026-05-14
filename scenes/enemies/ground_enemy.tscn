@@ -1,6 +1,72 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene format=3 uid="uid://dvxfk6v4a0vpn"]
 
-[ext_resource type="Script" path="res://scripts/enemy/ground_enemy.gd" id="1_script"]
+[ext_resource type="Script" uid="uid://ufk21sr2nt02" path="res://scripts/enemy/ground_enemy.gd" id="1_script"]
 
-[node name="GroundEnemy" type="CharacterBody3D"]
+[sub_resource type="StandardMaterial3D" id="mat_body"]
+albedo_color = Color(0.9, 0.25, 0.15, 1)
+
+[sub_resource type="StandardMaterial3D" id="mat_head"]
+albedo_color = Color(0.765, 0.2125, 0.1275, 1)
+
+[sub_resource type="StandardMaterial3D" id="mat_eye"]
+albedo_color = Color(1, 1, 0, 1)
+emission_enabled = true
+emission = Color(1, 1, 0, 1)
+emission_energy_multiplier = 1.5
+
+[sub_resource type="StandardMaterial3D" id="mat_arm"]
+albedo_color = Color(0.81, 0.225, 0.135, 1)
+
+[sub_resource type="StandardMaterial3D" id="mat_leg"]
+albedo_color = Color(0.72, 0.2, 0.12, 1)
+
+[sub_resource type="CapsuleShape3D" id="capsule_ground"]
+radius = 0.4
+height = 1.7
+
+[node name="GroundEnemy" type="CharacterBody3D" unique_id=202205808]
 script = ExtResource("1_script")
+
+[node name="Body" type="CSGBox3D" parent="." unique_id=1392298648]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+material_override = SubResource("mat_body")
+size = Vector3(0.65, 0.7, 0.35)
+
+[node name="Head" type="CSGBox3D" parent="." unique_id=532967002]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.55, 0)
+material_override = SubResource("mat_head")
+size = Vector3(0.35, 0.3, 0.3)
+
+[node name="LeftEye" type="CSGBox3D" parent="." unique_id=1482459678]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.08, 1.6, -0.16)
+material_override = SubResource("mat_eye")
+size = Vector3(0.08, 0.06, 0.02)
+
+[node name="RightEye" type="CSGBox3D" parent="." unique_id=1519369249]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.08, 1.6, -0.16)
+material_override = SubResource("mat_eye")
+size = Vector3(0.08, 0.06, 0.02)
+
+[node name="LeftArm" type="CSGBox3D" parent="." unique_id=160646479]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.45, 1, 0)
+material_override = SubResource("mat_arm")
+size = Vector3(0.18, 0.6, 0.18)
+
+[node name="RightArm" type="CSGBox3D" parent="." unique_id=406888670]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.45, 1, 0)
+material_override = SubResource("mat_arm")
+size = Vector3(0.18, 0.6, 0.18)
+
+[node name="LeftLeg" type="CSGBox3D" parent="." unique_id=696131343]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.18, 0.35, 0)
+material_override = SubResource("mat_leg")
+size = Vector3(0.22, 0.5, 0.22)
+
+[node name="RightLeg" type="CSGBox3D" parent="." unique_id=32080942]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.18, 0.35, 0)
+material_override = SubResource("mat_leg")
+size = Vector3(0.22, 0.5, 0.22)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=798999618]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.95, 0)
+shape = SubResource("capsule_ground")

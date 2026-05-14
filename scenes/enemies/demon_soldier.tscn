@@ -1,33 +1,41 @@
-[gd_scene load_steps=11 format=3]
+[gd_scene format=3 uid="uid://wdf5tuw2t4wd"]
 
-[ext_resource type="Script" path="res://scripts/enemy/demon_soldier.gd" id="1_soldier"]
+[ext_resource type="Script" uid="uid://b831jp6hchlku" path="res://scripts/enemy/demon_soldier.gd" id="1_soldier"]
 
 [sub_resource type="StandardMaterial3D" id="mat_body"]
-albedo_color = Color(0.35, 0.35, 0.4, 1.0)
+albedo_color = Color(0.35, 0.35, 0.4, 1)
+metallic = 0.3
+roughness = 0.5
 
 [sub_resource type="StandardMaterial3D" id="mat_shoulder"]
-albedo_color = Color(0.4, 0.4, 0.45, 1.0)
+albedo_color = Color(0.4, 0.4, 0.45, 1)
+metallic = 0.3
+roughness = 0.5
 
 [sub_resource type="StandardMaterial3D" id="mat_head"]
-albedo_color = Color(0.3, 0.3, 0.35, 1.0)
+albedo_color = Color(0.3, 0.3, 0.35, 1)
+metallic = 0.3
+roughness = 0.5
 
 [sub_resource type="StandardMaterial3D" id="mat_visor"]
-albedo_color = Color(1.0, 0.0, 0.0, 1.0)
+albedo_color = Color(1, 0, 0, 1)
+metallic = 0.3
+roughness = 0.5
 emission_enabled = true
-emission = Color(1.0, 0.0, 0.0, 1.0)
-emission_energy_multiplier = 3.0
+emission = Color(1, 0, 0, 1)
+emission_energy_multiplier = 2.0
 
 [sub_resource type="StandardMaterial3D" id="mat_limb"]
-albedo_color = Color(0.33, 0.33, 0.38, 1.0)
+albedo_color = Color(0.33, 0.33, 0.38, 1)
+metallic = 0.3
+roughness = 0.5
 
 [sub_resource type="StandardMaterial3D" id="mat_gun"]
-albedo_color = Color(0.15, 0.15, 0.18, 1.0)
-
-[sub_resource type="StandardMaterial3D" id="mat_leg"]
-albedo_color = Color(0.33, 0.33, 0.38, 1.0)
+albedo_color = Color(0.15, 0.15, 0.18, 1)
+metallic = 0.3
+roughness = 0.5
 
 [sub_resource type="CapsuleShape3D" id="capsule_soldier"]
-radius = 0.5
 height = 2.1
 
 [node name="DemonSoldier" type="CharacterBody3D"]
@@ -85,13 +93,13 @@ material_override = SubResource("mat_gun")
 size = Vector3(0.3, 0.65, 0.3)
 position = Vector3(-0.25, 0.4, 0)
 use_collision = false
-material_override = SubResource("mat_leg")
+material_override = SubResource("mat_limb")
 
 [node name="RightLeg" type="CSGBox3D" parent="."]
 size = Vector3(0.3, 0.65, 0.3)
 position = Vector3(0.25, 0.4, 0)
 use_collision = false
-material_override = SubResource("mat_leg")
+material_override = SubResource("mat_limb")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="."]
 shape = SubResource("capsule_soldier")

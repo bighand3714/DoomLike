@@ -1,6 +1,70 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene format=3 uid="uid://ccxfphmr056wh"]
 
-[ext_resource type="Script" path="res://scripts/enemy/flying_ranged_enemy.gd" id="1_script"]
+[ext_resource type="Script" uid="uid://x01aj8kdq2tn" path="res://scripts/enemy/flying_ranged_enemy.gd" id="1_script"]
+
+[sub_resource type="StandardMaterial3D" id="mat_body"]
+albedo_color = Color(0.1, 0.65, 0.65, 1)
+
+[sub_resource type="StandardMaterial3D" id="mat_head"]
+albedo_color = Color(0.09, 0.585, 0.585, 1)
+
+[sub_resource type="StandardMaterial3D" id="mat_eye"]
+albedo_color = Color(0, 1, 1, 1)
+emission_enabled = true
+emission = Color(0, 1, 1, 1)
+emission_energy_multiplier = 1.5
+
+[sub_resource type="StandardMaterial3D" id="mat_wing"]
+albedo_color = Color(0.082, 0.533, 0.533, 1)
+
+[sub_resource type="StandardMaterial3D" id="mat_gun"]
+albedo_color = Color(0.1, 0.1, 0.13, 1)
+
+[sub_resource type="StandardMaterial3D" id="mat_tail"]
+albedo_color = Color(0.08, 0.52, 0.52, 1)
+
+[sub_resource type="CapsuleShape3D" id="capsule_fly_ranged"]
+radius = 0.32
+height = 0.9
 
 [node name="FlyingRangedEnemy" type="CharacterBody3D"]
 script = ExtResource("1_script")
+
+[node name="Body" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+material_override = SubResource("mat_body")
+size = Vector3(0.5, 0.5, 0.35)
+
+[node name="Head" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.85, 0)
+material_override = SubResource("mat_head")
+size = Vector3(0.28, 0.22, 0.22)
+
+[node name="Eye" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.88, -0.12)
+material_override = SubResource("mat_eye")
+size = Vector3(0.08, 0.05, 0.02)
+
+[node name="LeftWing" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.4, 0.5, 0)
+material_override = SubResource("mat_wing")
+size = Vector3(0.06, 0.3, 0.5)
+
+[node name="RightWing" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, 0.5, 0)
+material_override = SubResource("mat_wing")
+size = Vector3(0.06, 0.3, 0.5)
+
+[node name="Gun" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.25, -0.25)
+material_override = SubResource("mat_gun")
+size = Vector3(0.08, 0.08, 0.4)
+
+[node name="Tail" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.35, 0.2)
+material_override = SubResource("mat_tail")
+size = Vector3(0.08, 0.08, 0.18)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+shape = SubResource("capsule_fly_ranged")
