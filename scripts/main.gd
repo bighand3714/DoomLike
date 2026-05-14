@@ -12,6 +12,7 @@ extends Node3D
 
 const MainMenuClass = preload("res://scripts/ui/main_menu.gd")
 const PauseMenuClass = preload("res://scripts/ui/pause_menu.gd")
+const LevelSelectClass = preload("res://scripts/ui/level_select.gd")
 
 @onready var _level_root: Node3D = %Level
 @onready var _crosshair: ColorRect = %Crosshair
@@ -20,7 +21,9 @@ const PauseMenuClass = preload("res://scripts/ui/pause_menu.gd")
 
 var _main_menu: CanvasLayer
 var _pause_menu: CanvasLayer
+var _level_select: CanvasLayer
 var _game_state: GameState.State = GameState.State.BOOT
+var _current_level_id: String = ""
 var _hit_marker_connected := false
 
 
@@ -36,12 +39,16 @@ func _ready() -> void:
 	ui.add_child(_main_menu)
 	_pause_menu = _create_pause_menu()
 	ui.add_child(_pause_menu)
+	_level_select = _create_level_select()
+	ui.add_child(_level_select)
 
 	# 信号连接
 	_main_menu.start_requested.connect(_on_start_requested)
 	_main_menu.quit_requested.connect(_on_quit_requested)
 	_pause_menu.resumed.connect(_on_pause_resumed)
 	_pause_menu.back_to_menu.connect(_on_back_to_menu)
+	_level_select.level_selected.connect(_on_level_selected)
+	_level_select.back_requested.connect(_on_level_select_back)
 
 	# 启动流程：BOOT → MAIN_MENU
 	_set_game_state(GameState.State.MAIN_MENU)
@@ -57,13 +64,17 @@ func _set_game_state(next_state: GameState.State) -> void:
 	match _game_state:
 		GameState.State.MAIN_MENU:
 			_main_menu.show_menu()
+			_level_select.hide()
+			_pause_menu.hide()
 			_hide_hud()
 			get_tree().paused = true
 			Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
 		GameState.State.LEVEL_SELECT:
-			# 1.3 选关界面实现前，直接进入 PLAYING（临时）
-			_set_game_state(GameState.State.PLAYING)
+			_main_menu.hide()
+			_level_select.show()
+			get_tree().paused = true
+			Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
 		GameState.State.PLAYING:
 			if prev != GameState.State.PAUSED:
@@ -72,6 +83,7 @@ func _set_game_state(next_state: GameState.State) -> void:
 				if not _hit_marker_connected:
 					_connect_hit_marker()
 			_main_menu.hide()
+			_level_select.hide()
 			_pause_menu.hide()
 			_show_hud()
 			get_tree().paused = false
@@ -103,8 +115,26 @@ func _on_quit_requested() -> void:
 func _on_pause_resumed() -> void:
 	_set_game_state(GameState.State.PLAYING)
 
+func _on_level_selected(level_id: String) -> void:
+	_current_level_id = level_id
+	_start_level(level_id)
+	_set_game_state(GameState.State.PLAYING)
+
+func _on_level_select_back() -> void:
+	_set_game_state(GameState.State.MAIN_MENU)
+
 func _on_back_to_menu() -> void:
 	_set_game_state(GameState.State.MAIN_MENU)
+
+
+# ==============================================================================
+# _start_level(level_id) — 启动指定关卡
+# ==============================================================================
+# Phase 2 完成后替换为 ArenaLevel 加载流程。当前复用场景内已有关卡。
+func _start_level(_level_id: String) -> void:
+	# TODO: Phase 2 — 通过 LevelRegistry 加载对应 .tscn 并实例化到 CurrentLevelRoot
+	# 目前使用场景中已搭建的 Level 节点
+	pass
 
 
 # ==============================================================================
@@ -130,6 +160,11 @@ func _create_main_menu() -> CanvasLayer:
 func _create_pause_menu() -> CanvasLayer:
 	var menu := PauseMenuClass.new()
 	menu.name = "PauseMenu"
+	return menu
+
+func _create_level_select() -> CanvasLayer:
+	var menu := LevelSelectClass.new()
+	menu.name = "LevelSelect"
 	return menu
 
 
