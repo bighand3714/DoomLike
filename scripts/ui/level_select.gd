@@ -1,8 +1,11 @@
 # ==============================================================================
 # LevelSelect — 选关界面
 # ==============================================================================
-# 显示两个关卡面板（荒漠 / 熔岩地狱），含关卡名、历史最高分、最长时间。
-# 点击面板发射 level_selected(level_id)，由 main.gd 状态机处理。
+# 显示关卡面板（从 LevelRegistry 动态读取），含关卡名、描述、历史最高分、
+# 最长时间。点击面板发射 level_selected(level_id)，由 main.gd 状态机处理。
+#
+# Phase 2.1：不再硬编码关卡数据，改为从 LevelRegistry 读取。
+# 新增关卡只需修改 level_registry.gd 一个文件。
 # ==============================================================================
 
 extends CanvasLayer
@@ -11,11 +14,7 @@ signal level_selected(level_id: String)
 signal back_requested()
 
 const SaveDataClass = preload("res://scripts/core/save_data.gd")
-
-const LEVELS: Array[Dictionary] = [
-	{ id = "desert", name = "第一关：荒漠", desc = "枯树作为掩体\n视野开阔，适合入门", color = Color(0.76, 0.66, 0.4) },
-	{ id = "lava",   name = "第二关：熔岩地狱", desc = "熔岩河流持续伤害\n柱状岩石提供掩体", color = Color(0.7, 0.2, 0.1) },
-]
+const LevelRegistryClass = preload("res://scripts/level/level_registry.gd")
 
 var _score_labels: Array[Label] = []
 var _time_labels: Array[Label] = []
@@ -49,9 +48,10 @@ func _create_ui() -> void:
 	title.offset_bottom = 100.0
 	add_child(title)
 
-	# 两个关卡面板（左右排列）
-	_create_level_panel(0, LEVELS[0])
-	_create_level_panel(1, LEVELS[1])
+	# 从 LevelRegistry 动态生成关卡面板
+	var level_ids := LevelRegistryClass.get_level_ids()
+	for i in range(level_ids.size()):
+		_create_level_panel(i, level_ids[i])
 
 	# 返回按钮
 	var back_btn := Button.new()
@@ -69,12 +69,19 @@ func _create_ui() -> void:
 	add_child(back_btn)
 
 
-func _create_level_panel(index: int, data: Dictionary) -> void:
+# _create_level_panel(index, level_id) — 创建一个关卡面板
+# ==============================================================================
+# index    —— 第几个面板（0=左, 1=右），控制水平排列位置
+# level_id —— 关卡标识（"desert" 或 "lava"），颜色/文字从 LevelRegistry 读取
+func _create_level_panel(index: int, level_id: String) -> void:
 	var center_x := 0.31 + float(index) * 0.38
+	var name_text: String = LevelRegistryClass.get_display_name(level_id)
+	var desc_text: String = LevelRegistryClass.get_description(level_id)
+	var color: Color = LevelRegistryClass.get_color(level_id)
 
-	# 面板背景（ColorRect + 边框）
+	# 面板背景（ColorRect）
 	var bg := ColorRect.new()
-	bg.color = Color(data.color.r * 0.15, data.color.g * 0.15, data.color.b * 0.05, 0.9)
+	bg.color = Color(color.r * 0.15, color.g * 0.15, color.b * 0.05, 0.9)
 	bg.anchor_left = center_x - 0.16
 	bg.anchor_right = center_x + 0.16
 	bg.anchor_top = 0.0
@@ -84,34 +91,33 @@ func _create_level_panel(index: int, data: Dictionary) -> void:
 	add_child(bg)
 
 	# 边框（用四个 ColorRect 拼出 2px 边框）
-	var bc: Color = data.color
 	# 上
-	var top := ColorRect.new(); top.color = bc; bg.add_child(top)
+	var top := ColorRect.new(); top.color = color; bg.add_child(top)
 	top.anchor_left = 0.0; top.anchor_right = 1.0
 	top.anchor_top = 0.0; top.anchor_bottom = 0.0
 	top.offset_top = 0.0; top.offset_bottom = 2.0
 	# 下
-	var bottom := ColorRect.new(); bottom.color = bc; bg.add_child(bottom)
+	var bottom := ColorRect.new(); bottom.color = color; bg.add_child(bottom)
 	bottom.anchor_left = 0.0; bottom.anchor_right = 1.0
 	bottom.anchor_top = 1.0; bottom.anchor_bottom = 1.0
 	bottom.offset_top = -2.0; bottom.offset_bottom = 0.0
 	# 左
-	var left := ColorRect.new(); left.color = bc; bg.add_child(left)
+	var left := ColorRect.new(); left.color = color; bg.add_child(left)
 	left.anchor_left = 0.0; left.anchor_right = 0.0
 	left.anchor_top = 0.0; left.anchor_bottom = 1.0
 	left.offset_left = 0.0; left.offset_right = 2.0
 	# 右
-	var right := ColorRect.new(); right.color = bc; bg.add_child(right)
+	var right := ColorRect.new(); right.color = color; bg.add_child(right)
 	right.anchor_left = 1.0; right.anchor_right = 1.0
 	right.anchor_top = 0.0; right.anchor_bottom = 1.0
 	right.offset_left = -2.0; right.offset_right = 0.0
 
 	# 关卡名称
 	var name_label := Label.new()
-	name_label.text = data.name
+	name_label.text = name_text
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	name_label.add_theme_font_size_override("font_size", 22)
-	name_label.add_theme_color_override("font_color", data.color)
+	name_label.add_theme_color_override("font_color", color)
 	name_label.anchor_left = 0.0
 	name_label.anchor_right = 1.0
 	name_label.anchor_top = 0.0
@@ -121,7 +127,7 @@ func _create_level_panel(index: int, data: Dictionary) -> void:
 
 	# 关卡描述
 	var desc_label := Label.new()
-	desc_label.text = data.desc
+	desc_label.text = desc_text
 	desc_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	desc_label.add_theme_font_size_override("font_size", 14)
 	desc_label.add_theme_color_override("font_color", Color(0.7, 0.7, 0.7))
@@ -132,7 +138,7 @@ func _create_level_panel(index: int, data: Dictionary) -> void:
 	desc_label.offset_bottom = 110.0
 	bg.add_child(desc_label)
 
-	# 最高分（1.6 存档系统完成前显示占位）
+	# 最高分
 	var score_label := Label.new()
 	score_label.text = "最高分: ---"
 	score_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -145,7 +151,7 @@ func _create_level_panel(index: int, data: Dictionary) -> void:
 	score_label.offset_bottom = 170.0
 	bg.add_child(score_label)
 
-	# 最长时间（1.6 存档系统完成前显示占位）
+	# 最长时间
 	var time_label := Label.new()
 	time_label.text = "最长时间: ---"
 	time_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -158,7 +164,7 @@ func _create_level_panel(index: int, data: Dictionary) -> void:
 	time_label.offset_bottom = 205.0
 	bg.add_child(time_label)
 
-	# 保存引用以便后续从 SaveData 更新
+	# 保存引用以便后续从 SaveData 刷新记录
 	_score_labels.append(score_label)
 	_time_labels.append(time_label)
 
@@ -171,7 +177,7 @@ func _create_level_panel(index: int, data: Dictionary) -> void:
 	select_btn.anchor_top = 0.0
 	select_btn.offset_top = 240.0
 	select_btn.offset_bottom = 278.0
-	select_btn.pressed.connect(_on_level_selected.bind(data.id))
+	select_btn.pressed.connect(_on_level_selected.bind(level_id))
 	bg.add_child(select_btn)
 
 
@@ -196,10 +202,10 @@ func _refresh_records() -> void:
 	if main == null or not main.has_method("get_save_data"):
 		return
 	var save = main.get_save_data()
-	for i in range(LEVELS.size()):
-		var level_id: String = LEVELS[i].id
-		var best_score: int = save.get_best_score(level_id)
-		var best_time: float = save.get_best_time(level_id)
+	var level_ids := LevelRegistryClass.get_level_ids()
+	for i in range(level_ids.size()):
+		var best_score: int = save.get_best_score(level_ids[i])
+		var best_time: float = save.get_best_time(level_ids[i])
 		if _score_labels.size() > i:
 			_score_labels[i].text = "最高分: %d" % best_score
 		if _time_labels.size() > i:

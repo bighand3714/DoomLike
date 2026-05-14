@@ -6,6 +6,8 @@
 
 extends CanvasLayer
 
+const LevelRegistryClass = preload("res://scripts/level/level_registry.gd")
+
 signal restart_requested()
 signal level_select_requested()
 signal main_menu_requested()
@@ -109,10 +111,9 @@ func _add_button(text: String, y: float, callback: Callable) -> void:
 # show_results(data) — 显示结算数据
 # ==============================================================================
 func show_results(data: Dictionary) -> void:
-	# 关卡名
-	var level_names := { "desert": "第一关：荒漠", "lava": "第二关：熔岩地狱" }
+	# 关卡名——从 LevelRegistry 读取，不再硬编码
 	var level_id: String = data.get("level_id", "")
-	_title.text = level_names.get(level_id, level_id)
+	_title.text = LevelRegistryClass.get_display_name(level_id)
 
 	# 本局
 	_score_label.text = "分数: %d" % data.get("score", 0)
