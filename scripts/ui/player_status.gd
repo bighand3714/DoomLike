@@ -1,6 +1,21 @@
 # ==============================================================================
-# PlayerStatus — 玩家状态 HUD + 生命条 + 护甲 + 武器栏位 + 拾取通知
+# PlayerStatus — 玩家状态 HUD + 生命条 + 护甲 + 武器栏位 + 拾取通知 + 边界提示
 # ==============================================================================
+# 屏幕布局（Phase 1.8）：
+#
+#   左上角                         右上角
+#   FPS  (由 fps_counter.gd)      位置: x  y  z
+#   分数: 0                        地面  移动中
+#   时间: 0.0                      ████████████████  (生命条)
+#   强度: 1                        生命: 100 / 100
+#                                   护甲: 0 / 100
+#   屏幕中上                        击杀: 0  (小恶魔)
+#   +30 弹药 (拾取通知)             手枪
+#   已到达边界 (边界提示)           8 / 50
+#                                  [1] 手枪  2  霰弹枪
+#                                   换弹中...
+# ==============================================================================
+
 extends Control
 
 const EnemyManagerClass = preload("res://scripts/enemy/enemy_manager.gd")
@@ -29,10 +44,13 @@ var _weapon_slots_label: Label
 var _pickup_notify: Label
 var _score_label: Label
 var _time_label: Label
+var _intensity_label: Label
+var _boundary_warning: Label
 
 var _update_timer: float = 0.0
 var _kill_count: int = 0
 var _notify_timer: float = 0.0
+var _boundary_warning_timer: float = 0.0
 
 const BAR_W := 200.0
 const BAR_H := 12.0
@@ -89,6 +107,10 @@ func _create_labels() -> void:
 	# 时间（左上角，分数下方 y=56）
 	_time_label = _make_left_label(56.0, 14, Color(0.85, 0.85, 0.85))
 
+	# 强度（左上角，时间下方 y=76），Phase 7 前固定显示 1
+	_intensity_label = _make_left_label(76.0, 14, Color(0.9, 0.5, 0.3))
+	_intensity_label.text = "强度: 1"
+
 	# 拾取通知（屏幕中上，居中）
 	_pickup_notify = Label.new()
 	_pickup_notify.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -104,9 +126,25 @@ func _create_labels() -> void:
 	_pickup_notify.hide()
 	add_child(_pickup_notify)
 
+	# 边界提示（屏幕中下，居中），默认隐藏，触碰边界时短暂显示
+	_boundary_warning = Label.new()
+	_boundary_warning.text = "已到达边界"
+	_boundary_warning.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_boundary_warning.add_theme_font_size_override("font_size", 22)
+	_boundary_warning.add_theme_color_override("font_color", Color(1.0, 0.6, 0.1))
+	_boundary_warning.anchor_left = 0.5
+	_boundary_warning.anchor_right = 0.5
+	_boundary_warning.anchor_top = 0.0
+	_boundary_warning.offset_left = -160.0
+	_boundary_warning.offset_right = 160.0
+	_boundary_warning.offset_top = 140.0
+	_boundary_warning.offset_bottom = 168.0
+	_boundary_warning.hide()
+	add_child(_boundary_warning)
+
 
 # ==============================================================================
-# _make_label(top, font_size, color, alpha)
+# _make_label(top, font_size, color, alpha) — 右上角标签（右对齐）
 # ==============================================================================
 func _make_label(top_offset: float, font_size: int, color: Color, alpha: float) -> Label:
 	var label := Label.new()
@@ -126,7 +164,7 @@ func _make_label(top_offset: float, font_size: int, color: Color, alpha: float) 
 
 
 # ==============================================================================
-# _make_left_label(top, font_size, color) — 左上角标签
+# _make_left_label(top, font_size, color) — 左上角标签（左对齐）
 # ==============================================================================
 func _make_left_label(top_offset: float, font_size: int, color: Color) -> Label:
 	var label := Label.new()
@@ -194,11 +232,15 @@ func _connect_enemy_manager() -> void:
 func _process(delta: float) -> void:
 	_update_timer += delta
 	if _update_timer < update_interval:
-		# 但仍需处理通知倒计时
+		# 但仍需处理两个独立倒计时（不受 0.1s 刷新间隔限制）
 		if _notify_timer > 0.0:
 			_notify_timer -= delta
 			if _notify_timer <= 0.0:
 				_pickup_notify.hide()
+		if _boundary_warning_timer > 0.0:
+			_boundary_warning_timer -= delta
+			if _boundary_warning_timer <= 0.0:
+				_boundary_warning.hide()
 		return
 	_update_timer = 0.0
 
@@ -228,13 +270,13 @@ func _process(delta: float) -> void:
 
 		_armor_label.text = "护甲: %.0f / %.0f" % [_player_dmg.armor, _player_dmg.max_armor]
 
-	# 分数和时间
+	# 分数、时间和强度
 	_update_score_and_time()
 
 	# 武器栏位
 	_update_weapon_slots()
 
-	# 通知倒计时
+	# 通知倒计时（fast path 中也有一份处理，这里是慢通道保险）
 	if _notify_timer > 0.0:
 		_notify_timer -= delta
 		if _notify_timer <= 0.0:
@@ -261,17 +303,27 @@ func _get_state_text() -> String:
 
 
 # ==============================================================================
-# _update_score_and_time() — 从 main.gd RunStats 读取并显示
+# _update_score_and_time() — 从 main.gd RunStats 读取分数/时间/强度并显示
 # ==============================================================================
+# 每 0.1 秒调用一次（由 _process 的 update_interval 控制）。
+# 当 main 为 null 或没有 get_run_stats 方法时（即不在 PLAYING 状态），
+# 清空所有数据显示——这样主菜单/选关/结算界面时左上角不会残留数字。
+#
+# 强度（intensity）说明：
+#   表示当前的"刷怪难度等级"，数值越高刷怪越快、越强。
+#   Phase 7 会接入 SpawnManager 的时间驱动刷新频率系统，
+#   届时这里的 "1" 会被替换为实际的当前强度值。
 func _update_score_and_time() -> void:
 	var main := get_tree().root.get_node_or_null("Main")
 	if main == null or not main.has_method("get_run_stats"):
 		_score_label.text = ""
 		_time_label.text = ""
+		_intensity_label.text = ""
 		return
 	var stats = main.get_run_stats()
 	_score_label.text = "分数: %d" % stats.score
 	_time_label.text = "时间: %.1f" % stats.survival_time
+	_intensity_label.text = "强度: 1"
 
 
 # ==============================================================================
@@ -296,12 +348,69 @@ func _update_weapon_slots() -> void:
 # ==============================================================================
 # show_notification(text, color) — 拾取通知
 # ==============================================================================
+# 在屏幕中上显示短文本（如"+30 弹药"），1.5 秒后自动淡出隐藏。
+# 由 main.gd 的 show_pickup_notification() 转发调用。
 func show_notification(text: String, color: Color) -> void:
 	_pickup_notify.text = text
 	_pickup_notify.add_theme_color_override("font_color", color)
 	_pickup_notify.modulate = Color.WHITE
 	_pickup_notify.show()
 	_notify_timer = 1.5
+
+
+# ==============================================================================
+# show_boundary_warning() — 显示"已到达边界"警告（Phase 1.8 新增）
+# ==============================================================================
+# 当玩家试图走出圆形竞技场边界时，ArenaLevel 会发出
+# boundary_warning_requested 信号，main.gd 转发到这个方法。
+#
+# 显示效果：
+#   - 屏幕中下出现橙红色"已到达边界"大字（22号字体）
+#   - 1.5 秒后自动消失
+#   - 如果玩家一直顶在边界上持续触发，每次调用都会刷新 timer，
+#     所以警告会一直显示直到玩家离开边界后 1.5 秒
+#
+# 为什么用 1.5 秒：
+#   太短（0.3s）玩家可能还没注意到就消失了；
+#   太长（3s+）会遮挡战斗视野。1.5 秒是一个折中值。
+#
+# 调用路径（Phase 2）：
+#   ArenaLevel._physics_process() 检测越界
+#     → boundary_warning_requested 信号
+#     → main.gd 连接 → 调用 player_status.show_boundary_warning()
+func show_boundary_warning() -> void:
+	_boundary_warning.show()
+	_boundary_warning_timer = 1.5
+
+
+# ==============================================================================
+# reset_kill_count() — 重置 HUD 击杀计数到 0（关卡重启时调用）
+# ==============================================================================
+# HUD 的击杀数有两个来源：
+#   1. _kill_count —— HUD 自己维护的本地计数器
+#   2. EnemyManager.total_kills —— 敌人管理器的全局统计
+#
+# 为什么需要两个独立的重置：
+#   _kill_count 是 HUD 内部变量，通过 _on_enemy_killed() 信号递增。
+#   EnemyManager.reset() 会把 total_kills 归零，但 HUD 的 _kill_count
+#   不会自动同步——需要单独调用这个方法。
+#
+# 如果不重置会怎样：
+#   上一局击杀了 5 个敌人，HUD 显示"击杀: 5"。
+#   重启后 _kill_count 还是 5，新击杀会显示"击杀: 6"——明显不对。
+#
+# 方法做了什么：
+#   - _kill_count = 0：归零本地计数
+#   - _kills_label.text = "击杀: 0"：立即刷新标签显示
+#     如果不手动刷新，标签要到下一次 _on_enemy_killed() 触发才会更新，
+#     这期间的几秒内会显示旧数据。
+#
+# 调用时机（Phase 2+）：
+#   - _start_level() 加载新关卡后
+#   - 结算界面点击"重新开始"后
+func reset_kill_count() -> void:
+	_kill_count = 0
+	_kills_label.text = "击杀: 0"
 
 
 # ==============================================================================
