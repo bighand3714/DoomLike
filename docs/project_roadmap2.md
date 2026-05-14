@@ -106,256 +106,256 @@
 
 ### 1.1 创建运行状态枚举
 
-- [ ] 在 `scripts/core/game_state.gd` 或 `scripts/main.gd` 中定义状态：`BOOT`、`MAIN_MENU`、`LEVEL_SELECT`、`PLAYING`、`PAUSED`、`GAME_OVER`。
-- [ ] 在 `main.gd` 中新增 `_game_state` 字段，默认进入 `BOOT`。
-- [ ] 新增 `_set_game_state(next_state)` 方法，统一处理状态切换。
-- [ ] 状态进入 `MAIN_MENU` 时显示主菜单，隐藏选关、结算、HUD。
-- [ ] 状态进入 `LEVEL_SELECT` 时显示选关，隐藏主菜单、结算。
-- [ ] 状态进入 `PLAYING` 时隐藏菜单，显示 HUD，捕获鼠标。
-- [ ] 状态进入 `GAME_OVER` 时释放鼠标，显示结算界面，暂停或停止刷怪。
-- [ ] 临时保留 `Esc` 释放鼠标行为，但确保不会在菜单中直接退出游戏。
+- [x] 在 `scripts/core/game_state.gd` 或 `scripts/main.gd` 中定义状态：`BOOT`、`MAIN_MENU`、`LEVEL_SELECT`、`PLAYING`、`PAUSED`、`GAME_OVER`。
+- [x] 在 `main.gd` 中新增 `_game_state` 字段，默认进入 `BOOT`。
+- [x] 新增 `_set_game_state(next_state)` 方法，统一处理状态切换。
+- [x] 状态进入 `MAIN_MENU` 时显示主菜单，隐藏选关、结算、HUD。
+- [x] 状态进入 `LEVEL_SELECT` 时显示选关，隐藏主菜单、结算。
+- [x] 状态进入 `PLAYING` 时隐藏菜单，显示 HUD，捕获鼠标。
+- [x] 状态进入 `GAME_OVER` 时释放鼠标，显示结算界面，暂停或停止刷怪。
+- [x] 临时保留 `Esc` 释放鼠标行为，但确保不会在菜单中直接退出游戏。
 
 ### 1.2 主菜单 UI
 
-- [ ] 新建 `scenes/ui/main_menu.tscn`，根节点使用 `Control`。
-- [ ] 新建 `scripts/ui/main_menu.gd` 并挂到主菜单根节点。
-- [ ] 主菜单添加标题 `DoomLike`。
-- [ ] 主菜单添加“开始游戏”按钮。
-- [ ] 主菜单添加“退出游戏”按钮。
-- [ ] `main_menu.gd` 定义 `start_requested` 信号。
-- [ ] 点击“开始游戏”发出 `start_requested`。
-- [ ] 点击“退出游戏”调用 `get_tree().quit()`。
-- [ ] 在 `main.gd` 中实例化或引用主菜单，并连接 `start_requested` 到进入 `LEVEL_SELECT`。
+- [x] 新建 `scenes/ui/main_menu.tscn`，根节点使用 `Control`。
+- [x] 新建 `scripts/ui/main_menu.gd` 并挂到主菜单根节点。
+- [x] 主菜单添加标题 `DoomLike`。
+- [x] 主菜单添加“开始游戏”按钮。
+- [x] 主菜单添加“退出游戏”按钮。
+- [x] `main_menu.gd` 定义 `start_requested` 信号。
+- [x] 点击“开始游戏”发出 `start_requested`。
+- [x] 点击“退出游戏”调用 `get_tree().quit()`。
+- [x] 在 `main.gd` 中实例化或引用主菜单，并连接 `start_requested` 到进入 `LEVEL_SELECT`。
 
 ### 1.3 选关 UI
 
-- [ ] 新建 `scenes/ui/level_select.tscn`，根节点使用 `Control`。
-- [ ] 新建 `scripts/ui/level_select.gd` 并挂到选关根节点。
-- [ ] 选关界面创建左右两个大按钮或面板。
-- [ ] 左侧显示“第一关：荒漠”。
-- [ ] 右侧显示“第二关：熔岩地狱”。
-- [ ] 每个关卡面板显示历史最高分。
-- [ ] 每个关卡面板显示历史最长时间。
-- [ ] `level_select.gd` 定义 `level_selected(level_id: String)` 信号。
-- [ ] 点击荒漠发出 `level_selected("desert")`。
-- [ ] 点击熔岩地狱发出 `level_selected("lava")`。
-- [ ] 添加“返回”按钮，返回主菜单。
-- [ ] 在 `main.gd` 中连接 `level_selected`，进入对应关卡加载流程。
+- [x] 新建 `scenes/ui/level_select.tscn`，根节点使用 `Control`。
+- [x] 新建 `scripts/ui/level_select.gd` 并挂到选关根节点。
+- [x] 选关界面创建左右两个大按钮或面板。
+- [x] 左侧显示“第一关：荒漠”。
+- [x] 右侧显示“第二关：熔岩地狱”。
+- [x] 每个关卡面板显示历史最高分。
+- [x] 每个关卡面板显示历史最长时间。
+- [x] `level_select.gd` 定义 `level_selected(level_id: String)` 信号。
+- [x] 点击荒漠发出 `level_selected("desert")`。
+- [x] 点击熔岩地狱发出 `level_selected("lava")`。
+- [x] 添加“返回”按钮，返回主菜单。
+- [x] 在 `main.gd` 中连接 `level_selected`，进入对应关卡加载流程。
 
 ### 1.4 结算 UI
 
-- [ ] 新建 `scenes/ui/game_over_screen.tscn`，根节点使用 `Control`。
-- [ ] 新建 `scripts/ui/game_over_screen.gd` 并挂到结算根节点。
-- [ ] 结算界面显示本局关卡名称。
-- [ ] 结算界面显示本局分数。
-- [ ] 结算界面显示本局坚持时间。
-- [ ] 结算界面显示本局击杀数。
-- [ ] 结算界面显示该关历史最高分。
-- [ ] 结算界面显示该关历史最长时间。
-- [ ] 如果刷新纪录，显示“新纪录”提示。
-- [ ] 添加“重新开始本关”按钮。
-- [ ] 添加“返回选关”按钮。
-- [ ] 添加“返回主菜单”按钮。
-- [ ] 在 `main.gd` 中连接三个按钮信号到对应流程。
+- [x] 新建 `scenes/ui/game_over_screen.tscn`，根节点使用 `Control`。
+- [x] 新建 `scripts/ui/game_over_screen.gd` 并挂到结算根节点。
+- [x] 结算界面显示本局关卡名称。
+- [x] 结算界面显示本局分数。
+- [x] 结算界面显示本局坚持时间。
+- [x] 结算界面显示本局击杀数。
+- [x] 结算界面显示该关历史最高分。
+- [x] 结算界面显示该关历史最长时间。
+- [x] 如果刷新纪录，显示“新纪录”提示。
+- [x] 添加“重新开始本关”按钮。
+- [x] 添加“返回选关”按钮。
+- [x] 添加“返回主菜单”按钮。
+- [x] 在 `main.gd` 中连接三个按钮信号到对应流程。
 
 ### 1.5 当前局统计 RunStats
 
-- [ ] 新建 `scripts/core/run_stats.gd`，`class_name RunStats extends RefCounted`。
-- [ ] 添加字段：`level_id: String`、`score: int`、`kills: int`、`survival_time: float`、`is_running: bool`。
-- [ ] 添加 `start(level_id: String)`，重置分数、击杀、时间并开始计时。
-- [ ] 添加 `stop()`，停止计时。
-- [ ] 添加 `update(delta)`，只在 `is_running` 时累加 `survival_time`。
-- [ ] 添加 `add_score(amount: int)`。
-- [ ] 添加 `add_kill(score_value: int)`，同时增加击杀数和分数。
-- [ ] 在 `main.gd` 的 `_process(delta)` 中更新当前 RunStats。
-- [ ] 让这些数据都实时显示到左上角FPS下面。
-- [ ] 敌人死亡时先临时按固定分数加分，后续 Phase 5 再接入 `EnemyData.score_value`。
+- [x] 新建 `scripts/core/run_stats.gd`，`class_name RunStats extends RefCounted`。
+- [x] 添加字段：`level_id: String`、`score: int`、`kills: int`、`survival_time: float`、`is_running: bool`。
+- [x] 添加 `start(level_id: String)`，重置分数、击杀、时间并开始计时。
+- [x] 添加 `stop()`，停止计时。
+- [x] 添加 `update(delta)`，只在 `is_running` 时累加 `survival_time`。
+- [x] 添加 `add_score(amount: int)`。
+- [x] 添加 `add_kill(score_value: int)`，同时增加击杀数和分数。
+- [x] 在 `main.gd` 的 `_process(delta)` 中更新当前 RunStats。
+- [x] 让这些数据都实时显示到左上角FPS下面。
+- [x] 敌人死亡时先临时按固定分数加分，后续 Phase 5 再接入 `EnemyData.score_value`。
 
 ### 1.6 存档 SaveData
 
-- [ ] 新建 `scripts/core/save_data.gd`，`class_name SaveData extends RefCounted`。
-- [ ] 使用 `ConfigFile` 读写 `user://save.cfg`。
-- [ ] 定义每关记录字段：`best_score`、`best_time`。
-- [ ] 添加 `load_records()`。
-- [ ] 添加 `save_records()`。
-- [ ] 添加 `get_best_score(level_id: String) -> int`。
-- [ ] 添加 `get_best_time(level_id: String) -> float`。
-- [ ] 添加 `submit_run(level_id: String, score: int, time: float) -> Dictionary`。
-- [ ] `submit_run()` 返回是否刷新最高分、是否刷新最长时间。
-- [ ] 第一次启动没有存档时，自动返回 0 分和 0 秒。
-- [ ] 验证关闭游戏再打开后，选关界面仍能显示历史记录。
+- [x] 新建 `scripts/core/save_data.gd`，`class_name SaveData extends RefCounted`。
+- [x] 使用 `ConfigFile` 读写 `user://save.cfg`。
+- [x] 定义每关记录字段：`best_score`、`best_time`。
+- [x] 添加 `load_records()`。
+- [x] 添加 `save_records()`。
+- [x] 添加 `get_best_score(level_id: String) -> int`。
+- [x] 添加 `get_best_time(level_id: String) -> float`。
+- [x] 添加 `submit_run(level_id: String, score: int, time: float) -> Dictionary`。
+- [x] `submit_run()` 返回是否刷新最高分、是否刷新最长时间。
+- [x] 第一次启动没有存档时，自动返回 0 分和 0 秒。
+- [x] 验证关闭游戏再打开后，选关界面仍能显示历史记录。
 
 ### 1.7 关卡启动和结束流程
 
-- [ ] 在 `main.gd` 中新增 `_start_level(level_id: String)`。
-- [ ] `_start_level()` 调用 Phase 2 的关卡加载接口；Phase 2 未完成前可先加载占位空关卡。
-- [ ] `_start_level()` 重置玩家位置、玩家生命值、武器弹药、EnemyManager、HUD。
-- [ ] `_start_level()` 调用 `run_stats.start(level_id)`。
-- [ ] `_start_level()` 切换状态到 `PLAYING`。
-- [ ] 在玩家 `Damageable.died` 时调用 `_end_run()`。
-- [ ] `_end_run()` 停止 RunStats。
-- [ ] `_end_run()` 调用 SaveData 提交记录。
-- [ ] `_end_run()` 把本局数据和历史数据传给结算 UI。
-- [ ] `_end_run()` 切换状态到 `GAME_OVER`。
+- [x] 在 `main.gd` 中新增 `_start_level(level_id: String)`。
+- [x] `_start_level()` 调用 Phase 2 的关卡加载接口；Phase 2 未完成前可先加载占位空关卡。
+- [x] `_start_level()` 重置玩家位置、玩家生命值、武器弹药、EnemyManager、HUD。
+- [x] `_start_level()` 调用 `run_stats.start(level_id)`。
+- [x] `_start_level()` 切换状态到 `PLAYING`。
+- [x] 在玩家 `Damageable.died` 时调用 `_end_run()`。
+- [x] `_end_run()` 停止 RunStats。
+- [x] `_end_run()` 调用 SaveData 提交记录。
+- [x] `_end_run()` 把本局数据和历史数据传给结算 UI。
+- [x] `_end_run()` 切换状态到 `GAME_OVER`。
 
 ### 1.8 HUD 扩展
 
-- [ ] 在 `scripts/ui/player_status.gd` 中增加分数 Label。
-- [ ] 在 `scripts/ui/player_status.gd` 中增加坚持时间 Label。
-- [ ] 在 `scripts/ui/player_status.gd` 中增加当前强度 Label，Phase 7 前可显示 `强度: 1`。
-- [ ] 新增 `set_run_stats(stats: RunStats)` 或通过 `main.gd` 定时推送数据。
-- [ ] 游戏未开始时隐藏分数和时间。
-- [ ] 游戏开始后每 0.1 秒刷新分数和时间。
-- [ ] 新增边界提示 Label，默认隐藏。
-- [ ] 添加 `show_boundary_warning()` 方法，显示“已到达边界”并在短时间后隐藏。
+- [x] 在 `scripts/ui/player_status.gd` 中增加分数 Label。
+- [x] 在 `scripts/ui/player_status.gd` 中增加坚持时间 Label。
+- [x] 在 `scripts/ui/player_status.gd` 中增加当前强度 Label，Phase 7 前可显示 `强度: 1`。
+- [x] 新增 `set_run_stats(stats: RunStats)` 或通过 `main.gd` 定时推送数据。
+- [x] 游戏未开始时隐藏分数和时间。
+- [x] 游戏开始后每 0.1 秒刷新分数和时间。
+- [x] 新增边界提示 Label，默认隐藏。
+- [x] 添加 `show_boundary_warning()` 方法，显示“已到达边界”并在短时间后隐藏。
 
 ### 1.9 Phase 1 验收
 
-- [ ] 启动后先看到主菜单，而不是直接进入战斗。
-- [ ] 点击“开始游戏”进入选关。
-- [ ] 选关界面左侧荒漠、右侧熔岩地狱显示正确。
-- [ ] 两个关卡面板能显示历史最高分和最长时间。
-- [ ] 选择任意关卡后进入 `PLAYING` 状态，HUD 显示分数和时间。
-- [ ] 玩家死亡后进入结算界面。
-- [ ] 结算界面显示本局数据和历史数据。
-- [ ] 新纪录能写入 `user://save.cfg`。
-- [ ] 从结算返回选关后，记录显示已更新。
+- [x] 启动后先看到主菜单，而不是直接进入战斗。
+- [x] 点击“开始游戏”进入选关。
+- [x] 选关界面左侧荒漠、右侧熔岩地狱显示正确。
+- [x] 两个关卡面板能显示历史最高分和最长时间。
+- [x] 选择任意关卡后进入 `PLAYING` 状态，HUD 显示分数和时间。
+- [x] 玩家死亡后进入结算界面。
+- [x] 结算界面显示本局数据和历史数据。
+- [x] 新纪录能写入 `user://save.cfg`。
+- [x] 从结算返回选关后，记录显示已更新。
 
 ## Phase 2：圆形竞技场基础系统
 
 ### 2.1 关卡注册表
 
-- [ ] 新建 `scripts/level/level_registry.gd`，`class_name LevelRegistry extends RefCounted`。
-- [ ] 定义 `const DESERT := "desert"`。
-- [ ] 定义 `const LAVA := "lava"`。
-- [ ] 添加 `static func get_level_ids() -> Array[String]`，返回两个关卡 id。
-- [ ] 添加 `static func get_display_name(level_id: String) -> String`。
-- [ ] 添加 `static func get_scene_path(level_id: String) -> String`。
-- [ ] 荒漠路径先指向 `res://scenes/levels/desert_arena.tscn`。
-- [ ] 熔岩路径先指向 `res://scenes/levels/lava_arena.tscn`。
-- [ ] 添加 `static func get_description(level_id: String) -> String`，供选关界面显示。
-- [ ] 选关 UI 不硬编码关卡文字，改为读取 LevelRegistry。
+- [x] 新建 `scripts/level/level_registry.gd`，`class_name LevelRegistry extends RefCounted`。
+- [x] 定义 `const DESERT := "desert"`。
+- [x] 定义 `const LAVA := "lava"`。
+- [x] 添加 `static func get_level_ids() -> Array[String]`，返回两个关卡 id。
+- [x] 添加 `static func get_display_name(level_id: String) -> String`。
+- [x] 添加 `static func get_scene_path(level_id: String) -> String`。
+- [x] 荒漠路径先指向 `res://scenes/levels/desert_arena.tscn`。
+- [x] 熔岩路径先指向 `res://scenes/levels/lava_arena.tscn`。
+- [x] 添加 `static func get_description(level_id: String) -> String`，供选关界面显示。
+- [x] 选关 UI 不硬编码关卡文字，改为读取 LevelRegistry。
 
 ### 2.2 ArenaLevel 基类脚本
 
-- [ ] 新建 `scripts/level/arena_level.gd`，`class_name ArenaLevel extends Node3D`。
-- [ ] 添加信号 `boundary_warning_requested()`。
-- [ ] 添加信号 `level_ready(arena: ArenaLevel)`。
-- [ ] 导出 `arena_radius: float = 45.0`。
-- [ ] 导出 `spawn_outer_radius: float = 55.0`。
-- [ ] 导出 `boundary_marker_count: int = 64`。
-- [ ] 导出 `random_seed: int = 0`。
-- [ ] 导出 `use_random_seed: bool = true`。
-- [ ] 添加节点容器字段：`_geometry_root`、`_boundary_root`、`_props_root`、`_hazards_root`、`_spawn_root`。
-- [ ] `_ready()` 中创建缺失的容器节点。
-- [ ] `_ready()` 中初始化随机数生成器。
-- [ ] `_ready()` 中调用 `_build_base_arena()`。
-- [ ] `_ready()` 中调用 `_build_boundary_markers()`。
-- [ ] `_ready()` 中发出 `level_ready`。
+- [x] 新建 `scripts/level/arena_level.gd`，`class_name ArenaLevel extends Node3D`。
+- [x] 添加信号 `boundary_warning_requested()`。
+- [x] 添加信号 `level_ready(arena: ArenaLevel)`。
+- [x] 导出 `arena_radius: float = 45.0`。
+- [x] 导出 `spawn_outer_radius: float = 55.0`。
+- [x] 导出 `boundary_marker_count: int = 64`。
+- [x] 导出 `random_seed: int = 0`。
+- [x] 导出 `use_random_seed: bool = true`。
+- [x] 添加节点容器字段：`_geometry_root`、`_boundary_root`、`_props_root`、`_hazards_root`、`_spawn_root`。
+- [x] `_ready()` 中创建缺失的容器节点。
+- [x] `_ready()` 中初始化随机数生成器。
+- [x] `_ready()` 中调用 `_build_base_arena()`。
+- [x] `_ready()` 中调用 `_build_boundary_markers()`。
+- [x] `_ready()` 中发出 `level_ready`。
 
 ### 2.3 生成基础圆形地面
 
-- [ ] 在 `ArenaLevel` 中实现 `_build_base_arena()`。
-- [ ] 先使用一个大 `CSGBox3D` 或 `MeshInstance3D PlaneMesh` 作为地面，占位尺寸覆盖完整圆形区域。
-- [ ] 地面节点加入 `level_geometry` group。
-- [ ] 地面节点开启碰撞。
-- [ ] 添加 `_is_inside_arena(pos: Vector3) -> bool`，只检查 XZ 到中心距离。
-- [ ] 添加 `get_arena_center() -> Vector3`，默认返回关卡根节点 `global_position`。
-- [ ] 添加 `get_arena_radius() -> float`。
-- [ ] 后续正式圆形视觉可再替换，当前先保证移动和边界逻辑。
+- [x] 在 `ArenaLevel` 中实现 `_build_base_arena()`。
+- [x] 先使用一个大 `CSGBox3D` 或 `MeshInstance3D PlaneMesh` 作为地面，占位尺寸覆盖完整圆形区域。
+- [x] 地面节点加入 `level_geometry` group。
+- [x] 地面节点开启碰撞。
+- [x] 添加 `_is_inside_arena(pos: Vector3) -> bool`，只检查 XZ 到中心距离。
+- [x] 添加 `get_arena_center() -> Vector3`，默认返回关卡根节点 `global_position`。
+- [x] 添加 `get_arena_radius() -> float`。
+- [x] 后续正式圆形视觉可再替换，当前先保证移动和边界逻辑。
 
 ### 2.4 生成边界标志
 
-- [ ] 在 `ArenaLevel` 中实现 `_build_boundary_markers()`。
-- [ ] 按 `boundary_marker_count` 均匀遍历圆周角度。
-- [ ] 每个角度生成一个细高 CSGBox3D 作为边界柱。
-- [ ] 边界柱颜色使用高亮黄/红，便于远处识别。
-- [ ] 边界柱加入 `level_geometry` group。
-- [ ] 边界柱可开启碰撞，也可只作为视觉标志；先优先开启碰撞。
-- [ ] 给边界柱统一命名 `BoundaryMarker_%03d`。
-- [ ] 验证从中心看向任意方向都能看到边界标志。
+- [x] 在 `ArenaLevel` 中实现 `_build_boundary_markers()`。
+- [x] 按 `boundary_marker_count` 均匀遍历圆周角度。
+- [x] 每个角度生成一个细高 CSGBox3D 作为边界柱。
+- [x] 边界柱颜色使用高亮黄/红，便于远处识别。
+- [x] 边界柱加入 `level_geometry` group。
+- [x] 边界柱可开启碰撞，也可只作为视觉标志；先优先开启碰撞。
+- [x] 给边界柱统一命名 `BoundaryMarker_%03d`。
+- [x] 验证从中心看向任意方向都能看到边界标志。
 
 ### 2.5 玩家边界限制
 
-- [ ] 在 `ArenaLevel` 中添加 `player: CharacterBody3D` 引用。
-- [ ] 添加 `set_player(player_node: CharacterBody3D)`，由 `Main` 在加载关卡后调用。
-- [ ] 在 `_physics_process(delta)` 中检查玩家是否超过 `arena_radius`。
-- [ ] 如果玩家超过边界，计算从中心指向玩家的 XZ 方向。
-- [ ] 将玩家位置夹回 `arena_radius - 0.5` 内。
-- [ ] 清除或削弱玩家继续向外的水平速度，避免持续抖动。
-- [ ] 越界时发出 `boundary_warning_requested`。
-- [ ] 在 `main.gd` 中连接该信号到 HUD 的 `show_boundary_warning()`。
-- [ ] 验证玩家冲向边界时不会离开圆形区域。
+- [x] 在 `ArenaLevel` 中添加 `player: CharacterBody3D` 引用。
+- [x] 添加 `set_player(player_node: CharacterBody3D)`，由 `Main` 在加载关卡后调用。
+- [x] 在 `_physics_process(delta)` 中检查玩家是否超过 `arena_radius`。
+- [x] 如果玩家超过边界，计算从中心指向玩家的 XZ 方向。
+- [x] 将玩家位置夹回 `arena_radius - 0.5` 内。
+- [x] 清除或削弱玩家继续向外的水平速度，避免持续抖动。
+- [x] 越界时发出 `boundary_warning_requested`。
+- [x] 在 `main.gd` 中连接该信号到 HUD 的 `show_boundary_warning()`。
+- [x] 验证玩家冲向边界时不会离开圆形区域。
 
 ### 2.6 ArenaRandomizer
 
-- [ ] 新建 `scripts/level/arena_randomizer.gd`，`class_name ArenaRandomizer extends RefCounted`。
-- [ ] 添加 `rng: RandomNumberGenerator` 字段。
-- [ ] 添加 `setup(seed_value: int, use_random_seed: bool)`。
-- [ ] 添加 `random_angle() -> float`。
-- [ ] 添加 `get_random_point_inside(center: Vector3, radius: float, margin: float) -> Vector3`。
-- [ ] 随机内部点使用 `sqrt(randf())` 分布，避免点集中在中心。
-- [ ] 添加 `get_random_point_outside_boundary(center: Vector3, arena_radius: float, spawn_outer_radius: float) -> Vector3`。
-- [ ] 外部刷新点在 `arena_radius` 和 `spawn_outer_radius` 之间选取。
-- [ ] 添加 `is_far_enough(point: Vector3, used_points: Array[Vector3], min_distance: float) -> bool`。
-- [ ] 添加 `try_get_non_overlapping_point(...) -> Dictionary`，返回 `{ "ok": bool, "position": Vector3 }`。
+- [x] 新建 `scripts/level/arena_randomizer.gd`，`class_name ArenaRandomizer extends RefCounted`。
+- [x] 添加 `rng: RandomNumberGenerator` 字段。
+- [x] 添加 `setup(seed_value: int, use_random_seed: bool)`。
+- [x] 添加 `random_angle() -> float`。
+- [x] 添加 `get_random_point_inside(center: Vector3, radius: float, margin: float) -> Vector3`。
+- [x] 随机内部点使用 `sqrt(randf())` 分布，避免点集中在中心。
+- [x] 添加 `get_random_point_outside_boundary(center: Vector3, arena_radius: float, spawn_outer_radius: float) -> Vector3`。
+- [x] 外部刷新点在 `arena_radius` 和 `spawn_outer_radius` 之间选取。
+- [x] 添加 `is_far_enough(point: Vector3, used_points: Array[Vector3], min_distance: float) -> bool`。
+- [x] 添加 `try_get_non_overlapping_point(...) -> Dictionary`，返回 `{ "ok": bool, "position": Vector3 }`。
 
 ### 2.7 障碍物随机放置接口
 
-- [ ] 在 `ArenaLevel` 中维护 `_used_spawn_points: Array[Vector3]`。
-- [ ] 添加 `clear_randomized_content()`，清空 `_props_root` 和 `_hazards_root`。
-- [ ] 添加 `register_occupied_point(pos: Vector3)`。
-- [ ] 添加 `get_random_prop_position(min_distance: float, center_safe_radius: float) -> Dictionary`。
-- [ ] 随机点必须在 `arena_radius` 内。
-- [ ] 随机点必须距离中心出生点大于 `center_safe_radius`。
-- [ ] 随机点必须与已注册点保持 `min_distance`。
-- [ ] 随机失败超过最大尝试次数时返回 `ok = false`，调用方跳过该物件。
+- [x] 在 `ArenaLevel` 中维护 `_used_spawn_points: Array[Vector3]`。
+- [x] 添加 `clear_randomized_content()`，清空 `_props_root` 和 `_hazards_root`。
+- [x] 添加 `register_occupied_point(pos: Vector3)`。
+- [x] 添加 `get_random_prop_position(min_distance: float, center_safe_radius: float) -> Dictionary`。
+- [x] 随机点必须在 `arena_radius` 内。
+- [x] 随机点必须距离中心出生点大于 `center_safe_radius`。
+- [x] 随机点必须与已注册点保持 `min_distance`。
+- [x] 随机失败超过最大尝试次数时返回 `ok = false`，调用方跳过该物件。
 
 ### 2.8 关卡场景占位
 
-- [ ] 新建 `scenes/levels/desert_arena.tscn`，根节点为 `Node3D`，挂 `arena_level.gd` 或后续 `desert_arena.gd`。
-- [ ] 设置荒漠 `arena_radius = 45.0`、`spawn_outer_radius = 56.0`。
-- [ ] 暂时把地面颜色设为沙黄色。
-- [ ] 新建 `scenes/levels/lava_arena.tscn`，根节点为 `Node3D`，挂 `arena_level.gd` 或后续 `lava_arena.gd`。
-- [ ] 设置熔岩 `arena_radius = 45.0`、`spawn_outer_radius = 56.0`。
-- [ ] 暂时把地面颜色设为暗红/黑色。
-- [ ] 两个场景先不生成枯树、熔岩、岩柱，只验证可加载和边界。
+- [x] 新建 `scenes/levels/desert_arena.tscn`，根节点为 `Node3D`，挂 `arena_level.gd` 或后续 `desert_arena.gd`。
+- [x] 设置荒漠 `arena_radius = 45.0`、`spawn_outer_radius = 56.0`。
+- [x] 暂时把地面颜色设为沙黄色。
+- [x] 新建 `scenes/levels/lava_arena.tscn`，根节点为 `Node3D`，挂 `arena_level.gd` 或后续 `lava_arena.gd`。
+- [x] 设置熔岩 `arena_radius = 45.0`、`spawn_outer_radius = 56.0`。
+- [x] 暂时把地面颜色设为暗红/黑色。
+- [x] 两个场景先不生成枯树、熔岩、岩柱，只验证可加载和边界。
 
 ### 2.9 Main 关卡加载和卸载
 
-- [ ] 在 `main.gd` 中新增 `_current_level: Node3D`。
-- [ ] 在 `main.gd` 中新增 `_current_level_id: String`。
-- [ ] 在主场景 `Level` 下新增或复用一个 `CurrentLevelRoot` 容器。
-- [ ] 实现 `_unload_current_level()`：清理当前关卡、敌人、投射物、危险区域。
-- [ ] 实现 `_load_arena_level(level_id: String)`。
-- [ ] `_load_arena_level()` 通过 `LevelRegistry.get_scene_path(level_id)` 加载 PackedScene。
-- [ ] 实例化关卡后挂到 `CurrentLevelRoot`。
-- [ ] 如果关卡是 `ArenaLevel`，调用 `set_player(_player)`。
-- [ ] 连接关卡的 `boundary_warning_requested` 到 HUD。
-- [ ] 关卡加载后把玩家传送到关卡中心或 `PlayerStart`。
-- [ ] 加载失败时回到选关界面并显示错误提示。
+- [x] 在 `main.gd` 中新增 `_current_level: Node3D`。
+- [x] 在 `main.gd` 中新增 `_current_level_id: String`。
+- [x] 在主场景 `Level` 下新增或复用一个 `CurrentLevelRoot` 容器。
+- [x] 实现 `_unload_current_level()`：清理当前关卡、敌人、投射物、危险区域。
+- [x] 实现 `_load_arena_level(level_id: String)`。
+- [x] `_load_arena_level()` 通过 `LevelRegistry.get_scene_path(level_id)` 加载 PackedScene。
+- [x] 实例化关卡后挂到 `CurrentLevelRoot`。
+- [x] 如果关卡是 `ArenaLevel`，调用 `set_player(_player)`。
+- [x] 连接关卡的 `boundary_warning_requested` 到 HUD。
+- [x] 关卡加载后把玩家传送到关卡中心或 `PlayerStart`。
+- [x] 加载失败时回到选关界面并显示错误提示。
 
 ### 2.10 玩家出生和重置
 
-- [ ] 在 `ArenaLevel` 中添加 `get_player_spawn_transform() -> Transform3D`。
-- [ ] 默认出生点为竞技场中心上方，朝向圆心外某个固定方向。
-- [ ] 如果关卡场景内存在 `PlayerStart`，优先使用 `PlayerStart.global_transform`。
-- [ ] 在 `_start_level()` 中使用 `get_player_spawn_transform()` 放置玩家。
-- [ ] 重置玩家水平和垂直速度。
-- [ ] 重置鼠标视角 yaw/pitch 或提供 `PlayerController.reset_view(transform)`。
-- [ ] 重置玩家 Damageable 血量到 max_health。
-- [ ] 重置武器弹药到开局状态。
+- [x] 在 `ArenaLevel` 中添加 `get_player_spawn_transform() -> Transform3D`。
+- [x] 默认出生点为竞技场中心上方，朝向圆心外某个固定方向。
+- [x] 如果关卡场景内存在 `PlayerStart`，优先使用 `PlayerStart.global_transform`。
+- [x] 在 `_start_level()` 中使用 `get_player_spawn_transform()` 放置玩家。
+- [x] 重置玩家水平和垂直速度。
+- [x] 重置鼠标视角 yaw/pitch 或提供 `PlayerController.reset_view(transform)`。
+- [x] 重置玩家 Damageable 血量到 max_health。
+- [x] 重置武器弹药到开局状态。
 
 ### 2.11 Phase 2 验收
 
-- [ ] 从选关界面选择荒漠，能加载沙黄色圆形竞技场占位。
-- [ ] 从选关界面选择熔岩，能加载暗红色圆形竞技场占位。
-- [ ] 两个关卡都显示明显圆形边界柱。
-- [ ] 玩家无法走出圆形边界。
-- [ ] 玩家触碰边界时 HUD 显示“已到达边界”。
-- [ ] 退出本关再进入另一关，旧关卡节点已被清理。
-- [ ] 重复进入同一关不会叠加多个地面、边界或信号连接。
-- [ ] 随机数接口可以返回区域内点和边界外刷新点。
+- [x] 从选关界面选择荒漠，能加载沙黄色圆形竞技场占位。
+- [x] 从选关界面选择熔岩，能加载暗红色圆形竞技场占位。
+- [x] 两个关卡都显示明显圆形边界柱。
+- [x] 玩家无法走出圆形边界。
+- [x] 玩家触碰边界时 HUD 显示“已到达边界”。
+- [x] 退出本关再进入另一关，旧关卡节点已被清理。
+- [x] 重复进入同一关不会叠加多个地面、边界或信号连接。
+- [x] 随机数接口可以返回区域内点和边界外刷新点。
 
 ## Phase 3：第一关荒漠竞技场
 
