@@ -1,0 +1,41 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(sleep *)",
+      "Bash(git push *)",
+      "Bash(git pull *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git remote *)",
+      "Bash(grep *)",
+      "Bash(ls *)",
+      "Bash(find *)",
+      "Bash(cat *)",
+      "Bash(head *)",
+      "Bash(wc *)",
+      "Bash(sed -n *)",
+      "mcp__godot__get_*",
+      "mcp__godot__read_*",
+      "mcp__godot__list_*",
+      "mcp__godot__validate_*",
+      "mcp__godot__reload_project",
+      "mcp__godot__open_scene",
+      "mcp__godot__close_scene_tab",
+      "mcp__godot__save_scene",
+      "mcp__godot__open_script_at_line",
+      "mcp__godot__run_project",
+      "mcp__godot__stop_project",
+      "mcp__godot__debug_print",
+      "mcp__godot__get_runtime_screenshot",
+      "mcp__godot__install_runtime_probe",
+      "mcp__godot__execute_editor_script",
+      "mcp__godot__fix_resource_uid",
+      "mcp__godot__audit_project_health",
+      "mcp__godot__detect_broken_scripts",
+      "mcp__godot__evaluate_runtime_expression",
+      "mcp__godot__await_runtime_condition",
+      "mcp__godot__call_runtime_node_method",
+      "mcp__godot__simulate_runtime_input_action"
+    ]
+  }
+}

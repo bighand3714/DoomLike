@@ -1,5 +1,5 @@
 # ==============================================================================
-# Enemy — 敌人基类（Phase 5 扩展）
+# Enemy — 敌人基类（Phase 5 扩展 + Phase 7 优化）
 # ==============================================================================
 class_name Enemy extends CharacterBody3D
 
@@ -37,13 +37,12 @@ var _stun_full_timer: float = 0.0
 var _knockback_velocity: Vector3 = Vector3.ZERO
 var _grab_owner: Node3D = null
 
-# 调试条（CSGBox3D，头顶）
 var _debug_stun_bar: CSGBox3D = null
 var _debug_stun_bg: CSGBox3D = null
 var _debug_hp_bar: CSGBox3D = null
 var _debug_hp_bg: CSGBox3D = null
-const DEBUG_BAR_FULL := 0.5  # 满条宽度
-const DEBUG_BAR_Y := 2.2     # 头顶高度
+const DEBUG_BAR_FULL := 0.5
+const DEBUG_BAR_Y := 2.2
 
 
 func _ready() -> void:
@@ -165,8 +164,14 @@ func _state_exit(_old_state: EnemyState) -> void:
 	pass
 
 
+# ==============================================================================
+# IDLE → 距离检测（不再要求射线穿透，边界柱不会挡住发现玩家）
+# ==============================================================================
 func _state_idle(_delta: float) -> void:
-	if _can_see_player():
+	if _player == null:
+		return
+	var dist := global_position.distance_to(_player.global_position)
+	if dist <= enemy_data.sight_range:
 		_transition_to(EnemyState.CHASE)
 
 
@@ -188,7 +193,6 @@ func _state_chase(delta: float) -> void:
 	else:
 		_move_towards_player(delta, enemy_data.move_speed)
 
-	# 飞行敌人：调整 Y 轴高度保持在玩家上方 hover_height
 	if enemy_data.is_flying:
 		var target_y: float = _player.global_position.y + enemy_data.hover_height
 		var y_diff: float = target_y - global_position.y
@@ -200,10 +204,6 @@ func _state_chase(delta: float) -> void:
 	move_and_slide()
 
 
-# 攻击三段式：windup(前摇)→damage(伤害判定)→recovery(后摇)
-# 前摇阶段敌人举枪/抬手但不开火，让玩家有反应时间。
-# windup 结束后进入 damage 窗口才真正造成伤害。
-# recovery 结束后才能再次攻击或切回追击。
 func _state_attack(delta: float) -> void:
 	_face_player_flat()
 
@@ -212,12 +212,12 @@ func _state_attack(delta: float) -> void:
 	var dist := to_player.length()
 
 	match _attack_phase:
-		0:  # windup——抬手/举枪，不开火
+		0:
 			_state_timer += delta
 			if _state_timer >= enemy_data.attack_windup:
 				_attack_phase = 1
 				_state_timer = 0.0
-		1:  # damage——判定窗口，实际造成伤害
+		1:
 			if _state_timer == 0.0:
 				_execute_attack()
 				_attack_cooldown_timer = enemy_data.attack_cooldown
@@ -225,7 +225,7 @@ func _state_attack(delta: float) -> void:
 			if _state_timer >= enemy_data.attack_duration:
 				_attack_phase = 2
 				_state_timer = 0.0
-		2:  # recovery——收招，不能行动
+		2:
 			_state_timer += delta
 			if _state_timer >= enemy_data.attack_recovery:
 				_transition_to(EnemyState.CHASE)
@@ -311,6 +311,7 @@ func _state_pain(delta: float) -> void:
 	if _state_timer >= enemy_data.pain_duration:
 		_transition_to(EnemyState.CHASE)
 
+
 func _state_stunned(delta: float) -> void:
 	_stun_full_timer -= delta
 	if _stun_full_timer <= 0.0:
@@ -318,13 +319,19 @@ func _state_stunned(delta: float) -> void:
 		_stun = enemy_data.max_stun * 0.8
 		_transition_to(EnemyState.CHASE)
 
+
 func _state_grabbed(_delta: float) -> void:
 	if _grab_owner == null or not is_instance_valid(_grab_owner):
 		release_grab()
 
+
+# ==============================================================================
+# 死亡 —— 快速缩小 + 缩短停留时间（最多 1.2 秒）
+# ==============================================================================
 func _state_death(delta: float) -> void:
 	_state_timer += delta
-	if _state_timer >= enemy_data.death_duration:
+	var effective_duration: float = minf(enemy_data.death_duration, 1.2)
+	if _state_timer >= effective_duration:
 		queue_free()
 
 
@@ -356,6 +363,9 @@ func _can_see_player() -> bool:
 	return false
 
 
+# ==============================================================================
+# 眩晕 / 击退 / 抓取 / 处决
+# ==============================================================================
 func apply_stun(amount: float) -> void:
 	if _state == EnemyState.DEATH or _state == EnemyState.EXECUTED:
 		return
@@ -367,6 +377,7 @@ func apply_stun(amount: float) -> void:
 		_stun_full_timer = enemy_data.stun_full_duration
 		stun_filled.emit(self)
 		_transition_to(EnemyState.STUNNED)
+
 
 func is_stunned_or_grabbable() -> bool:
 	return _state == EnemyState.STUNNED or _is_stun_full
@@ -383,6 +394,7 @@ func apply_knockback(direction: Vector3, force: float) -> void:
 func can_be_grabbed() -> bool:
 	return _is_stun_full and _state != EnemyState.DEATH and _state != EnemyState.EXECUTED
 
+
 func start_grab(grabber: Node3D) -> bool:
 	if not can_be_grabbed():
 		return false
@@ -391,9 +403,11 @@ func start_grab(grabber: Node3D) -> bool:
 	_transition_to(EnemyState.GRABBED)
 	return true
 
+
 func update_grabbed_position(target_transform: Transform3D, _delta: float) -> void:
 	global_position = target_transform.origin
 	rotation = target_transform.basis.get_euler()
+
 
 func release_grab() -> void:
 	_grab_owner = null
@@ -402,36 +416,45 @@ func release_grab() -> void:
 	_stun = enemy_data.max_stun * 0.5
 	_transition_to(EnemyState.CHASE)
 
+
 func execute() -> void:
 	_transition_to(EnemyState.EXECUTED)
 	_damageable.health = 0.0
 	_damageable.died.emit()
 
 
+# ==============================================================================
+# 移动辅助
+# ==============================================================================
 func _get_player_flat_direction() -> Vector3:
 	var dir := _player.global_position - global_position
 	dir.y = 0.0
 	return dir.normalized() if dir.length_squared() > 0.01 else Vector3.FORWARD
+
 
 func _get_player_distance_xz() -> float:
 	var d := _player.global_position - global_position
 	d.y = 0.0
 	return d.length()
 
+
 func _move_towards_player(_delta: float, speed: float) -> void:
 	var dir := _get_player_flat_direction()
 	velocity.x = dir.x * speed
 	velocity.z = dir.z * speed
+
 
 func _move_away_from_player(_delta: float, speed: float) -> void:
 	var dir := -_get_player_flat_direction()
 	velocity.x = dir.x * speed
 	velocity.z = dir.z * speed
 
+
 func _strafe_around_player(_delta: float, speed: float) -> void:
 	var dir := _get_player_flat_direction()
 	velocity.x = -dir.z * speed
 	velocity.z = dir.x * speed
+
 
 func _face_player_flat() -> void:
 	var dir := _get_player_flat_direction()
@@ -439,7 +462,7 @@ func _face_player_flat() -> void:
 
 
 # ==============================================================================
-# 受伤反馈——兼容 CSGBox3D/CSGPolygon3D 和 MeshInstance3D
+# 受伤反馈
 # ==============================================================================
 func _on_damaged(_amount: float, _type: WeaponData.DamageType) -> void:
 	if _state == EnemyState.DEATH:
@@ -447,6 +470,7 @@ func _on_damaged(_amount: float, _type: WeaponData.DamageType) -> void:
 	_flash_pain()
 	if _state != EnemyState.STUNNED and _state != EnemyState.GRABBED:
 		_transition_to(EnemyState.PAIN)
+
 
 func _flash_pain() -> void:
 	for child in get_children():
@@ -458,7 +482,6 @@ func _flash_pain() -> void:
 		if geo == null:
 			continue
 
-		# 保存原始材质（用 material_override 兜底）
 		var key := geo.get_instance_id()
 		if not _original_materials.has(key):
 			_original_materials[key] = geo.material_override
@@ -473,9 +496,11 @@ func _flash_pain() -> void:
 		var timer := get_tree().create_timer(enemy_data.pain_duration)
 		timer.timeout.connect(_restore_material.bind(geo, key))
 
+
 func _restore_material(geo: Node3D, key: int) -> void:
 	if _original_materials.has(key):
 		geo.material_override = _original_materials[key]
+
 
 func _on_died() -> void:
 	if _state == EnemyState.DEATH:
@@ -488,9 +513,11 @@ func _on_died() -> void:
 	_on_death_visual()
 	enemy_died.emit(self)
 
+
 func _on_death_visual() -> void:
+	var shrink_time: float = minf(enemy_data.death_duration * 0.4, 0.5)
 	var tween := create_tween()
-	tween.tween_property(self, "scale", Vector3(0.3, 0.3, 0.3), 0.3)
+	tween.tween_property(self, "scale", Vector3(0.3, 0.3, 0.3), shrink_time)
 	for child in get_children():
 		if child is MeshInstance3D or child is CSGBox3D or child is CSGPolygon3D:
 			var geo: Node3D = child
@@ -500,13 +527,12 @@ func _on_death_visual() -> void:
 
 
 # ==============================================================================
-# 调试条——左右缩进（不从中心缩），像真正的血条
+# 调试条
 # ==============================================================================
 func _create_debug_bars() -> void:
 	var bar_thick := 0.06
 	var bar_z := 0.05
 
-	# 眩晕条——背景 + 前景（黄），固定在左侧
 	_debug_stun_bg = _make_bar("StunBarBG", Color(0.1, 0.1, 0.1), DEBUG_BAR_Y, bar_thick, bar_z)
 	_debug_stun_bar = _make_bar("StunBar", Color(1.0, 0.9, 0.1), DEBUG_BAR_Y, bar_thick, bar_z + 0.03)
 	var stun_mat := _debug_stun_bar.material as StandardMaterial3D
@@ -515,9 +541,9 @@ func _create_debug_bars() -> void:
 		stun_mat.emission = Color(1.0, 0.9, 0.1)
 		stun_mat.emission_energy_multiplier = 0.5
 
-	# 血条——背景 + 前景（绿），在眩晕条下方
 	_debug_hp_bg = _make_bar("HPBarBG", Color(0.1, 0.1, 0.1), DEBUG_BAR_Y - 0.1, bar_thick, bar_z)
 	_debug_hp_bar = _make_bar("HPBar", Color(0.2, 0.9, 0.2), DEBUG_BAR_Y - 0.1, bar_thick, bar_z + 0.03)
+
 
 func _make_bar(bar_name: String, color: Color, y: float, thick: float, z: float) -> CSGBox3D:
 	var bar := CSGBox3D.new()
@@ -531,18 +557,19 @@ func _make_bar(bar_name: String, color: Color, y: float, thick: float, z: float)
 	add_child(bar)
 	return bar
 
+
 func _update_debug_bars() -> void:
 	if _debug_stun_bar != null and enemy_data != null:
 		var ratio: float = _stun / enemy_data.max_stun
 		var w: float = DEBUG_BAR_FULL * ratio
 		_debug_stun_bar.size.x = w
-		_debug_stun_bar.position.x = -(DEBUG_BAR_FULL - w) / 2.0  # 左对齐缩进
+		_debug_stun_bar.position.x = -(DEBUG_BAR_FULL - w) / 2.0
 
 	if _debug_hp_bar != null and _damageable != null:
 		var ratio: float = _damageable.health / _damageable.max_health
 		var w: float = DEBUG_BAR_FULL * ratio
 		_debug_hp_bar.size.x = w
-		_debug_hp_bar.position.x = -(DEBUG_BAR_FULL - w) / 2.0  # 左对齐缩进
+		_debug_hp_bar.position.x = -(DEBUG_BAR_FULL - w) / 2.0
 
 		var hp_mat := _debug_hp_bar.material as StandardMaterial3D
 		if hp_mat != null:
