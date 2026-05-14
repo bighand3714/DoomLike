@@ -29,6 +29,8 @@
 
 class_name ArenaLevel extends Node3D
 
+const ArenaRandomizerClass = preload("res://scripts/level/arena_randomizer.gd")
+
 
 # ==============================================================================
 # 信号
@@ -94,6 +96,12 @@ var _spawn_root: Node3D
 # ==============================================================================
 var rng: RandomNumberGenerator
 
+## 随机位置生成器——封装圆形区域内取点/互斥检测/边界外取点逻辑
+var _randomizer: ArenaRandomizer
+
+## 已占用的生成位置列表——防止道具/危险区互相重叠
+var _used_spawn_points: Array[Vector3] = []
+
 ## 玩家引用——由 main.gd 在关卡加载后通过 set_player() 注入
 var _player: CharacterBody3D = null
 
@@ -156,6 +164,9 @@ func _setup_rng() -> void:
 		rng.seed = random_seed
 	else:
 		rng.randomize()
+	# 创建随机位置生成器（Phase 2.6）
+	_randomizer = ArenaRandomizerClass.new()
+	_randomizer.setup(rng)
 
 
 # ==============================================================================
@@ -267,6 +278,53 @@ func is_inside_arena(pos: Vector3) -> bool:
 	var center := get_arena_center()
 	var dist_xz := Vector2(pos.x - center.x, pos.z - center.z).length()
 	return dist_xz <= arena_radius
+
+
+# ==============================================================================
+# 随机放置接口（Phase 2.7）
+# ==============================================================================
+
+## 清空所有随机生成的内容——道具 + 危险区 + 占用点列表
+func clear_randomized_content() -> void:
+	for child in _props_root.get_children():
+		child.queue_free()
+	for child in _hazards_root.get_children():
+		child.queue_free()
+	_used_spawn_points.clear()
+
+## 注册一个已占用的位置——后续生成的道具/危险区会避开此点
+func register_occupied_point(pos: Vector3) -> void:
+	_used_spawn_points.append(pos)
+
+## 获取一个合法的随机道具位置
+# 条件：在 arena_radius 内 + 距出生点 > center_safe_radius + 与已占点保持 min_distance
+# 返回 { "ok": bool, "position": Vector3 }
+func get_random_prop_position(min_distance: float, center_safe_radius: float) -> Dictionary:
+	return _randomizer.try_get_non_overlapping_point(
+		get_arena_center(),
+		arena_radius,
+		_used_spawn_points,
+		min_distance,
+		center_safe_radius,  # 距边界的安全缩进 = 距中心的安全半径
+		20
+	)
+
+
+# ==============================================================================
+# get_player_spawn_transform() — 返回玩家出生点的 Transform3D（Phase 2.10）
+# ==============================================================================
+# 优先使用场景中手动放置的 PlayerStart 标记节点（如果存在）；
+# 否则返回竞技场中心上方 1.6m（玩家视线高度）的默认出生点。
+#
+# 方便关卡设计者：在 .tscn 中放一个 Node3D 命名为 PlayerStart，
+# 玩家就会从这里出生；不放置则默认圆心出生。
+func get_player_spawn_transform() -> Transform3D:
+	for child in get_children():
+		if child.name == "PlayerStart" and child is Node3D:
+			return child.global_transform
+	# 默认：圆心上方 1.6m（玩家胶囊体中心高度）
+	var center := get_arena_center()
+	return Transform3D(Basis(), Vector3(center.x, 1.6, center.z))
 
 
 # ==============================================================================

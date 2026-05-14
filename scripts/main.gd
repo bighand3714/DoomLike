@@ -1,13 +1,11 @@
 # ==============================================================================
 # Main — 游戏主控制器
 # ==============================================================================
-# 挂在场景根节点（Main）上，负责：
-#   1. 游戏状态机（BOOT → MAIN_MENU → LEVEL_SELECT → PLAYING / PAUSED / GAME_OVER）
-#   2. 菜单创建与信号连接
-#   3. 关卡初始化（CSG 碰撞 + 出生点 + ArenaLevel 信号连接）
-#   4. 命中标记 + 受伤效果 + 拾取通知
-#   5. RunStats 驱动（_process 中更新生存时间）
-#   6. 存档读写（SaveData，结算时提交记录）
+# 挂在场景根节点（Main）上，负责游戏状态机、菜单信号、关卡加载管线、
+# RunStats 驱动、存档读写、命中标记和受伤效果。
+#
+# Phase 2.9：用 ArenaLevel PackedScene 加载替代 Phase 1.7 的
+# reload_current_scene()，实现真正的关卡切换。
 # ==============================================================================
 
 extends Node3D
@@ -19,6 +17,7 @@ const PauseMenuClass = preload("res://scripts/ui/pause_menu.gd")
 const LevelSelectClass = preload("res://scripts/ui/level_select.gd")
 const GameOverClass = preload("res://scripts/ui/game_over_screen.gd")
 const ArenaLevelClass = preload("res://scripts/level/arena_level.gd")
+const LevelRegistryClass = preload("res://scripts/level/level_registry.gd")
 
 @onready var _level_root: Node3D = %Level
 @onready var _crosshair: ColorRect = %Crosshair
@@ -31,6 +30,8 @@ var _level_select: CanvasLayer
 var _game_over_screen: CanvasLayer
 var _game_state: GameState.State = GameState.State.BOOT
 var _current_level_id: String = ""
+var _current_level: Node3D = null
+var _current_arena: ArenaLevel = null
 var _hit_marker_connected := false
 
 var _run_stats := RunStatsClass.new()
@@ -38,7 +39,7 @@ var _save_data := SaveDataClass.new()
 
 
 # ==============================================================================
-# _ready() — 场景加载完成后自动调用，游戏的总入口
+# _ready()
 # ==============================================================================
 func _ready() -> void:
 	_setup_crosshair()
@@ -63,16 +64,11 @@ func _ready() -> void:
 	_game_over_screen.level_select_requested.connect(_on_game_over_level_select)
 	_game_over_screen.main_menu_requested.connect(_on_game_over_main_menu)
 
-	if GameState.pending_level_start:
-		GameState.pending_level_start = false
-		_current_level_id = GameState.pending_level_id
-		_set_game_state(GameState.State.PLAYING)
-	else:
-		_set_game_state(GameState.State.MAIN_MENU)
+	_set_game_state(GameState.State.MAIN_MENU)
 
 
 # ==============================================================================
-# _set_game_state(next_state) — 游戏状态切换的总调度
+# _set_game_state(next_state) — 游戏状态切换
 # ==============================================================================
 func _set_game_state(next_state: GameState.State) -> void:
 	var prev := _game_state
@@ -96,14 +92,14 @@ func _set_game_state(next_state: GameState.State) -> void:
 			Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
 		GameState.State.PLAYING:
+			# 从非 PAUSED 进入时连接信号（首次进入或重开）。
+			# 关卡加载在 _start_level() 中已完成，这里只做信号连接。
 			if prev != GameState.State.PAUSED:
-				_load_level()
 				_reset_run_stats()
 				_connect_player_death()
 				if not _hit_marker_connected:
 					_connect_hit_marker()
 				_connect_enemy_killed()
-				_connect_arena_boundary()
 			_main_menu.hide()
 			_level_select.hide()
 			_game_over_screen.hide()
@@ -147,9 +143,11 @@ func _on_restart_requested() -> void:
 	_start_level(_current_level_id)
 
 func _on_game_over_level_select() -> void:
+	_unload_current_level()
 	_set_game_state(GameState.State.LEVEL_SELECT)
 
 func _on_game_over_main_menu() -> void:
+	_unload_current_level()
 	_set_game_state(GameState.State.MAIN_MENU)
 
 func _on_back_to_menu() -> void:
@@ -157,13 +155,92 @@ func _on_back_to_menu() -> void:
 
 
 # ==============================================================================
-# _start_level(level_id) — 启动指定关卡（Phase 1.7）
+# _start_level(level_id) — 启动指定关卡（Phase 2.9 重写）
 # ==============================================================================
+# 完整的关卡启动流程：
+#   1. 卸载旧关卡（如果有）——清理节点树 + 重置引用
+#   2. 加载新关卡 PackedScene → 实例化 → 挂到 _level_root 下
+#   3. 设置出生点——把玩家传送到 ArenaLevel.get_player_spawn_transform()
+#   4. 连接边界警告信号 → HUD 显示"已到达边界"
+#   5. 重置玩家血量/护甲/弹药
+#   6. 切换到 PLAYING 状态
 func _start_level(level_id: String) -> void:
-	GameState.pending_level_id = level_id
-	GameState.pending_level_start = true
-	get_tree().paused = false
-	get_tree().reload_current_scene()
+	_current_level_id = level_id
+
+	# 1. 卸载旧关卡
+	_unload_current_level()
+
+	# 2. 加载新关卡
+	_load_arena_level(level_id)
+
+	# 3. 玩家出生
+	_reset_player_for_level()
+
+	# 4. 切换到战斗状态（PLAYING handler 中连接信号）
+	_set_game_state(GameState.State.PLAYING)
+
+
+# ==============================================================================
+# _unload_current_level() — 卸载当前关卡
+# ==============================================================================
+func _unload_current_level() -> void:
+	if _current_arena != null:
+		if _current_arena.boundary_warning_requested.is_connected(_on_boundary_warning):
+			_current_arena.boundary_warning_requested.disconnect(_on_boundary_warning)
+		_current_arena = null
+	if _current_level != null:
+		_current_level.queue_free()
+		_current_level = null
+
+
+# ==============================================================================
+# _load_arena_level(level_id) — 加载竞技场关卡 PackedScene
+# ==============================================================================
+func _load_arena_level(level_id: String) -> void:
+	var scene_path := LevelRegistryClass.get_scene_path(level_id)
+	var packed := load(scene_path) as PackedScene
+	if packed == null:
+		push_error("Main: 无法加载关卡场景 '%s'" % scene_path)
+		return
+
+	_current_level = packed.instantiate()
+	_level_root.add_child(_current_level)
+
+	# 如果是 ArenaLevel，设置玩家引用并连接边界信号
+	if _current_level is ArenaLevelClass:
+		_current_arena = _current_level as ArenaLevel
+		_current_arena.set_player(_player)
+		if not _current_arena.boundary_warning_requested.is_connected(_on_boundary_warning):
+			_current_arena.boundary_warning_requested.connect(_on_boundary_warning)
+
+
+# ==============================================================================
+# _reset_player_for_level() — 重置玩家状态到关卡初始值
+# ==============================================================================
+func _reset_player_for_level() -> void:
+	# 传送到出生点
+	if _current_arena != null:
+		var spawn := _current_arena.get_player_spawn_transform()
+		_player.global_position = spawn.origin
+		_player.rotation.y = spawn.basis.get_euler().y
+
+	# 重置速度
+	_player.velocity = Vector3.ZERO
+
+	# 重置血量/护甲
+	var dmg := _player.get_node_or_null("Damageable") as Damageable
+	if dmg != null:
+		dmg.reset()
+
+	# 重置武器弹药
+	var wm := _player.find_child("WeaponManager", true, false) as WeaponManager
+	if wm != null and wm.has_method("reset_all_weapons"):
+		wm.reset_all_weapons()
+
+	# 重置 HUD 击杀计数
+	var ps := get_node_or_null("UI/PlayerStatus")
+	if ps != null and ps.has_method("reset_kill_count"):
+		ps.reset_kill_count()
 
 
 # ==============================================================================
@@ -192,16 +269,6 @@ func _connect_enemy_killed() -> void:
 		if not em.enemy_killed.is_connected(_on_enemy_killed_for_score):
 			em.enemy_killed.connect(_on_enemy_killed_for_score)
 
-# Phase 2.5：如果当前关卡是 ArenaLevel，注入玩家引用并连接边界警告信号。
-# 如果不是 ArenaLevel（如 Phase 1 的旧 Level 节点），什么都不做。
-func _connect_arena_boundary() -> void:
-	if _level_root is ArenaLevelClass:
-		var arena: ArenaLevel = _level_root as ArenaLevel
-		arena.set_player(_player)
-		if not arena.boundary_warning_requested.is_connected(_on_boundary_warning):
-			arena.boundary_warning_requested.connect(_on_boundary_warning)
-
-# ArenaLevel 越界信号 → 转发到 HUD 显示"已到达边界"
 func _on_boundary_warning() -> void:
 	var ps := get_node_or_null("UI/PlayerStatus")
 	if ps != null and ps.has_method("show_boundary_warning"):
@@ -237,7 +304,7 @@ func get_save_data() -> RefCounted:
 
 
 # ==============================================================================
-# toggle_pause() — Esc 键切换暂停（由 player_controller 调用）
+# toggle_pause() — Esc 键切换暂停
 # ==============================================================================
 func toggle_pause() -> void:
 	match _game_state:
@@ -273,7 +340,7 @@ func _create_game_over_screen() -> CanvasLayer:
 
 
 # ==============================================================================
-# _show_hud() / _hide_hud() — HUD 显隐控制
+# _show_hud() / _hide_hud()
 # ==============================================================================
 
 func _show_hud() -> void:
@@ -296,64 +363,7 @@ func _hide_hud() -> void:
 
 
 # ==============================================================================
-# _load_level() — 初始化关卡
-# ==============================================================================
-func _load_level() -> void:
-	_enable_csg_collision(_level_root)
-
-	for child in _level_root.get_children():
-		if child.name == "PlayerStart" and child is Node3D:
-			_player.global_position = child.global_position
-			_player.rotation.y = child.global_rotation.y
-			break
-
-	var has_light := false
-	for child in _level_root.get_children():
-		if child is DirectionalLight3D or child is OmniLight3D:
-			has_light = true
-			break
-	if not has_light:
-		_add_global_lights()
-
-
-# ==============================================================================
-# _enable_csg_collision(node) — 只对 level_geometry group 或关卡几何命名前缀启用 CSG 碰撞
-# ==============================================================================
-func _enable_csg_collision(node: Node) -> void:
-	for child in node.get_children():
-		if child is CSGBox3D or child is CSGPolygon3D or child is CSGCombiner3D:
-			if _is_level_geometry(child):
-				child.use_collision = true
-		_enable_csg_collision(child)
-
-
-func _is_level_geometry(node: Node) -> bool:
-	if node.is_in_group("level_geometry"):
-		return true
-	var n := node.name
-	return n.begins_with("Ground_") or n.begins_with("Wall_") or n.begins_with("Boundary_")
-
-
-# ==============================================================================
-# _add_global_lights() — 添加默认灯光
-# ==============================================================================
-func _add_global_lights() -> void:
-	var light := DirectionalLight3D.new()
-	light.name = "GlobalDirectionalLight"
-	light.position = Vector3(4, 6, 2)
-	light.rotation_degrees = Vector3(-45, -30, 0)
-	light.light_energy = 0.8
-	_level_root.add_child(light)
-
-	var fill := OmniLight3D.new()
-	fill.name = "GlobalFillLight"
-	fill.position = Vector3(0, 3.5, 0)
-	fill.light_energy = 0.3
-	_level_root.add_child(fill)
-
-
-# ==============================================================================
-# 命中标记——射击打中敌人时准星短暂闪红
+# 命中标记
 # ==============================================================================
 
 func _connect_hit_marker() -> void:
@@ -367,7 +377,6 @@ func _connect_hit_marker() -> void:
 		weapon.hit_something.connect(_on_hit_something)
 	_hit_marker_connected = true
 
-
 func _on_weapon_changed_for_hitmarker(_name: String, _index: int) -> void:
 	var wm := _player.find_child("WeaponManager", true, false) as WeaponManager
 	if wm == null:
@@ -377,7 +386,6 @@ func _on_weapon_changed_for_hitmarker(_name: String, _index: int) -> void:
 		if not weapon.hit_something.is_connected(_on_hit_something):
 			weapon.hit_something.connect(_on_hit_something)
 
-
 func _on_hit_something(_hit_point: Vector3, _hit_normal: Vector3, target: Node) -> void:
 	var check: Node = target
 	while check != null:
@@ -386,18 +394,16 @@ func _on_hit_something(_hit_point: Vector3, _hit_normal: Vector3, target: Node) 
 			break
 		check = check.get_parent()
 
-
 func _flash_crosshair() -> void:
 	_crosshair.color = Color(1.0, 0.0, 0.0, 0.9)
 	get_tree().create_timer(0.08).timeout.connect(_restore_crosshair)
-
 
 func _restore_crosshair() -> void:
 	_crosshair.color = Color(0.0, 1.0, 0.0, 0.7)
 
 
 # ==============================================================================
-# 受伤效果——玩家受伤时全屏闪红
+# 受伤效果
 # ==============================================================================
 
 func player_hit(_amount: float) -> void:
@@ -406,9 +412,6 @@ func player_hit(_amount: float) -> void:
 	tween.tween_property(_damage_flash, "color", Color(1.0, 0.0, 0.0, 0.0), 0.3)
 
 
-# ==============================================================================
-# show_pickup_notification() — 拾取通知（转发给 HUD）
-# ==============================================================================
 func show_pickup_notification(text: String, color: Color) -> void:
 	var ps := get_node_or_null("UI/PlayerStatus")
 	if ps != null and ps.has_method("show_notification"):
@@ -424,7 +427,6 @@ func _setup_crosshair() -> void:
 	_crosshair.size = Vector2(4, 4)
 	_crosshair.position = Vector2(get_viewport().size) / 2.0 - _crosshair.size / 2.0
 	get_tree().root.size_changed.connect(_on_window_resized)
-
 
 func _on_window_resized() -> void:
 	_crosshair.position = Vector2(get_viewport().size) / 2.0 - _crosshair.size / 2.0
