@@ -1,26 +1,28 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene format=3 uid="uid://cr2qkfl65i1eh"]
 
-[ext_resource type="Script" path="res://scripts/player/player_controller.gd" id="1_player"]
-[ext_resource type="Script" path="res://scripts/weapon/weapon_manager.gd" id="2_wm"]
+[ext_resource type="Script" uid="uid://y8bg1s06by74" path="res://scripts/player/player_controller.gd" id="1_player"]
+[ext_resource type="Script" uid="uid://b45tacvgihrd8" path="res://scripts/weapon/weapon_manager.gd" id="2_wm"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_pshp"]
 radius = 0.4
 height = 1.8
 
-[node name="Player" type="CharacterBody3D"]
+[node name="Player" type="CharacterBody3D" unique_id=1527392614]
 script = ExtResource("1_player")
+max_health = 10000.0
+max_armor = 10000.0
 
-[node name="Camera3D" type="Camera3D" parent="."]
+[node name="Camera3D" type="Camera3D" parent="." unique_id=327371901]
 unique_name_in_owner = true
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, 0)
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
-shape = SubResource("CapsuleShape3D_pshp")
-
-[node name="WeaponHolder" type="Node3D" parent="Camera3D"]
+[node name="WeaponHolder" type="Node3D" parent="Camera3D" unique_id=1907727800]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.3, -0.15, -0.5)
 
-[node name="WeaponManager" type="Node3D" parent="Camera3D/WeaponHolder"]
+[node name="WeaponManager" type="Node3D" parent="Camera3D/WeaponHolder" unique_id=296605510]
 unique_name_in_owner = true
 script = ExtResource("2_wm")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=1384737840]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+shape = SubResource("CapsuleShape3D_pshp")

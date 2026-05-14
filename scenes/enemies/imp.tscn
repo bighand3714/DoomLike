@@ -1,80 +1,71 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene format=3 uid="uid://b2ew0737wq1wx"]
 
-[ext_resource type="Script" path="res://scripts/enemy/imp.gd" id="1_imp"]
+[ext_resource type="Script" uid="uid://cleklinu722yb" path="res://scripts/enemy/imp.gd" id="1_imp"]
 
 [sub_resource type="StandardMaterial3D" id="mat_body"]
-albedo_color = Color(0.65, 0.3, 0.2, 1.0)
+albedo_color = Color(0.65, 0.3, 0.2, 1)
 
 [sub_resource type="StandardMaterial3D" id="mat_head"]
-albedo_color = Color(0.7, 0.25, 0.15, 1.0)
+albedo_color = Color(0.7, 0.25, 0.15, 1)
 
 [sub_resource type="StandardMaterial3D" id="mat_eye"]
-albedo_color = Color(1.0, 1.0, 0.0, 1.0)
+albedo_color = Color(1, 1, 0, 1)
 emission_enabled = true
-emission = Color(1.0, 1.0, 0.0, 1.0)
+emission = Color(1, 1, 0, 1)
 emission_energy_multiplier = 2.0
 
 [sub_resource type="StandardMaterial3D" id="mat_limb"]
-albedo_color = Color(0.6, 0.25, 0.15, 1.0)
+albedo_color = Color(0.6, 0.25, 0.15, 1)
 
 [sub_resource type="StandardMaterial3D" id="mat_leg"]
-albedo_color = Color(0.5, 0.2, 0.12, 1.0)
+albedo_color = Color(0.5, 0.2, 0.12, 1)
 
 [sub_resource type="CapsuleShape3D" id="capsule_imp"]
 radius = 0.45
-height = 2.0
 
-[node name="Imp" type="CharacterBody3D"]
+[node name="Imp" type="CharacterBody3D" unique_id=2006624319]
 script = ExtResource("1_imp")
 
-[node name="Body" type="CSGBox3D" parent="."]
-size = Vector3(0.7, 0.8, 0.4)
-position = Vector3(0, 1.1, 0)
-use_collision = false
+[node name="Body" type="CSGBox3D" parent="." unique_id=811460325]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, 0)
 material_override = SubResource("mat_body")
+size = Vector3(0.7, 0.8, 0.4)
 
-[node name="Head" type="CSGBox3D" parent="."]
-size = Vector3(0.4, 0.35, 0.35)
-position = Vector3(0, 1.75, 0)
-use_collision = false
+[node name="Head" type="CSGBox3D" parent="." unique_id=623515023]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.75, 0)
 material_override = SubResource("mat_head")
+size = Vector3(0.4, 0.35, 0.35)
 
-[node name="LeftEye" type="CSGBox3D" parent="."]
-size = Vector3(0.1, 0.08, 0.02)
-position = Vector3(-0.1, 1.8, -0.18)
-use_collision = false
+[node name="LeftEye" type="CSGBox3D" parent="." unique_id=1099707733]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.1, 1.8, -0.18)
 material_override = SubResource("mat_eye")
-
-[node name="RightEye" type="CSGBox3D" parent="."]
 size = Vector3(0.1, 0.08, 0.02)
-position = Vector3(0.1, 1.8, -0.18)
-use_collision = false
+
+[node name="RightEye" type="CSGBox3D" parent="." unique_id=438781586]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.1, 1.8, -0.18)
 material_override = SubResource("mat_eye")
+size = Vector3(0.1, 0.08, 0.02)
 
-[node name="LeftArm" type="CSGBox3D" parent="."]
-size = Vector3(0.2, 0.7, 0.2)
-position = Vector3(-0.5, 1.1, 0)
-use_collision = false
+[node name="LeftArm" type="CSGBox3D" parent="." unique_id=1106266313]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.5, 1.1, 0)
 material_override = SubResource("mat_limb")
-
-[node name="RightArm" type="CSGBox3D" parent="."]
 size = Vector3(0.2, 0.7, 0.2)
-position = Vector3(0.5, 1.1, 0)
-use_collision = false
+
+[node name="RightArm" type="CSGBox3D" parent="." unique_id=998726128]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.5, 1.1, 0)
 material_override = SubResource("mat_limb")
+size = Vector3(0.2, 0.7, 0.2)
 
-[node name="LeftLeg" type="CSGBox3D" parent="."]
-size = Vector3(0.25, 0.6, 0.25)
-position = Vector3(-0.2, 0.4, 0)
-use_collision = false
+[node name="LeftLeg" type="CSGBox3D" parent="." unique_id=1089005660]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.2, 0.4, 0)
 material_override = SubResource("mat_leg")
-
-[node name="RightLeg" type="CSGBox3D" parent="."]
 size = Vector3(0.25, 0.6, 0.25)
-position = Vector3(0.2, 0.4, 0)
-use_collision = false
-material_override = SubResource("mat_leg")
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+[node name="RightLeg" type="CSGBox3D" parent="." unique_id=655873690]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.2, 0.4, 0)
+material_override = SubResource("mat_leg")
+size = Vector3(0.25, 0.6, 0.25)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=245339023]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, 0)
 shape = SubResource("capsule_imp")
-position = Vector3(0, 1.1, 0)

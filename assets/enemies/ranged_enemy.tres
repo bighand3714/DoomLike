@@ -1,0 +1,36 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/enemy/enemy_data.gd" id="1_edata"]
+
+[resource]
+script = ExtResource("1_edata")
+enemy_id = "ranged_enemy"
+enemy_name = "远程恶魔"
+enemy_role = "ground_ranged"
+max_health = 50.0
+attack_damage = 10.0
+damage_type = 1
+score_value = 15
+spawn_cost = 2
+weight = 0.8
+knockback_resistance = 0.0
+max_stun = 50.0
+stun_recovery_rate = 14.0
+stun_resistance = 0.0
+move_speed = 3.0
+attack_range = 18.0
+sight_range = 35.0
+attack_cooldown = 1.8
+preferred_range = 10.0
+min_range = 4.0
+attack_windup = 0.25
+attack_duration = 0.1
+attack_recovery = 0.35
+is_flying = false
+hover_height = 0.0
+vertical_move_speed = 0.0
+pain_duration = 0.3
+knockback_force = 2.5
+death_duration = 1.5
+stun_full_duration = 2.0
+model_color = Color(0.2, 0.35, 0.8, 1)

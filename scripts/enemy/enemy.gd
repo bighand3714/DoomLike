@@ -4,6 +4,7 @@
 class_name Enemy extends CharacterBody3D
 
 const EnemyDataClass = preload("res://scripts/enemy/enemy_data.gd")
+const ProjectileClass = preload("res://scripts/enemy/projectile.gd")
 
 
 enum EnemyState {
@@ -187,6 +188,14 @@ func _state_chase(delta: float) -> void:
 	else:
 		_move_towards_player(delta, enemy_data.move_speed)
 
+	# 飞行敌人：调整 Y 轴高度保持在玩家上方 hover_height
+	if enemy_data.is_flying:
+		var target_y: float = _player.global_position.y + enemy_data.hover_height
+		var y_diff: float = target_y - global_position.y
+		velocity.y = clampf(y_diff * 3.0, -enemy_data.vertical_move_speed, enemy_data.vertical_move_speed)
+	else:
+		velocity.y = 0.0
+
 	_face_player_flat()
 	move_and_slide()
 
@@ -226,7 +235,75 @@ func _state_attack(delta: float) -> void:
 
 
 func _execute_attack() -> void:
-	pass
+	if _player == null:
+		return
+
+	var dist := _get_player_distance_xz()
+
+	match enemy_data.damage_type:
+		WeaponData.DamageType.MELEE:
+			if dist <= enemy_data.attack_range * 1.3:
+				_damage_player(enemy_data.attack_damage, WeaponData.DamageType.MELEE)
+
+		WeaponData.DamageType.HITSCAN:
+			_do_hitscan_attack()
+
+		WeaponData.DamageType.PROJECTILE:
+			_spawn_projectile_attack()
+
+
+func _damage_player(amount: float, dtype: WeaponData.DamageType) -> void:
+	var dmg := _player.get_node_or_null("Damageable")
+	if dmg != null and dmg is Damageable:
+		dmg.take_damage(amount, dtype)
+	elif _player.has_method("take_damage"):
+		_player.take_damage(amount, dtype)
+
+
+func _do_hitscan_attack() -> void:
+	var origin := global_position + Vector3(0, 1.5, 0)
+	var dir := (_player.global_position + Vector3(0, 1.0, 0) - origin).normalized()
+	var end: Vector3 = origin + dir * enemy_data.attack_range * 2.0
+
+	var space_state := get_world_3d().direct_space_state
+	var query := PhysicsRayQueryParameters3D.create(origin, end)
+	query.collision_mask = 1
+	query.exclude = [self]
+
+	var result := space_state.intersect_ray(query)
+	if result.is_empty():
+		return
+
+	if _is_player_target(result.collider):
+		_damage_player(enemy_data.attack_damage, WeaponData.DamageType.HITSCAN)
+
+
+func _spawn_projectile_attack() -> void:
+	var proj: Area3D = ProjectileClass.new()
+	proj.speed = 10.0
+	proj.damage = enemy_data.attack_damage
+	proj.damage_type = WeaponData.DamageType.PROJECTILE
+	proj.lifetime = 5.0
+
+	get_tree().root.add_child(proj)
+	proj._setup_visual()
+
+	var spawn_pos := global_position + Vector3(0, 1.5, 0)
+	proj.global_position = spawn_pos
+
+	var direction := (_player.global_position + Vector3(0, 1.0, 0) - spawn_pos).normalized()
+	proj.setup(direction, self)
+
+
+func _is_player_target(collider: Node) -> bool:
+	if collider == _player:
+		return true
+	var p := collider.get_parent()
+	while p != null:
+		if p == _player:
+			return true
+		p = p.get_parent()
+	return false
 
 
 func _state_pain(delta: float) -> void:
@@ -306,10 +383,10 @@ func apply_knockback(direction: Vector3, force: float) -> void:
 func can_be_grabbed() -> bool:
 	return _is_stun_full and _state != EnemyState.DEATH and _state != EnemyState.EXECUTED
 
-func start_grab(owner: Node3D) -> bool:
+func start_grab(grabber: Node3D) -> bool:
 	if not can_be_grabbed():
 		return false
-	_grab_owner = owner
+	_grab_owner = grabber
 	collision_layer = 0
 	_transition_to(EnemyState.GRABBED)
 	return true

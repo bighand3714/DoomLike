@@ -19,7 +19,6 @@ func _ready() -> void:
 	super()
 
 # 预加载投射物类
-const ProjectileClass = preload("res://scripts/enemy/projectile.gd")
 
 
 # ==============================================================================

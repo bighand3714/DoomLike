@@ -1,0 +1,36 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/enemy/enemy_data.gd" id="1_edata"]
+
+[resource]
+script = ExtResource("1_edata")
+enemy_id = "flying_ranged_enemy"
+enemy_name = "飞行远程恶魔"
+enemy_role = "flying_ranged"
+max_health = 50.0
+attack_damage = 8.0
+damage_type = 1
+score_value = 25
+spawn_cost = 3
+weight = 0.7
+knockback_resistance = 0.1
+max_stun = 50.0
+stun_recovery_rate = 12.0
+stun_resistance = 0.05
+move_speed = 5.0
+attack_range = 20.0
+sight_range = 38.0
+attack_cooldown = 1.5
+preferred_range = 10.0
+min_range = 5.0
+attack_windup = 0.2
+attack_duration = 0.1
+attack_recovery = 0.3
+is_flying = true
+hover_height = 4.0
+vertical_move_speed = 4.5
+pain_duration = 0.25
+knockback_force = 2.0
+death_duration = 1.8
+stun_full_duration = 2.0
+model_color = Color(0.1, 0.65, 0.65, 1)

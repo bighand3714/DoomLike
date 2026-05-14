@@ -728,151 +728,430 @@
 
 > 所有敌人先用不同颜色立方体模型。优先共用 Enemy 基类和少量行为脚本，通过 EnemyData 拉开差异。
 
-### 6.1 地面近战系
+### 6.1 敌人变体实现策略
 
-- [ ] `GroundEnemy`：普通地面敌人，低血量，中等速度，低分数，容易眩晕。
-- [ ] `AdvancedGroundEnemy`：高级地面敌人，更高血量和速度，中等重量。
-- [ ] `EliteGroundEnemy`：精英地面敌人，高血量，高重量，高眩晕抗性，高分数。
+- [ ] 先保留 `Enemy` 基类作为统一生命、眩晕、击退、抓取、计分入口。
+- [ ] 为近战、远程、空中行为建立最少数量的行为脚本，避免八类敌人复制大量代码。
+- [ ] 优先通过 `EnemyData` 区分血量、速度、重量、分数、眩晕抗性、攻击方式。
+- [ ] 每类敌人都提供一个 `.tres` 数据资源。
+- [ ] 每类敌人都提供一个 `.tscn` 场景资源，方便 SpawnManager 直接实例化。
+- [ ] 每类敌人模型先用不同颜色的立方体，不制作正式模型。
+- [ ] 每类敌人都必须能被现有武器击杀、计分、进入眩晕流程。
 
-### 6.2 地面远程系
+### 6.2 通用占位模型生成
 
-- [ ] `RangedEnemy`：普通远程敌人，到达一定距离后发射慢速投射物。
-- [ ] `AdvancedRangedEnemy`：高级远程敌人，更高射速或更快投射物，会保持距离。
+- [ ] 在 `Enemy` 基类中新增或整理 `_setup_placeholder_model()`。
+- [ ] 根据 `enemy_data.model_color` 设置身体颜色。
+- [ ] 根据敌人类型调整立方体尺寸：普通小、高级中、精英大、空中稍小。
+- [ ] 地面敌人使用一个主体立方体加一个顶部小方块区分朝向。
+- [ ] 远程敌人增加一个前方小枪管方块。
+- [ ] 空中敌人增加左右小翼方块或上方标记方块。
+- [ ] 所有视觉 CSG 默认 `use_collision = false`。
+- [ ] 每个敌人只使用一个 Capsule 或 Box CollisionShape 作为物理碰撞。
+- [ ] 头顶眩晕条位置根据模型高度自动调整。
 
-### 6.3 空中系
+### 6.3 EnemyData 资源创建
 
-- [ ] `FlyingEnemy`：普通空中近战敌人，低血量，高机动。
-- [ ] `AdvancedFlyingEnemy`：高级空中近战敌人，更快、更重、更难眩晕。
-- [ ] `FlyingRangedEnemy`：空中远程敌人，保持高度并发射投射物。
+- [ ] 新建 `assets/enemies/ground_enemy.tres`。
+- [ ] 新建 `assets/enemies/advanced_ground_enemy.tres`。
+- [ ] 新建 `assets/enemies/elite_ground_enemy.tres`。
+- [ ] 新建 `assets/enemies/ranged_enemy.tres`。
+- [ ] 新建 `assets/enemies/advanced_ranged_enemy.tres`。
+- [ ] 新建 `assets/enemies/flying_enemy.tres`。
+- [ ] 新建 `assets/enemies/advanced_flying_enemy.tres`。
+- [ ] 新建 `assets/enemies/flying_ranged_enemy.tres`。
+- [ ] 每个资源填写 `enemy_id`，必须和 SpawnManager 使用的 id 一致。
+- [ ] 每个资源填写 `enemy_name`，用于 HUD 和调试。
+- [ ] 每个资源填写 `score_value` 和 `spawn_cost`。
+- [ ] 每个资源填写 `weight`，供铁鞭抓取阶段使用。
+- [ ] 每个资源填写 `model_color`，用于占位模型。
 
-### 6.4 视觉占位规范
+### 6.4 地面近战敌人
 
-- [ ] 地面普通：红色立方体。
-- [ ] 地面高级：深红色较大立方体。
-- [ ] 地面精英：紫色大型立方体。
-- [ ] 远程普通：蓝色立方体。
-- [ ] 远程高级：青色较大立方体。
-- [ ] 空中普通：黄色立方体。
-- [ ] 空中高级：橙色立方体。
-- [ ] 空中远程：绿色立方体。
-- [ ] 每类敌人头顶或身体上方显示简易眩晕条。
+- [ ] 新建 `scripts/enemy/ground_enemy.gd`，继承 `Enemy` 或近战模板脚本。
+- [ ] `GroundEnemy` 使用普通追击 + 近战攻击。
+- [ ] `GroundEnemy` 配置为低血量、低重量、低分数、低眩晕抗性。
+- [ ] 新建 `scripts/enemy/advanced_ground_enemy.gd`。
+- [ ] `AdvancedGroundEnemy` 使用同样近战模板，但速度更快、血量更高。
+- [ ] `AdvancedGroundEnemy` 可增加轻微左右移动，避免完全直线靠近。
+- [ ] 新建 `scripts/enemy/elite_ground_enemy.gd`。
+- [ ] `EliteGroundEnemy` 使用大型模型、高血量、高重量、高分数。
+- [ ] `EliteGroundEnemy` 攻击前摇更明显，但伤害更高。
+- [ ] 三类地面敌人都从边界外刷新后能向玩家推进。
+
+### 6.5 地面远程敌人
+
+- [ ] 新建 `scripts/enemy/ranged_enemy.gd`，继承 `Enemy` 或远程模板脚本。
+- [ ] `RangedEnemy` 到达 `preferred_range` 后停止推进。
+- [ ] `RangedEnemy` 使用慢速投射物攻击。
+- [ ] 投射物颜色使用蓝色或浅蓝色。
+- [ ] `RangedEnemy` 玩家太近时可以缓慢后退。
+- [ ] 新建 `scripts/enemy/advanced_ranged_enemy.gd`。
+- [ ] `AdvancedRangedEnemy` 使用更快投射物或更短攻击冷却。
+- [ ] `AdvancedRangedEnemy` 横向移动概率更高。
+- [ ] 两类远程敌人攻击前都检查玩家视线。
+- [ ] 远程敌人被枯树/岩柱遮挡时，应尝试换位或继续靠近。
+
+### 6.6 空中敌人
+
+- [ ] 新建 `scripts/enemy/flying_enemy.gd`。
+- [ ] `FlyingEnemy` 使用空中近战模板，保持悬浮高度后靠近玩家。
+- [ ] `FlyingEnemy` 血量较低、速度较快、分数中等。
+- [ ] 新建 `scripts/enemy/advanced_flying_enemy.gd`。
+- [ ] `AdvancedFlyingEnemy` 速度更快、重量更高、眩晕抗性更高。
+- [ ] `AdvancedFlyingEnemy` 可在攻击前短暂停顿，给玩家反应时间。
+- [ ] 新建 `scripts/enemy/flying_ranged_enemy.gd`。
+- [ ] `FlyingRangedEnemy` 保持空中距离并发射投射物。
+- [ ] `FlyingRangedEnemy` 优先保持高度，避免贴地移动。
+- [ ] 空中敌人死亡后下落、缩小或直接变灰消失，先用简单效果。
+
+### 6.7 敌人场景资源
+
+- [ ] 新建 `scenes/enemies/ground_enemy.tscn`。
+- [ ] 新建 `scenes/enemies/advanced_ground_enemy.tscn`。
+- [ ] 新建 `scenes/enemies/elite_ground_enemy.tscn`。
+- [ ] 新建 `scenes/enemies/ranged_enemy.tscn`。
+- [ ] 新建 `scenes/enemies/advanced_ranged_enemy.tscn`。
+- [ ] 新建 `scenes/enemies/flying_enemy.tscn`。
+- [ ] 新建 `scenes/enemies/advanced_flying_enemy.tscn`。
+- [ ] 新建 `scenes/enemies/flying_ranged_enemy.tscn`。
+- [ ] 每个场景根节点为 `CharacterBody3D`。
+- [ ] 每个场景挂对应脚本。
+- [ ] 每个场景挂对应 `EnemyData` 资源。
+- [ ] 每个场景包含基础碰撞体。
+- [ ] 打开每个场景单独运行或实例化测试，确认 `_ready()` 不报错。
+
+### 6.8 敌人单体测试
+
+- [ ] 在临时测试关卡中放置 `GroundEnemy`，确认能追击和近战攻击。
+- [ ] 放置 `AdvancedGroundEnemy`，确认速度和血量区别明显。
+- [ ] 放置 `EliteGroundEnemy`，确认更难击退和眩晕。
+- [ ] 放置 `RangedEnemy`，确认能保持距离并发射投射物。
+- [ ] 放置 `AdvancedRangedEnemy`，确认射速或弹速更高。
+- [ ] 放置 `FlyingEnemy`，确认能悬浮并靠近玩家。
+- [ ] 放置 `AdvancedFlyingEnemy`，确认速度和抗性区别明显。
+- [ ] 放置 `FlyingRangedEnemy`，确认能在空中远程攻击。
+- [ ] 所有敌人死亡后都能加分且只加一次。
+
+### 6.9 Phase 6 验收
+
+- [ ] 八类敌人均有脚本、场景和数据资源。
+- [ ] 八类敌人颜色区分明显。
+- [ ] 八类敌人都能被 SpawnManager 或 EnemyManager 注册。
+- [ ] 八类敌人都能被击杀并计分。
+- [ ] 地面、远程、空中三种行为差异能在游戏内感受到。
+- [ ] 所有敌人都支持眩晕、击退、抓取占位接口。
 
 ## Phase 7：刷怪与难度曲线
 
-### 7.1 SpawnManager
+### 7.1 SpawnManager 基础
 
-- [ ] 新建 `scripts/enemy/spawn_manager.gd`。
-- [ ] SpawnManager 挂在当前关卡或 Main 下，由关卡加载时初始化。
-- [ ] 所有敌人从 arena 半径外随机点刷新。
-- [ ] 刷新点必须在圆形边界外，但不能离边界太远。
-- [ ] 刷新时朝向玩家或竞技场中心。
-- [ ] 刷新前可显示短暂预警方块/光柱。
+- [ ] 新建 `scripts/enemy/spawn_manager.gd`，`class_name SpawnManager extends Node`。
+- [ ] 添加 `arena: ArenaLevel` 引用。
+- [ ] 添加 `enemy_manager: EnemyManager` 引用。
+- [ ] 添加 `run_stats: RunStats` 引用。
+- [ ] 添加 `is_active: bool`。
+- [ ] 添加 `active_enemy_limit: int = 60`。
+- [ ] 添加 `spawn_timer: float`。
+- [ ] 添加 `current_intensity: int = 1`。
+- [ ] 添加 `setup(arena, enemy_manager, run_stats)`。
+- [ ] 添加 `start()`、`stop()`、`reset()`。
+- [ ] 关卡开始时由 `Main` 创建或启用 SpawnManager。
+- [ ] 关卡结束、玩家死亡、返回菜单时停止 SpawnManager。
 
-### 7.2 时间驱动刷新频率
+### 7.2 敌人池和条目配置
 
-- [ ] 根据 `survival_time` 计算当前强度等级。
-- [ ] 随时间缩短刷新间隔。
-- [ ] 随时间提高每波敌人数量。
-- [ ] 随时间逐步引入高级、精英、空中、远程敌人。
-- [ ] 设置当前存活敌人上限，避免无限堆积导致性能或体验崩溃。
+- [ ] 新建 `scripts/enemy/spawn_entry.gd` 或在 SpawnManager 内使用 Dictionary 定义条目。
+- [ ] 每个条目包含 `enemy_id`、`scene_path`、`enemy_data_path`、`min_intensity`、`weight`。
+- [ ] 注册八类敌人的场景路径。
+- [ ] 普通地面敌人 `min_intensity = 1`。
+- [ ] 普通远程敌人 `min_intensity = 2`。
+- [ ] 普通空中敌人 `min_intensity = 3`。
+- [ ] 高级地面和高级远程 `min_intensity = 4`。
+- [ ] 高级空中和空中远程 `min_intensity = 5`。
+- [ ] 精英地面敌人 `min_intensity = 6`。
+- [ ] 条目权重用于同强度下随机选择。
 
-### 7.3 刷怪权重
+### 7.3 时间强度曲线
 
-- [ ] 每类敌人配置 `spawn_cost`。
-- [ ] 每波根据当前强度给予预算，随机挑选敌人组合。
-- [ ] 初期只刷普通地面敌人。
-- [ ] 中期加入远程敌人和空中敌人。
-- [ ] 后期加入高级和精英敌人。
+- [ ] 根据 `run_stats.survival_time` 计算当前强度。
+- [ ] 0 到 30 秒为强度 1。
+- [ ] 30 到 75 秒为强度 2。
+- [ ] 75 到 130 秒为强度 3。
+- [ ] 130 到 210 秒为强度 4。
+- [ ] 210 到 320 秒为强度 5。
+- [ ] 320 秒后进入强度 6，并继续缓慢提升预算。
+- [ ] 强度变化时发出 `intensity_changed(new_intensity)` 信号。
+- [ ] HUD 当前强度显示接入该信号。
+- [ ] 强度曲线先写死，后续可改成 Resource。
 
-### 7.4 击杀计分
+### 7.4 刷新间隔和波次预算
 
-- [ ] 敌人死亡时根据 `score_value` 加分。
-- [ ] 处决敌人可获得额外分数或短暂奖励。
-- [ ] 使用抓取敌人抵挡攻击可获得少量奖励分或不加分，先保留设计接口。
-- [ ] HUD 实时更新分数。
+- [ ] 添加 `get_spawn_interval() -> float`。
+- [ ] 初期刷新间隔较长，例如 4.0 秒。
+- [ ] 随强度提高逐步缩短到 1.2 到 1.5 秒。
+- [ ] 添加 `get_wave_budget() -> int`。
+- [ ] 初期每波预算 1 到 2。
+- [ ] 中期每波预算 3 到 5。
+- [ ] 后期每波预算 6 以上，但受存活上限限制。
+- [ ] 每个敌人的 `spawn_cost` 从 EnemyData 或 spawn entry 读取。
+- [ ] 每波按预算挑选敌人，直到预算不足或达到本波上限。
+- [ ] 如果当前存活敌人超过 `active_enemy_limit`，暂停刷新。
+
+### 7.5 边界外刷新点
+
+- [ ] SpawnManager 调用 `arena.get_random_point_outside_boundary()` 或 ArenaRandomizer。
+- [ ] 刷新点必须在 `arena_radius` 外、`spawn_outer_radius` 内。
+- [ ] 刷新点与玩家保持最小距离，避免贴脸突然出现。
+- [ ] 刷新点与其他刚生成敌人保持最小距离。
+- [ ] 刷新点朝向玩家或竞技场中心。
+- [ ] 如果找不到合法点，延迟到下一次刷新。
+- [ ] 飞行敌人刷新时额外设置 Y 轴高度。
+
+### 7.6 刷新预警
+
+- [ ] 新建简单预警节点，可用半透明红色 CSGBox3D 或发光小柱。
+- [ ] SpawnManager 先创建预警节点，等待 `spawn_warning_time`。
+- [ ] 预警结束后再实例化敌人。
+- [ ] 玩家能看见边界外即将出现敌人的位置。
+- [ ] 预警节点在敌人生成后自动销毁。
+- [ ] 关卡结束时清理所有预警节点。
+
+### 7.7 关卡差异化刷怪
+
+- [ ] 荒漠关卡刷怪偏向地面敌人和普通远程敌人。
+- [ ] 熔岩关卡更早加入空中敌人和远程敌人。
+- [ ] 在 ArenaLevel 或 LevelRegistry 中提供 `spawn_profile`。
+- [ ] SpawnManager 根据当前关卡 profile 调整敌人权重。
+- [ ] 没有 profile 时使用默认权重。
+
+### 7.8 击杀计分链路
+
+- [ ] EnemyManager 死亡信号传递 `score_value`。
+- [ ] RunStats 接收击杀并增加分数。
+- [ ] HUD 实时刷新分数和击杀数。
+- [ ] 处决额外分数接口先预留，Phase 8 再接入。
+- [ ] 被熔岩或环境伤害击杀的敌人是否给分先统一为给分，后续可调。
+- [ ] 同一个敌人死亡只结算一次。
+
+### 7.9 SpawnManager 验收
+
+- [ ] 进入关卡后，敌人从圆形边界外刷新。
+- [ ] 刷新前有短暂预警。
+- [ ] 随时间推进，敌人数量和强度逐渐增加。
+- [ ] 不同强度阶段出现不同敌人类型。
+- [ ] 敌人数量达到上限后暂停刷新。
+- [ ] 玩家死亡或返回菜单后不再刷新。
+- [ ] 荒漠和熔岩刷怪权重有明显差异。
 
 ## Phase 8：铁鞭、眩晕、抓取与处决
 
-### 8.1 铁鞭武器基础
+### 8.1 输入和节点结构
 
-- [ ] 新建 `scripts/weapon/iron_whip.gd`。
-- [ ] 铁鞭挂在玩家摄像机/武器节点左侧，作为左手武器。
-- [ ] 鼠标右键触发铁鞭攻击。
-- [ ] 铁鞭攻击先用射线或短扇形区域判定，后续再替换为动画轨迹。
-- [ ] 命中敌人后造成少量伤害、击退、增加眩晕值。
-- [ ] 铁鞭有冷却时间，避免无限连击。
+- [ ] 在 `project.godot` 中新增输入动作 `secondary_fire`，绑定鼠标右键。
+- [ ] 在 Player 场景的 Camera3D 下新增 `LeftHandHolder` 或在脚本中动态创建。
+- [ ] 新建 `scripts/weapon/iron_whip.gd`，`class_name IronWhip extends Node3D`。
+- [ ] IronWhip 挂在左手节点下。
+- [ ] IronWhip 只处理鼠标右键，不影响现有左键枪械。
+- [ ] 抓取状态下 `reload` 输入交给处决逻辑，非抓取状态仍交给武器换弹。
+- [ ] 确认菜单状态下鼠标右键不会触发铁鞭。
 
-### 8.2 武器眩晕值
+### 8.2 铁鞭数据参数
 
-- [ ] `WeaponData` 增加 `stun_damage`。
-- [ ] 手枪、霰弹枪、铁鞭分别配置不同眩晕值。
-- [ ] 普通伤害和眩晕伤害分离，方便调参。
-- [ ] 敌人根据 `stun_resistance` 减少受到的眩晕值。
+- [ ] 新建 `assets/weapons/iron_whip.tres` 或专用 `WhipData` 资源。
+- [ ] 参数包含 `damage: float`。
+- [ ] 参数包含 `stun_damage: float`。
+- [ ] 参数包含 `knockback_force: float`。
+- [ ] 参数包含 `range: float`。
+- [ ] 参数包含 `cooldown: float`。
+- [ ] 参数包含 `pull_speed: float`。
+- [ ] 参数包含 `grab_distance: float`。
+- [ ] 参数包含 `execution_damage: float`。
+- [ ] 手枪和霰弹枪的 WeaponData 也增加 `stun_damage`。
+- [ ] 调整手枪、霰弹枪、铁鞭眩晕值，铁鞭应明显更偏控制。
 
-### 8.3 拉取与抓取
+### 8.3 铁鞭视觉占位
 
-- [ ] 铁鞭命中眩晕满的敌人时，进入拉取流程。
-- [ ] 拉取过程中敌人向玩家身前移动。
-- [ ] 拉到指定距离后进入 `GRABBED` 状态。
-- [ ] 玩家同时只能抓取一个敌人。
-- [ ] 抓取敌人后玩家移动速度按敌人 `weight` 降低。
-- [ ] 抓取期间再次使用铁鞭可先设计为释放或无效，后续再扩展。
+- [ ] 铁鞭未攻击时显示左手小型深灰色立方体。
+- [ ] 攻击瞬间生成一条细长 CSGBox3D 或 ImmediateMesh 作为鞭影。
+- [ ] 鞭影从玩家左手方向延伸到命中点或最大距离。
+- [ ] 鞭影持续很短时间后自动隐藏。
+- [ ] 命中敌人时让敌人短暂闪色或眩晕条增长。
+- [ ] 未命中时也播放短暂挥鞭视觉，保证输入有反馈。
 
-### 8.4 盾牌机制
+### 8.4 铁鞭命中判定
 
-- [ ] 抓取敌人时，将其作为玩家前方盾牌。
-- [ ] 敌人投射物或 hitscan 命中盾牌方向时，优先伤害被抓取敌人。
-- [ ] 盾牌判定先用简单角度判断：攻击来源在玩家前方一定角度内则可被挡。
-- [ ] 被抓取敌人血量归零时自动死亡并解除抓取。
-- [ ] 被抓取敌人也可承受近战敌人的部分攻击，具体比例保留为可调参数。
+- [ ] 第一版使用摄像机中心射线判定，范围使用 `range`。
+- [ ] 射线优先命中敌人，也能被掩体阻挡。
+- [ ] 后续可替换为扇形 Area3D，但第一版先保证稳定。
+- [ ] 命中敌人后调用 `take_damage(damage)`。
+- [ ] 命中敌人后调用 `apply_stun(stun_damage)`。
+- [ ] 命中敌人后调用 `apply_knockback(direction, knockback_force)`。
+- [ ] 命中眩晕满敌人时，不做普通击退，改为进入拉取流程。
+- [ ] 铁鞭冷却期间再次按右键无效。
 
-### 8.5 处决
+### 8.5 拉取流程
 
-- [ ] 抓取敌人时按 `R` 执行处决。
-- [ ] 处决播放简单位移/缩放/变色动画。
-- [ ] 处决立即击杀或造成大量伤害。
-- [ ] 处决成功增加分数，并解除抓取。
-- [ ] 如果玩家未抓取敌人，`R` 仍保留现有换弹行为。
-- [ ] 输入优先级：抓取状态下 `R` 为处决，未抓取时 `R` 为换弹。
+- [ ] IronWhip 维护 `_pulled_enemy: Enemy`。
+- [ ] 命中 `enemy.can_be_grabbed()` 为 true 的敌人时，设置为拉取目标。
+- [ ] 拉取期间敌人停止普通 AI。
+- [ ] 每帧把敌人向玩家身前目标点移动。
+- [ ] 如果敌人与玩家距离小于 `grab_distance`，调用 `enemy.start_grab(player)`。
+- [ ] 拉取过程中如果敌人死亡，清空拉取目标。
+- [ ] 拉取过程中如果玩家死亡或切回菜单，释放目标。
+- [ ] 拉取过程中如果距离过远或被遮挡时间过长，可取消拉取。
+
+### 8.6 抓取状态和移动惩罚
+
+- [ ] 玩家或 IronWhip 维护 `_grabbed_enemy: Enemy`。
+- [ ] 抓取成功后敌人固定在玩家前方偏左或正前方。
+- [ ] 每帧调用 `enemy.update_grabbed_position()`。
+- [ ] 在 PlayerController 中新增移动速度倍率接口，例如 `set_external_speed_multiplier(multiplier)`。
+- [ ] 抓取敌人后根据 `enemy_data.weight` 降低玩家移动速度。
+- [ ] 轻敌人移动惩罚小，精英重敌人移动惩罚大。
+- [ ] 释放或处决敌人后恢复玩家移动速度。
+- [ ] 玩家同一时间只能抓取一个敌人。
+
+### 8.7 盾牌抵挡
+
+- [ ] 新建 `scripts/combat/shield_blocker.gd` 或在 IronWhip 中实现盾牌判定。
+- [ ] 敌人攻击玩家前，先查询玩家是否有抓取盾牌。
+- [ ] 对 hitscan 攻击，判断攻击来源是否在玩家前方角度范围内。
+- [ ] 对投射物攻击，投射物碰到被抓取敌人时优先伤害该敌人。
+- [ ] 盾牌抵挡成功时，被抓取敌人承受伤害。
+- [ ] 盾牌抵挡成功时，玩家不受伤或受到降低后的伤害。
+- [ ] 被抓取敌人死亡后自动解除抓取。
+- [ ] HUD 可临时显示“盾牌抵挡”调试文本。
+
+### 8.8 处决
+
+- [ ] 抓取状态下按 `R` 调用 `_execute_grabbed_enemy()`。
+- [ ] 未抓取状态下按 `R` 仍执行当前武器换弹。
+- [ ] 处决时锁定短暂时间，避免重复触发。
+- [ ] 处决对被抓取敌人造成 `execution_damage` 或直接调用 `execute()`。
+- [ ] 处决播放简单动画：敌人变白、缩小、下沉或爆开成方块占位。
+- [ ] 处决成功后给额外分数。
+- [ ] 处决成功后恢复玩家移动速度。
+- [ ] 处决成功后清空 `_grabbed_enemy`。
+
+### 8.9 与武器系统整合
+
+- [ ] `WeaponData` 新增 `stun_damage` 后，枪械命中敌人时调用 `apply_stun()`。
+- [ ] 手枪眩晕值较低。
+- [ ] 霰弹枪每颗弹丸眩晕值较低，但近距离全中总眩晕更高。
+- [ ] 铁鞭眩晕值最高，但攻击频率低。
+- [ ] HUD 或敌人头顶条能看到不同武器造成的眩晕差异。
+- [ ] 隐藏武器不应触发眩晕，沿用 Phase 0 的装备检查。
+
+### 8.10 Phase 8 验收
+
+- [ ] 鼠标右键能稳定挥鞭。
+- [ ] 铁鞭命中敌人能造成伤害、眩晕和击退。
+- [ ] 铁鞭不能穿过枯树、岩柱命中敌人。
+- [ ] 眩晕满敌人能被铁鞭拉到身前。
+- [ ] 抓取敌人后玩家移动速度降低。
+- [ ] 抓取敌人能抵挡正面攻击。
+- [ ] 抓取状态下按 `R` 处决。
+- [ ] 未抓取状态下按 `R` 换弹。
+- [ ] 抓取、处决、释放不会留下无效敌人引用。
 
 ## Phase 9：整合、平衡与验证
 
-### 9.1 单局完整循环
+### 9.1 完整流程回归
 
 - [ ] 启动游戏进入主菜单。
 - [ ] 点击开始游戏进入选关。
-- [ ] 选择任意关卡进入生存局。
-- [ ] 随机障碍/危险区域生成。
-- [ ] 敌人从边界外持续刷新。
-- [ ] 玩家击杀敌人获得分数。
-- [ ] 玩家死亡后进入结算并保存纪录。
-- [ ] 返回选关界面时能看到更新后的最高分和最长时间。
+- [ ] 选关界面正确显示两关历史最高分和最长时间。
+- [ ] 选择荒漠进入生存局。
+- [ ] 荒漠随机生成枯树。
+- [ ] 荒漠敌人从边界外刷新。
+- [ ] 荒漠玩家死亡后进入结算。
+- [ ] 返回选关后选择熔岩地狱。
+- [ ] 熔岩随机生成河流和岩柱。
+- [ ] 熔岩敌人从边界外刷新。
+- [ ] 熔岩玩家死亡后进入结算。
+- [ ] 两关记录互不覆盖。
 
-### 9.2 玩法验证清单
+### 9.2 战斗系统回归
 
-- [ ] 荒漠关卡中，枯树能有效作为掩体。
-- [ ] 熔岩关卡中，熔岩持续伤害可靠，柱状岩石能作为掩体。
-- [ ] 所有敌人都能正确追踪/攻击/死亡/加分。
-- [ ] 飞行敌人不会卡在地面或边界。
-- [ ] 远程敌人不会全部贴脸或一直站在边界外无法互动。
-- [ ] 铁鞭能稳定命中、击退、加眩晕。
-- [ ] 眩晕满的敌人能被拉取和抓取。
-- [ ] 抓取敌人的重量会影响玩家速度。
-- [ ] 抓取敌人能抵挡攻击。
-- [ ] 抓取状态下按 `R` 能处决，非抓取状态下按 `R` 能换弹。
+- [ ] 手枪能伤害敌人并增加少量眩晕。
+- [ ] 霰弹枪能多弹丸伤害敌人并增加眩晕。
+- [ ] 铁鞭能伤害、眩晕、击退敌人。
+- [ ] 眩晕满的敌人能被拉取。
+- [ ] 被抓取敌人能作为盾牌。
+- [ ] 被抓取敌人能被处决。
+- [ ] 玩家没有抓取敌人时，`R` 是换弹。
+- [ ] 玩家抓取敌人时，`R` 是处决。
+- [ ] 玩家死亡后所有抓取和拉取状态清空。
 
-### 9.3 调参目标
+### 9.3 关卡系统回归
 
-- [ ] 第一关更适合学习：视野开阔，掩体稀疏，熔岩类风险不存在。
-- [ ] 第二关更危险：熔岩河流切割移动空间，柱状岩石提供强掩体但限制走位。
-- [ ] 普通敌人主要提供压力，高级敌人制造节奏变化，精英敌人作为阶段性威胁。
-- [ ] 铁鞭不是纯输出武器，而是控制、保命、处决和制造空间的工具。
-- [ ] 刷怪频率提高要让玩家逐渐紧张，但不能在早期突然崩盘。
+- [ ] 玩家无法离开荒漠圆形边界。
+- [ ] 玩家无法离开熔岩圆形边界。
+- [ ] 触碰边界显示提示。
+- [ ] 枯树能阻挡玩家、敌人和射线。
+- [ ] 岩柱能阻挡玩家、敌人和射线。
+- [ ] 熔岩只造成持续伤害，不阻挡玩家。
+- [ ] 随机物件不会生成在玩家出生安全区。
+- [ ] 重复进入关卡不会叠加旧随机物件。
+
+### 9.4 敌人系统回归
+
+- [ ] 八类敌人都能从 SpawnManager 刷新。
+- [ ] 地面近战敌人能接近并攻击玩家。
+- [ ] 远程敌人能保持距离并攻击玩家。
+- [ ] 空中敌人能保持悬浮高度。
+- [ ] 高级敌人的数值明显高于普通敌人。
+- [ ] 精英敌人能形成阶段性压力。
+- [ ] 敌人死亡只计分一次。
+- [ ] 敌人被抓取、处决、环境伤害击杀时都不会报错。
+
+### 9.5 难度和平衡首轮
+
+- [ ] 荒漠前 60 秒主要刷普通地面敌人。
+- [ ] 荒漠 60 秒后逐步加入远程和空中敌人。
+- [ ] 熔岩更早加入远程或空中敌人。
+- [ ] 90 秒内玩家应能理解边界、掩体、铁鞭、抓取。
+- [ ] 3 分钟后敌人压力明显提高。
+- [ ] 5 分钟后允许出现精英敌人和混合敌群。
+- [ ] 普通敌人应易于眩晕和抓取。
+- [ ] 精英敌人应难以眩晕和抓取，但处决收益高。
+- [ ] 铁鞭冷却不能短到让玩家无限控场。
+- [ ] 熔岩伤害不能瞬间秒杀玩家，但必须迫使玩家离开。
+
+### 9.6 性能和清理检查
+
+- [ ] 连续游玩 10 分钟，敌人和投射物不会无限堆积。
+- [ ] 返回选关后，当前关卡节点被释放。
+- [ ] 返回主菜单后，SpawnManager 停止。
+- [ ] 玩家死亡后，所有投射物或预警节点能被清理或自然消失。
+- [ ] 多次重新开始同一关，不出现重复信号连接。
+- [ ] 多次切换关卡，不出现重复 HUD、重复菜单或重复敌人管理器。
+- [ ] 当前占位 CSG 数量不会造成明显卡顿。
+
+### 9.7 调试开关
+
+- [ ] 添加全局调试开关或导出变量，控制敌人状态打印。
+- [ ] 添加开关控制眩晕条是否显示。
+- [ ] 添加开关控制刷怪预警是否显示。
+- [ ] 添加开关控制固定随机种子。
+- [ ] 添加开关控制是否暂停刷怪，方便测试铁鞭。
+- [ ] 调试开关默认适合开发，发布前再统一关闭或隐藏。
+
+### 9.8 Phase 9 验收
+
+- [ ] 主菜单、选关、两关游玩、死亡结算、记录保存形成完整闭环。
+- [ ] 荒漠和熔岩地狱在玩法上有明显差异。
+- [ ] 八类敌人都能在合适时间段出现。
+- [ ] 铁鞭、眩晕、抓取、盾牌、处决全部可用。
+- [ ] 分数和最长时间能按关卡分别记录。
+- [ ] 连续游玩和反复切换关卡没有明显残留状态。
 
 ## 建议文件清单
 
 ### 新增脚本
 
+- [ ] `scripts/core/game_state.gd`
 - [ ] `scripts/core/run_stats.gd`
 - [ ] `scripts/core/save_data.gd`
 - [ ] `scripts/level/level_registry.gd`
@@ -883,6 +1162,7 @@
 - [ ] `scripts/level/props/dead_tree_prop.gd`
 - [ ] `scripts/level/props/rock_column_prop.gd`
 - [ ] `scripts/level/hazards/lava_river.gd`
+- [ ] `scripts/enemy/spawn_entry.gd`
 - [ ] `scripts/enemy/spawn_manager.gd`
 - [ ] `scripts/enemy/ground_enemy.gd`
 - [ ] `scripts/enemy/advanced_ground_enemy.gd`
@@ -892,6 +1172,7 @@
 - [ ] `scripts/enemy/flying_enemy.gd`
 - [ ] `scripts/enemy/advanced_flying_enemy.gd`
 - [ ] `scripts/enemy/flying_ranged_enemy.gd`
+- [ ] `scripts/combat/shield_blocker.gd`
 - [ ] `scripts/weapon/iron_whip.gd`
 - [ ] `scripts/ui/main_menu.gd`
 - [ ] `scripts/ui/level_select.gd`
@@ -904,15 +1185,44 @@
 - [ ] `scenes/props/dead_tree_prop.tscn`
 - [ ] `scenes/props/rock_column_prop.tscn`
 - [ ] `scenes/hazards/lava_river.tscn`
+- [ ] `scenes/enemies/ground_enemy.tscn`
+- [ ] `scenes/enemies/advanced_ground_enemy.tscn`
+- [ ] `scenes/enemies/elite_ground_enemy.tscn`
+- [ ] `scenes/enemies/ranged_enemy.tscn`
+- [ ] `scenes/enemies/advanced_ranged_enemy.tscn`
+- [ ] `scenes/enemies/flying_enemy.tscn`
+- [ ] `scenes/enemies/advanced_flying_enemy.tscn`
+- [ ] `scenes/enemies/flying_ranged_enemy.tscn`
 - [ ] `scenes/ui/main_menu.tscn`
 - [ ] `scenes/ui/level_select.tscn`
 - [ ] `scenes/ui/game_over_screen.tscn`
 
 ### 新增资源
 
-- [ ] 八类敌人的 `EnemyData .tres`。
-- [ ] 铁鞭的 `WeaponData .tres` 或专用 `WhipData .tres`。
+- [ ] `assets/enemies/ground_enemy.tres`
+- [ ] `assets/enemies/advanced_ground_enemy.tres`
+- [ ] `assets/enemies/elite_ground_enemy.tres`
+- [ ] `assets/enemies/ranged_enemy.tres`
+- [ ] `assets/enemies/advanced_ranged_enemy.tres`
+- [ ] `assets/enemies/flying_enemy.tres`
+- [ ] `assets/enemies/advanced_flying_enemy.tres`
+- [ ] `assets/enemies/flying_ranged_enemy.tres`
+- [ ] `assets/weapons/iron_whip.tres` 或专用 `WhipData .tres`
 - [ ] 两个关卡的配置资源：半径、障碍数量、颜色、刷怪曲线。
+
+### 重点修改文件
+
+- [ ] `scripts/main.gd`
+- [ ] `scripts/player/player_controller.gd`
+- [ ] `scripts/ui/player_status.gd`
+- [ ] `scripts/weapon/weapon_data.gd`
+- [ ] `scripts/weapon/weapon_node.gd`
+- [ ] `scripts/weapon/weapon_manager.gd`
+- [ ] `scripts/enemy/enemy_data.gd`
+- [ ] `scripts/enemy/enemy.gd`
+- [ ] `scripts/enemy/enemy_manager.gd`
+- [ ] `scripts/enemy/projectile.gd`
+- [ ] `project.godot`
 
 ## 推荐实现顺序
 
@@ -921,8 +1231,8 @@
 3. 完成 Phase 2，做出可复用圆形竞技场。
 4. 完成 Phase 3 和 Phase 4，分别落地荒漠与熔岩地狱。
 5. 完成 Phase 5，统一敌人属性、眩晕、重量、AI 状态。
-6. 完成 Phase 7 的 SpawnManager，让单局先有持续压力。
-7. 完成 Phase 6，逐个加入八类敌人。
+6. 完成 Phase 6，逐个加入八类敌人。
+7. 完成 Phase 7 的 SpawnManager，让单局形成持续压力。
 8. 完成 Phase 8，加入铁鞭、抓取、盾牌、处决。
 9. 完成 Phase 9，集中做整合验证和数值调整。
 

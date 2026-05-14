@@ -1,0 +1,36 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/enemy/enemy_data.gd" id="1_edata"]
+
+[resource]
+script = ExtResource("1_edata")
+enemy_id = "elite_ground_enemy"
+enemy_name = "精英恶魔"
+enemy_role = "ground_melee"
+max_health = 250.0
+attack_damage = 30.0
+damage_type = 3
+score_value = 50
+spawn_cost = 4
+weight = 3.0
+knockback_resistance = 0.6
+max_stun = 150.0
+stun_recovery_rate = 6.0
+stun_resistance = 0.4
+move_speed = 3.0
+attack_range = 3.2
+sight_range = 28.0
+attack_cooldown = 1.5
+preferred_range = 0.0
+min_range = 0.0
+attack_windup = 0.35
+attack_duration = 0.15
+attack_recovery = 0.5
+is_flying = false
+hover_height = 0.0
+vertical_move_speed = 0.0
+pain_duration = 0.2
+knockback_force = 5.0
+death_duration = 3.0
+stun_full_duration = 1.5
+model_color = Color(0.5, 0.15, 0.6, 1)

@@ -2,7 +2,7 @@
 
 ## 项目概览
 
-Godot 4.6 项目，正在构建一款DOOM风格的第一人称射击游戏。当前处于**Roadmap 2 Phase 5 已完成**——敌人数据模型扩展、眩晕/击退/抓取接口、三段式攻击AI、计分链路已实现。已知问题：敌人头顶调试血条/眩晕条显示为深色（CSGBox3D 在无直接光照下材质偏暗）。下一步 Phase 6：八类敌人实现。
+Godot 4.6 项目，正在构建一款DOOM风格的第一人称射击游戏。当前处于**Roadmap 2 Phase 6 已完成**——八类敌人全部实现（近战/远程/飞行 × 普通/高级/精英），Enemy基类扩展通用攻击系统（近战/hitscan/投射物）和飞行支持，所有敌人通过EnemyData差异化。已知问题：敌人头顶调试血条/眩晕条显示为深色（CSGBox3D 在无直接光照下材质偏暗）。下一步 Phase 7：刷怪与难度曲线。
 
 - **引擎**：Godot 4.6 (Forward Plus, D3D12)
 - **物理**：Jolt Physics
@@ -34,12 +34,20 @@ scripts/        GDScript 源代码
   damage/           伤害系统
     damageable.gd      可受伤接口（血量/护甲/减伤/重置/治疗信号）
     shooting_target.gd 射击靶子（测试用，自动创建Damageable）
-  enemy/            敌人系统（Phase 5 扩展）
+  enemy/            敌人系统（Phase 5 扩展 + Phase 6 八类敌人）
     enemy_data.gd      EnemyData Resource（20+字段：生命/速度/AI/眩晕/重量/飞行/模型颜色）
     enemy.gd           Enemy 基类（10状态机：IDLE→CHASE→ATTACK三段式→PAIN→STUNNED→DEATH等）
     projectile.gd      投射物基类（Area3D，飞行/碰撞/伤害/火球外观）
     imp.gd             小恶魔（远程火球投射物 + 近战爪击，CSG人形模型）
     demon_soldier.gd   恶魔士兵（hitscan射击 + 举枪前摇+有效性检查，装甲外观）
+    ground_enemy.gd        近战恶魔（红色小体型，MELEE）
+    advanced_ground_enemy.gd 高阶近战恶魔（暗红中体型，更快更硬）
+    elite_ground_enemy.gd   精英恶魔（紫色大体型，高血量高重量）
+    ranged_enemy.gd         远程恶魔（蓝色瘦长，PROJECTILE投射物）
+    advanced_ranged_enemy.gd 高阶远程恶魔（深蓝，双管枪）
+    flying_enemy.gd         飞行恶魔（黄色小体型，悬浮近战）
+    advanced_flying_enemy.gd 高阶飞行恶魔（橙色中体型，高速高抗性）
+    flying_ranged_enemy.gd   飞行远程恶魔（青色，空中投射物）
     enemy_manager.gd   敌人生成与管理（enemy_killed信号携带score_value）
   pickup/           拾取系统
     pickup.gd          Pickup 基类（Area3D + 悬浮旋转动画）
@@ -56,14 +64,14 @@ scripts/        GDScript 源代码
 scenes/         Godot 场景文件
   main.tscn          主场景
   player/            player.tscn（Player 场景）
-  enemies/           imp.tscn, demon_soldier.tscn
+  enemies/           imp.tscn, demon_soldier.tscn + 8 Phase 6 .tscn
   levels/            关卡场景
     desert_arena.tscn 荒漠竞技场（挂 ArenaLevel，arena_radius=45，72边界柱）
     lava_arena.tscn   熔岩地狱（挂 ArenaLevel，arena_radius=45，72边界柱）
   ui/                UI场景（当前均为代码创建，无 .tscn 文件）
 assets/         游戏资源
   weapons/          WeaponData .tres（pistol.tres, shotgun.tres）
-  enemies/          EnemyData .tres（imp.tres, demon_soldier.tres）
+  enemies/          EnemyData .tres（imp.tres, demon_soldier.tres + 8 Phase 6 .tres）
   audio/fonts/textures 子目录（当前为空）
 shaders/        自定义着色器（当前为空）
 docs/           文档（project_roadmap.md 原路线图, project_roadmap2.md 新路线图）
@@ -126,7 +134,7 @@ Main (Node3D)                          ← main.gd
 - **关卡切换流程**：`_start_level(id)` → `_unload_current_level()`（清理旧关卡+信号）→ `_load_arena_level(id)`（PackedScene.instantiate + 连接边界信号）→ `_reset_player_for_level()`（传送出生点+重置血量/护甲/弹药/HUD）→ PLAYING
 - **武器系统**：`WeaponData`(Resource) → `WeaponNode`(基类) → `WeaponManager`(栏位管理)。支持半自动/全自动/泵动式，`reset_ammo()` 和 `reset_all_weapons()` 用于关卡重启。
 - **伤害系统**：`Damageable` 接口（血量/护甲/减伤），护甲吸收 50% 伤害（经典 DOOM 规则），`reset()` 恢复到满血满护甲。
-- **敌人系统（Phase 5）**：`Enemy` 基类 10 状态机（SPAWNING/IDLE/CHASE/ATTACK/PAIN/STUNNED/GRABBED/EXECUTED/DEATH），攻击采用三段式 windup→damage→recovery。眩晕系统（累积→满→STUNNED→可抓取窗口→自动恢复）、击退系统（weight/knockback_resistance 衰减）、抓取接口（can_be_grabbed/start_grab/execute）。头顶 CSGBox3D 调试条（血条+眩晕条）。`EnemyManager` 的 enemy_killed 信号携带 score_value，计分链路接入 RunStats。
+- **敌人系统（Phase 5+6）**：`Enemy` 基类 10 状态机（SPAWNING/IDLE/CHASE/ATTACK/PAIN/STUNNED/GRABBED/EXECUTED/DEATH），攻击采用三段式 windup→damage→recovery。眩晕系统（累积→满→STUNNED→可抓取窗口→自动恢复）、击退系统（weight/knockback_resistance 衰减）、抓取接口（can_be_grabbed/start_grab/execute）。头顶 CSGBox3D 调试条（血条+眩晕条）。`EnemyManager` 的 enemy_killed 信号携带 score_value，计分链路接入 RunStats。Phase 6 新增通用攻击系统：基类 `_execute_attack()` 根据 `enemy_data.damage_type` 自动分发 MELEE（近战距离判定）/ HITSCAN（射线命中检测）/ PROJECTILE（生成飞行投射物）。飞行敌人支持：`is_flying=true` 时 `_state_chase()` 自动调整 Y 轴悬浮高度（`hover_height` + `vertical_move_speed`）。八类敌人脚本仅覆写 `_setup_model()` 创建差异化 CSG 占位模型，核心行为由 EnemyData 参数驱动。
 - **战斗HUD**：生命条（绿→橙→红+闪烁）、护甲（蓝色）、击杀（黄色）、武器栏位、命中标记、受伤闪红、拾取通知、分数/时间/强度（左上角，从 RunStats 读取）、边界警告（屏幕中下，橙红色大字，1.5秒自动消失）
 - **菜单系统**：主菜单 → 选关（动态读取 LevelRegistry）→ 加载竞技场 → 结算（从 LevelRegistry 获取关卡名）
 - **存档系统**：`SaveData` 用 ConfigFile 读写 `user://save.cfg`，`submit_run()` 比较并更新最高分/最长时间。选关和结算界面每次显示时刷新记录。
@@ -187,6 +195,8 @@ Main (Node3D)                          ← main.gd
 
 ## 敌人参数（enemy_data.gd / EnemyData Resource）
 
+### 旧有敌人（Imp / DemonSoldier）
+
 | 属性 | 小恶魔 (Imp) | 恶魔士兵 (Demon Soldier) | 说明 |
 |------|-------------|------------------------|------|
 | `max_health` | 80 | 120 | 生命值 |
@@ -199,6 +209,20 @@ Main (Node3D)                          ← main.gd
 | `pain_duration` | 0.3s | 0.3s | 受击硬直时间 |
 | `knockback_force` | 3.0 | 3.0 | 击退力度 |
 | `death_duration` | 2.0s | 2.5s | 尸体停留时间 |
+
+### Phase 6 新增敌人
+
+| 属性 | 近战恶魔 | 高阶近战 | 精英恶魔 | 远程恶魔 | 高阶远程 | 飞行恶魔 | 高阶飞行 | 飞行远程 |
+|------|---------|---------|---------|---------|---------|---------|---------|---------|
+| `max_health` | 60 | 100 | 250 | 50 | 80 | 40 | 70 | 50 |
+| `attack_damage` | 12 | 18 | 30 | 10 | 14 | 10 | 16 | 8 |
+| `damage_type` | MELEE(3) | MELEE(3) | MELEE(3) | PROJECTILE(1) | PROJECTILE(1) | MELEE(3) | MELEE(3) | PROJECTILE(1) |
+| `score_value` | 10 | 20 | 50 | 15 | 25 | 15 | 30 | 25 |
+| `spawn_cost` | 1 | 2 | 4 | 2 | 3 | 2 | 3 | 3 |
+| `weight` | 1.0 | 1.5 | 3.0 | 0.8 | 1.2 | 0.5 | 1.0 | 0.7 |
+| `move_speed` | 4.0 | 5.5 | 3.0 | 3.0 | 3.5 | 6.0 | 7.5 | 5.0 |
+| `is_flying` | N | N | N | N | N | Y | Y | Y |
+| `model_color` | 红 | 暗红 | 紫 | 蓝 | 深蓝 | 黄 | 橙 | 青 |
 
 ## 射击流程（weapon_node.gd）
 

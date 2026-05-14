@@ -53,6 +53,12 @@ extends CharacterBody3D
 # 鼠标设置
 # ==============================================================================
 
+## 最大生命值
+@export var max_health: float = 100.0
+
+## 最大护甲值
+@export var max_armor: float = 100.0
+
 ## 鼠标灵敏度。0.002 是比较适中的值，数字越大转得越快
 @export var mouse_sensitivity := 0.002
 
@@ -100,12 +106,14 @@ func _ready() -> void:
 	# 0.5：先检查是否已有 Damageable，避免重复创建
 	var existing := get_node_or_null("Damageable")
 	if existing != null and existing is Damageable:
-		existing.max_health = 100.0
+		existing.max_health = max_health
+		existing.max_armor = max_armor
 		existing.damaged.connect(_on_player_damaged)
 	else:
 		var dmg := Damageable.new()
 		dmg.name = "Damageable"
-		dmg.max_health = 100.0
+		dmg.max_health = max_health
+		dmg.max_armor = max_armor
 		add_child(dmg)
 
 		# 受伤时触发屏幕闪红
