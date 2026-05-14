@@ -1,8 +1,8 @@
 [gd_scene format=3 uid="uid://bunrv7txjrip6"]
 
-[ext_resource type="Script" uid="uid://c3rnyy3jech11" path="res://scripts/level/arena_level.gd" id="1_f8501"]
+[ext_resource type="Script" uid="uid://g5qhr3fjssku" path="res://scripts/level/desert_arena.gd" id="1_desert"]
 
-[node name="DesertArena" type="Node3D" unique_id=996055425]
-script = ExtResource("1_f8501")
+[node name="DesertArena" type="Node3D" unique_id=2135815375]
+script = ExtResource("1_desert")
 spawn_outer_radius = 56.0
 boundary_marker_count = 72

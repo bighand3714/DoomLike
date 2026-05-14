@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://bgn8020k7mv5p"]
+
+[ext_resource type="Script" path="res://scripts/level/props/dead_tree_prop.gd" id="1_deadtree"]
+
+[node name="DeadTreeProp" type="Node3D" unique_id=1802900662]
+script = ExtResource("1_deadtree")
