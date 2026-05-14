@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://b1wtxe1yt4fq5"]
+
+[ext_resource type="Script" path="res://scripts/level/props/rock_column_prop.gd" id="1_an0aa"]
+
+[node name="RockColumnProp" type="Node3D" unique_id=1635641528]
+script = ExtResource("1_an0aa")

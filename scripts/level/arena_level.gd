@@ -305,7 +305,8 @@ func get_random_prop_position(min_distance: float, center_safe_radius: float) ->
 		arena_radius,
 		_used_spawn_points,
 		min_distance,
-		center_safe_radius,  # 距边界的安全缩进 = 距中心的安全半径
+		2.0,  # 距边界 2m 缩进，防止道具贴边
+		center_safe_radius,  # 距中心的最小距离
 		20
 	)
 

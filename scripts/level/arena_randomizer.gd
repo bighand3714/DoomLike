@@ -110,19 +110,22 @@ func is_far_enough(point: Vector3, used_points: Array, min_distance: float) -> b
 # 如果全部尝试都失败，返回 { "ok": false, "position": Vector3.ZERO }。
 #
 # 参数：
-#   center        —— 竞技场中心
-#   radius        —— 竞技场可玩半径
-#   used_points   —— 已占用的点列表
-#   min_distance  —— 与已占点的最小间距
-#   margin        —— 距边界的缩进（0 = 可以贴边）
-#   max_attempts  —— 最大尝试次数（默认 20）
+#   center                  —— 竞技场中心
+#   radius                  —— 竞技场可玩半径
+#   used_points             —— 已占用的点列表
+#   min_distance            —— 与已占点的最小间距
+#   margin                  —— 距边界的缩进（0 = 可以贴边）
+#   min_distance_from_center —— 距中心的最小距离（0 = 可以在圆心）
+#   max_attempts            —— 最大尝试次数（默认 20）
 #
 # 返回 Dictionary：
 #   "ok"       —— bool，是否成功找到合法位置
 #   "position" —— Vector3，找到的位置（失败则为 ZERO）
-func try_get_non_overlapping_point(center: Vector3, radius: float, used_points: Array, min_distance: float, margin: float = 0.0, max_attempts: int = 20) -> Dictionary:
+func try_get_non_overlapping_point(center: Vector3, radius: float, used_points: Array, min_distance: float, margin: float = 0.0, min_distance_from_center: float = 0.0, max_attempts: int = 20) -> Dictionary:
 	for _i in range(max_attempts):
 		var pos := get_random_point_inside(center, radius, margin)
+		if pos.distance_to(center) < min_distance_from_center:
+			continue
 		if is_far_enough(pos, used_points, min_distance):
 			return { "ok": true, "position": pos }
 	return { "ok": false, "position": Vector3.ZERO }

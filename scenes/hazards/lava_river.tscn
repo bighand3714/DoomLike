@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://de3alcios57eb"]
+
+[ext_resource type="Script" path="res://scripts/level/hazards/lava_river.gd" id="1_eqfwj"]
+
+[node name="LavaRiver" type="Node3D" unique_id=2100223448]
+script = ExtResource("1_eqfwj")
