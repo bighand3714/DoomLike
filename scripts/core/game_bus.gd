@@ -41,7 +41,7 @@ signal grab_status_hide()
 # ==============================================================================
 
 ## 当前局统计引用（main.gd 在 _start_level() 中设置，_unload_current_level() 中置 null）
-var run_stats: RunStats = null
+var run_stats = null  # RunStats
 
 ## 存档数据引用（main.gd 在 _ready() 中设置，持久有效）
-var save_data: SaveData = null
+var save_data = null  # SaveData
