@@ -96,7 +96,7 @@ Main (Node3D)                          ← main.gd
 ├── Level (Node3D)                     [%Level] ← 动态加载的关卡场景挂在这里
 │   └── DesertArena/LavaArena (ArenaLevel) ← Phase 2.9 通过 PackedScene 实例化
 │       ├── GeometryRoot               (_geometry_root) 地面
-│       ├── BoundaryRoot               (_boundary_root) 64/72根边界柱
+│       ├── BoundaryRoot               (_boundary_root) 72根边界柱
 │       ├── PropsRoot                  (_props_root) 道具（Phase 3/4）
 │       ├── HazardsRoot                (_hazards_root) 危险区（Phase 4）
 │       └── SpawnRoot                  (_spawn_root) 刷怪点（Phase 7）

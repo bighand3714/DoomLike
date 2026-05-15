@@ -4,18 +4,18 @@
 
 ## 设计边界
 
-- [ ] 两个关卡均为大圆形可移动区域，基础地形用平面组成。
-- [ ] 圆形边界必须有明显视觉标志，玩家继续向外移动时提示“已到达边界”。
-- [ ] 敌人从圆形区域边界外刷新，并向玩家活动区域推进。
-- [ ] 枯树、熔岩河流、柱状岩石每次开始游戏时随机生成位置。
-- [ ] 第一关：荒漠场景，枯树作为掩体。
-- [ ] 第二关：熔岩地狱场景，熔岩河流持续伤害，柱状岩石作为掩体。
-- [ ] 鼠标左键保留现有枪械射击，鼠标右键新增左手铁鞭。
-- [ ] 铁鞭可击退敌人、增加眩晕值；敌人眩晕满后可被拉至身前并抓取。
-- [ ] 抓取敌人后，玩家移动速度受敌人重量影响；抓取敌人可处决，也可作为盾牌抵挡攻击。
-- [ ] 不同武器对敌人造成不同眩晕值。
-- [ ] 敌人拥有血量、眩晕值、重量、移动速度、分数等参数。
-- [ ] 随游戏时间增加，敌人刷新频率逐渐提高。
+- [x] 两个关卡均为大圆形可移动区域，基础地形用平面组成。
+- [x] 圆形边界必须有明显视觉标志，玩家继续向外移动时提示“已到达边界”。
+- [x] 敌人从圆形区域边界外刷新，并向玩家活动区域推进。
+- [x] 枯树、熔岩河流、柱状岩石每次开始游戏时随机生成位置。
+- [x] 第一关：荒漠场景，枯树作为掩体。
+- [x] 第二关：熔岩地狱场景，熔岩河流持续伤害，柱状岩石作为掩体。
+- [x] 鼠标左键保留现有枪械射击，鼠标右键新增左手铁鞭。
+- [x] 铁鞭可击退敌人、增加眩晕值；敌人眩晕满后可被拉至身前并抓取。
+- [x] 抓取敌人后，玩家移动速度受敌人重量影响；抓取敌人可处决，也可作为盾牌抵挡攻击。
+- [x] 不同武器对敌人造成不同眩晕值。
+- [x] 敌人拥有血量、眩晕值、重量、移动速度、分数等参数。
+- [x] 随游戏时间增加，敌人刷新频率逐渐提高。
 
 ## Phase 0：前置整理与运行稳定 ✅
 
@@ -361,208 +361,208 @@
 
 ### 3.1 DesertArena 脚本
 
-- [ ] 新建 `scripts/level/desert_arena.gd`，`class_name DesertArena extends ArenaLevel`。
-- [ ] 导出 `dead_tree_count: int = 24`。
-- [ ] 导出 `dead_tree_min_distance: float = 5.0`。
-- [ ] 导出 `dead_tree_safe_radius: float = 8.0`，避免出生点附近生成枯树。
-- [ ] 导出 `ground_color: Color`，默认沙黄色。
-- [ ] 导出 `boundary_color: Color`，默认偏黄白高亮。
-- [ ] 覆写 `_get_ground_material()` 或提供类似方法，让基类地面使用荒漠颜色。
-- [ ] 覆写 `_get_boundary_material()` 或提供类似方法，让边界柱使用荒漠边界颜色。
-- [ ] 在 `_ready()` 或基类提供的生成钩子中调用 `_spawn_dead_trees()`。
-- [ ] 保持 `ArenaLevel` 的边界、出生、随机点接口不变。
+- [x] 新建 `scripts/level/desert_arena.gd`，`class_name DesertArena extends ArenaLevel`。
+- [x] 导出 `dead_tree_count: int = 24`。
+- [x] 导出 `dead_tree_min_distance: float = 5.0`。
+- [x] 导出 `dead_tree_safe_radius: float = 8.0`，避免出生点附近生成枯树。
+- [x] 导出 `ground_color: Color`，默认沙黄色。
+- [x] 导出 `boundary_color: Color`，默认偏黄白高亮。
+- [x] 覆写 `_get_ground_material()` 或提供类似方法，让基类地面使用荒漠颜色。
+- [x] 覆写 `_get_boundary_material()` 或提供类似方法，让边界柱使用荒漠边界颜色。
+- [x] 在 `_ready()` 或基类提供的生成钩子中调用 `_spawn_dead_trees()`。
+- [x] 保持 `ArenaLevel` 的边界、出生、随机点接口不变。
 
 ### 3.2 荒漠场景搭建
 
-- [ ] 新建或更新 `scenes/levels/desert_arena.tscn`。
-- [ ] 根节点命名为 `DesertArena`，类型为 `Node3D`。
-- [ ] 根节点挂载 `scripts/level/desert_arena.gd`。
-- [ ] 设置 `arena_radius = 45.0`。
-- [ ] 设置 `spawn_outer_radius = 56.0`。
-- [ ] 设置 `boundary_marker_count = 72`，让边界足够明显。
-- [ ] 添加 `PlayerStart` 节点，放在圆心附近，例如 `(0, 1.6, 0)`。
-- [ ] 添加 `DirectionalLight3D`，使用暖色光，模拟荒漠日照。
-- [ ] 添加 `OmniLight3D` 或环境补光，避免占位模型过暗。
-- [ ] 确认场景路径和 `LevelRegistry.DESERT` 的路径一致。
+- [x] 新建或更新 `scenes/levels/desert_arena.tscn`。
+- [x] 根节点命名为 `DesertArena`，类型为 `Node3D`。
+- [x] 根节点挂载 `scripts/level/desert_arena.gd`。
+- [x] 设置 `arena_radius = 45.0`。
+- [x] 设置 `spawn_outer_radius = 56.0`。
+- [x] 设置 `boundary_marker_count = 72`，让边界足够明显。
+- [x] 添加 `PlayerStart` 节点，放在圆心附近，例如 `(0, 1.6, 0)`。
+- [x] 添加 `DirectionalLight3D`，使用暖色光，模拟荒漠日照。
+- [x] 添加 `OmniLight3D` 或环境补光，避免占位模型过暗。
+- [x] 确认场景路径和 `LevelRegistry.DESERT` 的路径一致。
 
 ### 3.3 荒漠地面和边界表现
 
-- [ ] 地面使用沙黄色材质。
-- [ ] 地面碰撞加入 `level_geometry` group。
-- [ ] 边界柱使用浅黄/白色，和地面有明显区分。
-- [ ] 边界柱高度至少高于玩家视线附近，远处也可识别。
-- [ ] 在圆形边界外可额外生成一圈更暗的荒漠地面占位，作为“不可进入远景”，但不参与移动区域。
-- [ ] 保持地形仍为平面，不加入高低起伏。
-- [ ] 验证玩家从中心向任意方向移动，都能提前看见边界标志。
+- [x] 地面使用沙黄色材质。
+- [x] 地面碰撞加入 `level_geometry` group。
+- [x] 边界柱使用浅黄/白色，和地面有明显区分。
+- [x] 边界柱高度至少高于玩家视线附近，远处也可识别。
+- [x] 在圆形边界外可额外生成一圈更暗的荒漠地面占位，作为“不可进入远景”，但不参与移动区域。
+- [x] 保持地形仍为平面，不加入高低起伏。
+- [x] 验证玩家从中心向任意方向移动，都能提前看见边界标志。
 
 ### 3.4 枯树道具脚本
 
-- [ ] 新建 `scripts/level/props/dead_tree_prop.gd`，`class_name DeadTreeProp extends Node3D`。
-- [ ] 导出 `trunk_height: float`、`trunk_width: float`、`branch_count: int`。
-- [ ] 在 `_ready()` 中调用 `_build_model()`，自动生成占位模型。
-- [ ] `_build_model()` 创建棕色树干 CSGBox3D。
-- [ ] `_build_model()` 创建若干深棕色枝干 CSGBox3D。
-- [ ] 枝干使用随机或固定角度倾斜，让不同枯树轮廓不完全一样。
-- [ ] 添加 `StaticBody3D` 或直接让 CSGBox3D 使用碰撞，确保枯树能挡住玩家和射线。
-- [ ] 所有碰撞用简单盒子即可，不追求精确树形碰撞。
-- [ ] 枯树根节点加入 `cover_prop` group。
-- [ ] 枯树几何加入 `level_geometry` group，方便碰撞启用规则识别。
+- [x] 新建 `scripts/level/props/dead_tree_prop.gd`，`class_name DeadTreeProp extends Node3D`。
+- [x] 导出 `trunk_height: float`、`trunk_width: float`、`branch_count: int`。
+- [x] 在 `_ready()` 中调用 `_build_model()`，自动生成占位模型。
+- [x] `_build_model()` 创建棕色树干 CSGBox3D。
+- [x] `_build_model()` 创建若干深棕色枝干 CSGBox3D。
+- [x] 枝干使用随机或固定角度倾斜，让不同枯树轮廓不完全一样。
+- [x] 添加 `StaticBody3D` 或直接让 CSGBox3D 使用碰撞，确保枯树能挡住玩家和射线。
+- [x] 所有碰撞用简单盒子即可，不追求精确树形碰撞。
+- [x] 枯树根节点加入 `cover_prop` group。
+- [x] 枯树几何加入 `level_geometry` group，方便碰撞启用规则识别。
 
 ### 3.5 枯树场景资源
 
-- [ ] 新建 `scenes/props/dead_tree_prop.tscn`。
-- [ ] 根节点命名为 `DeadTreeProp`，挂 `dead_tree_prop.gd`。
-- [ ] 打开场景确认运行后能自动生成树干和枝干。
-- [ ] 确认材质颜色为棕色系，与荒漠地面明显区分。
-- [ ] 确认碰撞体高度和树干模型大致一致。
-- [ ] 确认作为 PackedScene 实例化时不依赖主场景节点。
+- [x] 新建 `scenes/props/dead_tree_prop.tscn`。
+- [x] 根节点命名为 `DeadTreeProp`，挂 `dead_tree_prop.gd`。
+- [x] 打开场景确认运行后能自动生成树干和枝干。
+- [x] 确认材质颜色为棕色系，与荒漠地面明显区分。
+- [x] 确认碰撞体高度和树干模型大致一致。
+- [x] 确认作为 PackedScene 实例化时不依赖主场景节点。
 
 ### 3.6 枯树随机生成
 
-- [ ] 在 `DesertArena` 中预加载 `res://scenes/props/dead_tree_prop.tscn`。
-- [ ] 实现 `_spawn_dead_trees()`。
-- [ ] 生成前调用 `clear_randomized_content()` 或确保只清理荒漠道具，不清理地面和边界。
-- [ ] 每棵枯树通过 `get_random_prop_position(dead_tree_min_distance, dead_tree_safe_radius)` 获取位置。
-- [ ] 如果随机失败，跳过该棵树并打印调试信息。
-- [ ] 枯树实例挂到 `_props_root`。
-- [ ] 枯树 `rotation_degrees.y` 随机，避免朝向完全相同。
-- [ ] 枯树缩放可在 `0.8` 到 `1.3` 之间随机，让掩体大小略有变化。
-- [ ] 生成后调用 `register_occupied_point()`，后续枯树避开它。
-- [ ] 保证枯树不会生成到 `arena_radius - 2.0` 以外，避免贴边卡住玩家。
+- [x] 在 `DesertArena` 中预加载 `res://scenes/props/dead_tree_prop.tscn`。
+- [x] 实现 `_spawn_dead_trees()`。
+- [x] 生成前调用 `clear_randomized_content()` 或确保只清理荒漠道具，不清理地面和边界。
+- [x] 每棵枯树通过 `get_random_prop_position(dead_tree_min_distance, dead_tree_safe_radius)` 获取位置。
+- [x] 如果随机失败，跳过该棵树并打印调试信息。
+- [x] 枯树实例挂到 `_props_root`。
+- [x] 枯树 `rotation_degrees.y` 随机，避免朝向完全相同。
+- [x] 枯树缩放可在 `0.8` 到 `1.3` 之间随机，让掩体大小略有变化。
+- [x] 生成后调用 `register_occupied_point()`，后续枯树避开它。
+- [x] 保证枯树不会生成到 `arena_radius - 2.0` 以外，避免贴边卡住玩家。
 
 ### 3.7 枯树掩体行为验证
 
-- [ ] 玩家走向枯树时会被阻挡。
-- [ ] 子弹射线命中枯树时不会穿透打到后方敌人。
-- [ ] 敌人追击玩家时会被枯树阻挡或绕不过时短暂卡住；高级避障后续再处理。
-- [ ] 枯树之间留有足够通道，不形成完全封闭围栏。
-- [ ] 玩家出生点周围至少有一个安全开阔区域。
-- [ ] 重进荒漠关卡后枯树位置变化。
-- [ ] 使用固定 `random_seed` 时，枯树位置可复现。
+- [x] 玩家走向枯树时会被阻挡。
+- [x] 子弹射线命中枯树时不会穿透打到后方敌人。
+- [x] 敌人追击玩家时会被枯树阻挡或绕不过时短暂卡住；高级避障后续再处理。
+- [x] 枯树之间留有足够通道，不形成完全封闭围栏。
+- [x] 玩家出生点周围至少有一个安全开阔区域。
+- [x] 重进荒漠关卡后枯树位置变化。
+- [x] 使用固定 `random_seed` 时，枯树位置可复现。
 
 ### 3.8 荒漠关卡验收
 
-- [ ] 从选关界面选择荒漠后能正常进入关卡。
-- [ ] 荒漠地面、暖色灯光、边界标志能形成明确主题。
-- [ ] 玩家出生在圆形区域中心附近。
-- [ ] 边界限制和“已到达边界”提示正常。
-- [ ] 枯树每次开局随机生成。
-- [ ] 枯树能作为掩体阻挡移动和射线。
-- [ ] 返回选关再进入荒漠，不会叠加上一局的枯树。
-- [ ] 荒漠关卡不依赖熔岩或岩柱相关脚本。
+- [x] 从选关界面选择荒漠后能正常进入关卡。
+- [x] 荒漠地面、暖色灯光、边界标志能形成明确主题。
+- [x] 玩家出生在圆形区域中心附近。
+- [x] 边界限制和“已到达边界”提示正常。
+- [x] 枯树每次开局随机生成。
+- [x] 枯树能作为掩体阻挡移动和射线。
+- [x] 返回选关再进入荒漠，不会叠加上一局的枯树。
+- [x] 荒漠关卡不依赖熔岩或岩柱相关脚本。
 
 ## Phase 4：第二关熔岩地狱竞技场
 
 ### 4.1 LavaArena 脚本
 
-- [ ] 新建 `scripts/level/lava_arena.gd`，`class_name LavaArena extends ArenaLevel`。
-- [ ] 导出 `lava_river_count: int = 2`。
-- [ ] 导出 `rock_column_count: int = 18`。
-- [ ] 导出 `rock_column_min_distance: float = 5.0`。
-- [ ] 导出 `center_safe_radius: float = 10.0`，保证出生区域不被熔岩和岩柱堵住。
-- [ ] 导出 `lava_min_distance_from_spawn: float = 8.0`。
-- [ ] 导出暗红/黑色地面材质颜色。
-- [ ] 导出亮橙/红色边界材质颜色。
-- [ ] 覆写地面和边界材质方法，让熔岩关卡主题与荒漠区分明显。
-- [ ] 在生成钩子中依次调用 `_spawn_lava_rivers()` 和 `_spawn_rock_columns()`。
+- [x] 新建 `scripts/level/lava_arena.gd`，`class_name LavaArena extends ArenaLevel`。
+- [x] 导出 `lava_river_count: int = 2`。
+- [x] 导出 `rock_column_count: int = 18`。
+- [x] 导出 `rock_column_min_distance: float = 5.0`。
+- [x] 导出 `center_safe_radius: float = 10.0`，保证出生区域不被熔岩和岩柱堵住。
+- [x] 导出 `lava_min_distance_from_spawn: float = 8.0`。
+- [x] 导出暗红/黑色地面材质颜色。
+- [x] 导出亮橙/红色边界材质颜色。
+- [x] 覆写地面和边界材质方法，让熔岩关卡主题与荒漠区分明显。
+- [x] 在生成钩子中依次调用 `_spawn_lava_rivers()` 和 `_spawn_rock_columns()`。
 
 ### 4.2 熔岩场景搭建
 
-- [ ] 新建或更新 `scenes/levels/lava_arena.tscn`。
-- [ ] 根节点命名为 `LavaArena`，类型为 `Node3D`。
-- [ ] 根节点挂载 `scripts/level/lava_arena.gd`。
-- [ ] 设置 `arena_radius = 45.0`。
-- [ ] 设置 `spawn_outer_radius = 56.0`。
-- [ ] 设置 `boundary_marker_count = 72`。
-- [ ] 添加 `PlayerStart`，放在圆心附近。
-- [ ] 添加红橙色 `DirectionalLight3D`。
-- [ ] 添加低强度补光，避免黑色地面吞掉视觉信息。
-- [ ] 确认 `LevelRegistry.LAVA` 指向该场景。
+- [x] 新建或更新 `scenes/levels/lava_arena.tscn`。
+- [x] 根节点命名为 `LavaArena`，类型为 `Node3D`。
+- [x] 根节点挂载 `scripts/level/lava_arena.gd`。
+- [x] 设置 `arena_radius = 45.0`。
+- [x] 设置 `spawn_outer_radius = 56.0`。
+- [x] 设置 `boundary_marker_count = 72`。
+- [x] 添加 `PlayerStart`，放在圆心附近。
+- [x] 添加红橙色 `DirectionalLight3D`。
+- [x] 添加低强度补光，避免黑色地面吞掉视觉信息。
+- [x] 确认 `LevelRegistry.LAVA` 指向该场景。
 
 ### 4.3 熔岩河流脚本
 
-- [ ] 新建 `scripts/level/hazards/lava_river.gd`，`class_name LavaRiver extends Node3D`。
-- [ ] 导出 `river_length: float = 28.0`。
-- [ ] 导出 `river_width: float = 4.0`。
-- [ ] 导出 `damage_per_second: float = 18.0`。
-- [ ] 导出 `tick_interval: float = 0.25`。
-- [ ] 导出 `visual_height: float = 0.04`，让熔岩略高于地面避免闪烁。
-- [ ] `_ready()` 中调用 `_build_visual()` 和 `_build_damage_area()`。
-- [ ] `_build_visual()` 创建红橙色扁平 CSGBox3D 或 MeshInstance3D。
-- [ ] 视觉材质开启 emission，强化熔岩危险感。
-- [ ] `_build_damage_area()` 创建 `Area3D` 和 `CollisionShape3D`，尺寸覆盖河流矩形。
-- [ ] `Area3D` 只负责检测玩家，不阻挡玩家移动。
-- [ ] 根节点加入 `hazard` group。
+- [x] 新建 `scripts/level/hazards/lava_river.gd`，`class_name LavaRiver extends Node3D`。
+- [x] 导出 `river_length: float = 28.0`。
+- [x] 导出 `river_width: float = 4.0`。
+- [x] 导出 `damage_per_second: float = 18.0`。
+- [x] 导出 `tick_interval: float = 0.25`。
+- [x] 导出 `visual_height: float = 0.04`，让熔岩略高于地面避免闪烁。
+- [x] `_ready()` 中调用 `_build_visual()` 和 `_build_damage_area()`。
+- [x] `_build_visual()` 创建红橙色扁平 CSGBox3D 或 MeshInstance3D。
+- [x] 视觉材质开启 emission，强化熔岩危险感。
+- [x] `_build_damage_area()` 创建 `Area3D` 和 `CollisionShape3D`，尺寸覆盖河流矩形。
+- [x] `Area3D` 只负责检测玩家，不阻挡玩家移动。
+- [x] 根节点加入 `hazard` group。
 
 ### 4.4 熔岩持续伤害
 
-- [ ] `LavaRiver` 维护 `_bodies_in_lava: Array[Node]` 或 Dictionary。
-- [ ] 连接 `body_entered`，玩家进入时加入列表。
-- [ ] 连接 `body_exited`，玩家离开时移出列表。
-- [ ] 使用 `_process(delta)` 累计 tick 时间。
-- [ ] 每个 tick 对列表中的玩家查找 `Damageable`。
-- [ ] 伤害数值为 `damage_per_second * tick_interval`。
-- [ ] 调用 `Damageable.take_damage()`，伤害类型可临时使用 `WeaponData.DamageType.EXPLOSION` 或后续新增 `HAZARD`。
-- [ ] 玩家离开熔岩后不再继续扣血。
-- [ ] 玩家死亡后不再重复造成伤害或刷屏报错。
-- [ ] 熔岩伤害应触发玩家受伤闪红。
+- [x] `LavaRiver` 维护 `_bodies_in_lava: Array[Node]` 或 Dictionary。
+- [x] 连接 `body_entered`，玩家进入时加入列表。
+- [x] 连接 `body_exited`，玩家离开时移出列表。
+- [x] 使用 `_process(delta)` 累计 tick 时间。
+- [x] 每个 tick 对列表中的玩家查找 `Damageable`。
+- [x] 伤害数值为 `damage_per_second * tick_interval`。
+- [x] 调用 `Damageable.take_damage()`，伤害类型可临时使用 `WeaponData.DamageType.EXPLOSION` 或后续新增 `HAZARD`。
+- [x] 玩家离开熔岩后不再继续扣血。
+- [x] 玩家死亡后不再重复造成伤害或刷屏报错。
+- [x] 熔岩伤害应触发玩家受伤闪红。
 
 ### 4.5 熔岩河流随机生成
 
-- [ ] 新建 `scenes/hazards/lava_river.tscn`，根节点挂 `lava_river.gd`。
-- [ ] 在 `LavaArena` 中预加载熔岩河流场景。
-- [ ] 实现 `_spawn_lava_rivers()`。
-- [ ] 每条熔岩河流随机选取中心点、长度和旋转角度。
-- [ ] 河流中心点必须在竞技场内部。
-- [ ] 河流矩形的主要部分应留在 `arena_radius - 3.0` 内。
-- [ ] 河流不能覆盖玩家出生安全半径。
-- [ ] 多条河流之间保持最小距离，避免一开局就把地图切成死路。
-- [ ] 河流生成后，把中心点和近似占用半径注册到随机占位列表。
-- [ ] 如果找不到合法位置，减少该局河流数量而不是强行生成。
+- [x] 新建 `scenes/hazards/lava_river.tscn`，根节点挂 `lava_river.gd`。
+- [x] 在 `LavaArena` 中预加载熔岩河流场景。
+- [x] 实现 `_spawn_lava_rivers()`。
+- [x] 每条熔岩河流随机选取中心点、长度和旋转角度。
+- [x] 河流中心点必须在竞技场内部。
+- [x] 河流矩形的主要部分应留在 `arena_radius - 3.0` 内。
+- [x] 河流不能覆盖玩家出生安全半径。
+- [x] 多条河流之间保持最小距离，避免一开局就把地图切成死路。
+- [x] 河流生成后，把中心点和近似占用半径注册到随机占位列表。
+- [x] 如果找不到合法位置，减少该局河流数量而不是强行生成。
 
 ### 4.6 柱状岩石脚本
 
-- [ ] 新建 `scripts/level/props/rock_column_prop.gd`，`class_name RockColumnProp extends Node3D`。
-- [ ] 导出 `column_height: float`、`column_width: float`、`segment_count: int`。
-- [ ] `_ready()` 中调用 `_build_model()`。
-- [ ] 用深灰/黑色 CSGBox3D 堆叠成柱状岩石。
-- [ ] 每段方块可轻微旋转或缩放，形成粗糙柱体轮廓。
-- [ ] 添加碰撞，能阻挡玩家、敌人、射线和投射物。
-- [ ] 岩柱根节点加入 `cover_prop` group。
-- [ ] 岩柱几何加入 `level_geometry` group。
+- [x] 新建 `scripts/level/props/rock_column_prop.gd`，`class_name RockColumnProp extends Node3D`。
+- [x] 导出 `column_height: float`、`column_width: float`、`segment_count: int`。
+- [x] `_ready()` 中调用 `_build_model()`。
+- [x] 用深灰/黑色 CSGBox3D 堆叠成柱状岩石。
+- [x] 每段方块可轻微旋转或缩放，形成粗糙柱体轮廓。
+- [x] 添加碰撞，能阻挡玩家、敌人、射线和投射物。
+- [x] 岩柱根节点加入 `cover_prop` group。
+- [x] 岩柱几何加入 `level_geometry` group。
 
 ### 4.7 柱状岩石场景和随机生成
 
-- [ ] 新建 `scenes/props/rock_column_prop.tscn`。
-- [ ] 根节点命名为 `RockColumnProp`，挂 `rock_column_prop.gd`。
-- [ ] 在 `LavaArena` 中预加载岩柱场景。
-- [ ] 实现 `_spawn_rock_columns()`。
-- [ ] 岩柱通过 `get_random_prop_position(rock_column_min_distance, center_safe_radius)` 获取位置。
-- [ ] 岩柱不得生成在熔岩河流的近似占用范围内。
-- [ ] 岩柱不得过于贴近边界，避免玩家沿边界移动时被卡住。
-- [ ] 岩柱高度和缩放可随机，形成掩体层次。
-- [ ] 生成后注册占用点。
+- [x] 新建 `scenes/props/rock_column_prop.tscn`。
+- [x] 根节点命名为 `RockColumnProp`，挂 `rock_column_prop.gd`。
+- [x] 在 `LavaArena` 中预加载岩柱场景。
+- [x] 实现 `_spawn_rock_columns()`。
+- [x] 岩柱通过 `get_random_prop_position(rock_column_min_distance, center_safe_radius)` 获取位置。
+- [x] 岩柱不得生成在熔岩河流的近似占用范围内。
+- [x] 岩柱不得过于贴近边界，避免玩家沿边界移动时被卡住。
+- [x] 岩柱高度和缩放可随机，形成掩体层次。
+- [x] 生成后注册占用点。
 
 ### 4.8 熔岩关卡综合验证
 
-- [ ] 玩家出生点附近没有熔岩河流。
-- [ ] 熔岩河流和岩柱每次开局位置不同。
-- [ ] 熔岩河流不阻挡玩家移动，但会持续造成伤害。
-- [ ] 岩柱阻挡玩家移动和射线。
-- [ ] 岩柱不会生成在熔岩上。
-- [ ] 熔岩和岩柱不会完全封死从中心到边界的大部分路线。
-- [ ] 边界标志在红橙环境中仍清晰可见。
-- [ ] 返回选关再进入熔岩关卡，不会叠加上一局河流和岩柱。
+- [x] 玩家出生点附近没有熔岩河流。
+- [x] 熔岩河流和岩柱每次开局位置不同。
+- [x] 熔岩河流不阻挡玩家移动，但会持续造成伤害。
+- [x] 岩柱阻挡玩家移动和射线。
+- [x] 岩柱不会生成在熔岩上。
+- [x] 熔岩和岩柱不会完全封死从中心到边界的大部分路线。
+- [x] 边界标志在红橙环境中仍清晰可见。
+- [x] 返回选关再进入熔岩关卡，不会叠加上一局河流和岩柱。
 
 ### 4.9 熔岩关卡验收
 
-- [ ] 从选关界面选择熔岩地狱后能正常进入关卡。
-- [ ] 熔岩地面、红橙灯光、发光边界形成明确主题。
-- [ ] 玩家站在熔岩中会持续掉血，离开后停止。
-- [ ] 熔岩伤害触发玩家受伤 UI。
-- [ ] 柱状岩石能作为掩体。
-- [ ] 随机生成不会破坏出生安全区。
-- [ ] 熔岩关卡不依赖荒漠枯树脚本。
+- [x] 从选关界面选择熔岩地狱后能正常进入关卡。
+- [x] 熔岩地面、红橙灯光、发光边界形成明确主题。
+- [x] 玩家站在熔岩中会持续掉血，离开后停止。
+- [x] 熔岩伤害触发玩家受伤 UI。
+- [x] 柱状岩石能作为掩体。
+- [x] 随机生成不会破坏出生安全区。
+- [x] 熔岩关卡不依赖荒漠枯树脚本。
 
 ## Phase 5：敌人数据模型与通用 AI
 
@@ -730,330 +730,330 @@
 
 ### 6.1 敌人变体实现策略
 
-- [ ] 先保留 `Enemy` 基类作为统一生命、眩晕、击退、抓取、计分入口。
-- [ ] 为近战、远程、空中行为建立最少数量的行为脚本，避免八类敌人复制大量代码。
-- [ ] 优先通过 `EnemyData` 区分血量、速度、重量、分数、眩晕抗性、攻击方式。
-- [ ] 每类敌人都提供一个 `.tres` 数据资源。
-- [ ] 每类敌人都提供一个 `.tscn` 场景资源，方便 SpawnManager 直接实例化。
-- [ ] 每类敌人模型先用不同颜色的立方体，不制作正式模型。
-- [ ] 每类敌人都必须能被现有武器击杀、计分、进入眩晕流程。
+- [x] 先保留 `Enemy` 基类作为统一生命、眩晕、击退、抓取、计分入口。
+- [x] 为近战、远程、空中行为建立最少数量的行为脚本，避免八类敌人复制大量代码。
+- [x] 优先通过 `EnemyData` 区分血量、速度、重量、分数、眩晕抗性、攻击方式。
+- [x] 每类敌人都提供一个 `.tres` 数据资源。
+- [x] 每类敌人都提供一个 `.tscn` 场景资源，方便 SpawnManager 直接实例化。
+- [x] 每类敌人模型先用不同颜色的立方体，不制作正式模型。
+- [x] 每类敌人都必须能被现有武器击杀、计分、进入眩晕流程。
 
 ### 6.2 通用占位模型生成
 
-- [ ] 在 `Enemy` 基类中新增或整理 `_setup_placeholder_model()`。
-- [ ] 根据 `enemy_data.model_color` 设置身体颜色。
-- [ ] 根据敌人类型调整立方体尺寸：普通小、高级中、精英大、空中稍小。
-- [ ] 地面敌人使用一个主体立方体加一个顶部小方块区分朝向。
-- [ ] 远程敌人增加一个前方小枪管方块。
-- [ ] 空中敌人增加左右小翼方块或上方标记方块。
-- [ ] 所有视觉 CSG 默认 `use_collision = false`。
-- [ ] 每个敌人只使用一个 Capsule 或 Box CollisionShape 作为物理碰撞。
-- [ ] 头顶眩晕条位置根据模型高度自动调整。
+- [x] 在 `Enemy` 基类中新增或整理 `_setup_placeholder_model()`。
+- [x] 根据 `enemy_data.model_color` 设置身体颜色。
+- [x] 根据敌人类型调整立方体尺寸：普通小、高级中、精英大、空中稍小。
+- [x] 地面敌人使用一个主体立方体加一个顶部小方块区分朝向。
+- [x] 远程敌人增加一个前方小枪管方块。
+- [x] 空中敌人增加左右小翼方块或上方标记方块。
+- [x] 所有视觉 CSG 默认 `use_collision = false`。
+- [x] 每个敌人只使用一个 Capsule 或 Box CollisionShape 作为物理碰撞。
+- [x] 头顶眩晕条位置根据模型高度自动调整。
 
 ### 6.3 EnemyData 资源创建
 
-- [ ] 新建 `assets/enemies/ground_enemy.tres`。
-- [ ] 新建 `assets/enemies/advanced_ground_enemy.tres`。
-- [ ] 新建 `assets/enemies/elite_ground_enemy.tres`。
-- [ ] 新建 `assets/enemies/ranged_enemy.tres`。
-- [ ] 新建 `assets/enemies/advanced_ranged_enemy.tres`。
-- [ ] 新建 `assets/enemies/flying_enemy.tres`。
-- [ ] 新建 `assets/enemies/advanced_flying_enemy.tres`。
-- [ ] 新建 `assets/enemies/flying_ranged_enemy.tres`。
-- [ ] 每个资源填写 `enemy_id`，必须和 SpawnManager 使用的 id 一致。
-- [ ] 每个资源填写 `enemy_name`，用于 HUD 和调试。
-- [ ] 每个资源填写 `score_value` 和 `spawn_cost`。
-- [ ] 每个资源填写 `weight`，供铁鞭抓取阶段使用。
-- [ ] 每个资源填写 `model_color`，用于占位模型。
+- [x] 新建 `assets/enemies/ground_enemy.tres`。
+- [x] 新建 `assets/enemies/advanced_ground_enemy.tres`。
+- [x] 新建 `assets/enemies/elite_ground_enemy.tres`。
+- [x] 新建 `assets/enemies/ranged_enemy.tres`。
+- [x] 新建 `assets/enemies/advanced_ranged_enemy.tres`。
+- [x] 新建 `assets/enemies/flying_enemy.tres`。
+- [x] 新建 `assets/enemies/advanced_flying_enemy.tres`。
+- [x] 新建 `assets/enemies/flying_ranged_enemy.tres`。
+- [x] 每个资源填写 `enemy_id`，必须和 SpawnManager 使用的 id 一致。
+- [x] 每个资源填写 `enemy_name`，用于 HUD 和调试。
+- [x] 每个资源填写 `score_value` 和 `spawn_cost`。
+- [x] 每个资源填写 `weight`，供铁鞭抓取阶段使用。
+- [x] 每个资源填写 `model_color`，用于占位模型。
 
 ### 6.4 地面近战敌人
 
-- [ ] 新建 `scripts/enemy/ground_enemy.gd`，继承 `Enemy` 或近战模板脚本。
-- [ ] `GroundEnemy` 使用普通追击 + 近战攻击。
-- [ ] `GroundEnemy` 配置为低血量、低重量、低分数、低眩晕抗性。
-- [ ] 新建 `scripts/enemy/advanced_ground_enemy.gd`。
-- [ ] `AdvancedGroundEnemy` 使用同样近战模板，但速度更快、血量更高。
-- [ ] `AdvancedGroundEnemy` 可增加轻微左右移动，避免完全直线靠近。
-- [ ] 新建 `scripts/enemy/elite_ground_enemy.gd`。
-- [ ] `EliteGroundEnemy` 使用大型模型、高血量、高重量、高分数。
-- [ ] `EliteGroundEnemy` 攻击前摇更明显，但伤害更高。
-- [ ] 三类地面敌人都从边界外刷新后能向玩家推进。
+- [x] 新建 `scripts/enemy/ground_enemy.gd`，继承 `Enemy` 或近战模板脚本。
+- [x] `GroundEnemy` 使用普通追击 + 近战攻击。
+- [x] `GroundEnemy` 配置为低血量、低重量、低分数、低眩晕抗性。
+- [x] 新建 `scripts/enemy/advanced_ground_enemy.gd`。
+- [x] `AdvancedGroundEnemy` 使用同样近战模板，但速度更快、血量更高。
+- [x] `AdvancedGroundEnemy` 可增加轻微左右移动，避免完全直线靠近。
+- [x] 新建 `scripts/enemy/elite_ground_enemy.gd`。
+- [x] `EliteGroundEnemy` 使用大型模型、高血量、高重量、高分数。
+- [x] `EliteGroundEnemy` 攻击前摇更明显，但伤害更高。
+- [x] 三类地面敌人都从边界外刷新后能向玩家推进。
 
 ### 6.5 地面远程敌人
 
-- [ ] 新建 `scripts/enemy/ranged_enemy.gd`，继承 `Enemy` 或远程模板脚本。
-- [ ] `RangedEnemy` 到达 `preferred_range` 后停止推进。
-- [ ] `RangedEnemy` 使用慢速投射物攻击。
-- [ ] 投射物颜色使用蓝色或浅蓝色。
-- [ ] `RangedEnemy` 玩家太近时可以缓慢后退。
-- [ ] 新建 `scripts/enemy/advanced_ranged_enemy.gd`。
-- [ ] `AdvancedRangedEnemy` 使用更快投射物或更短攻击冷却。
-- [ ] `AdvancedRangedEnemy` 横向移动概率更高。
-- [ ] 两类远程敌人攻击前都检查玩家视线。
-- [ ] 远程敌人被枯树/岩柱遮挡时，应尝试换位或继续靠近。
+- [x] 新建 `scripts/enemy/ranged_enemy.gd`，继承 `Enemy` 或远程模板脚本。
+- [x] `RangedEnemy` 到达 `preferred_range` 后停止推进。
+- [x] `RangedEnemy` 使用慢速投射物攻击。
+- [x] 投射物颜色使用蓝色或浅蓝色。
+- [x] `RangedEnemy` 玩家太近时可以缓慢后退。
+- [x] 新建 `scripts/enemy/advanced_ranged_enemy.gd`。
+- [x] `AdvancedRangedEnemy` 使用更快投射物或更短攻击冷却。
+- [x] `AdvancedRangedEnemy` 横向移动概率更高。
+- [x] 两类远程敌人攻击前都检查玩家视线。
+- [x] 远程敌人被枯树/岩柱遮挡时，应尝试换位或继续靠近。
 
 ### 6.6 空中敌人
 
-- [ ] 新建 `scripts/enemy/flying_enemy.gd`。
-- [ ] `FlyingEnemy` 使用空中近战模板，保持悬浮高度后靠近玩家。
-- [ ] `FlyingEnemy` 血量较低、速度较快、分数中等。
-- [ ] 新建 `scripts/enemy/advanced_flying_enemy.gd`。
-- [ ] `AdvancedFlyingEnemy` 速度更快、重量更高、眩晕抗性更高。
-- [ ] `AdvancedFlyingEnemy` 可在攻击前短暂停顿，给玩家反应时间。
-- [ ] 新建 `scripts/enemy/flying_ranged_enemy.gd`。
-- [ ] `FlyingRangedEnemy` 保持空中距离并发射投射物。
-- [ ] `FlyingRangedEnemy` 优先保持高度，避免贴地移动。
-- [ ] 空中敌人死亡后下落、缩小或直接变灰消失，先用简单效果。
+- [x] 新建 `scripts/enemy/flying_enemy.gd`。
+- [x] `FlyingEnemy` 使用空中近战模板，保持悬浮高度后靠近玩家。
+- [x] `FlyingEnemy` 血量较低、速度较快、分数中等。
+- [x] 新建 `scripts/enemy/advanced_flying_enemy.gd`。
+- [x] `AdvancedFlyingEnemy` 速度更快、重量更高、眩晕抗性更高。
+- [x] `AdvancedFlyingEnemy` 可在攻击前短暂停顿，给玩家反应时间。
+- [x] 新建 `scripts/enemy/flying_ranged_enemy.gd`。
+- [x] `FlyingRangedEnemy` 保持空中距离并发射投射物。
+- [x] `FlyingRangedEnemy` 优先保持高度，避免贴地移动。
+- [x] 空中敌人死亡后下落、缩小或直接变灰消失，先用简单效果。
 
 ### 6.7 敌人场景资源
 
-- [ ] 新建 `scenes/enemies/ground_enemy.tscn`。
-- [ ] 新建 `scenes/enemies/advanced_ground_enemy.tscn`。
-- [ ] 新建 `scenes/enemies/elite_ground_enemy.tscn`。
-- [ ] 新建 `scenes/enemies/ranged_enemy.tscn`。
-- [ ] 新建 `scenes/enemies/advanced_ranged_enemy.tscn`。
-- [ ] 新建 `scenes/enemies/flying_enemy.tscn`。
-- [ ] 新建 `scenes/enemies/advanced_flying_enemy.tscn`。
-- [ ] 新建 `scenes/enemies/flying_ranged_enemy.tscn`。
-- [ ] 每个场景根节点为 `CharacterBody3D`。
-- [ ] 每个场景挂对应脚本。
-- [ ] 每个场景挂对应 `EnemyData` 资源。
-- [ ] 每个场景包含基础碰撞体。
-- [ ] 打开每个场景单独运行或实例化测试，确认 `_ready()` 不报错。
+- [x] 新建 `scenes/enemies/ground_enemy.tscn`。
+- [x] 新建 `scenes/enemies/advanced_ground_enemy.tscn`。
+- [x] 新建 `scenes/enemies/elite_ground_enemy.tscn`。
+- [x] 新建 `scenes/enemies/ranged_enemy.tscn`。
+- [x] 新建 `scenes/enemies/advanced_ranged_enemy.tscn`。
+- [x] 新建 `scenes/enemies/flying_enemy.tscn`。
+- [x] 新建 `scenes/enemies/advanced_flying_enemy.tscn`。
+- [x] 新建 `scenes/enemies/flying_ranged_enemy.tscn`。
+- [x] 每个场景根节点为 `CharacterBody3D`。
+- [x] 每个场景挂对应脚本。
+- [x] 每个场景挂对应 `EnemyData` 资源。
+- [x] 每个场景包含基础碰撞体。
+- [x] 打开每个场景单独运行或实例化测试，确认 `_ready()` 不报错。
 
 ### 6.8 敌人单体测试
 
-- [ ] 在临时测试关卡中放置 `GroundEnemy`，确认能追击和近战攻击。
-- [ ] 放置 `AdvancedGroundEnemy`，确认速度和血量区别明显。
-- [ ] 放置 `EliteGroundEnemy`，确认更难击退和眩晕。
-- [ ] 放置 `RangedEnemy`，确认能保持距离并发射投射物。
-- [ ] 放置 `AdvancedRangedEnemy`，确认射速或弹速更高。
-- [ ] 放置 `FlyingEnemy`，确认能悬浮并靠近玩家。
-- [ ] 放置 `AdvancedFlyingEnemy`，确认速度和抗性区别明显。
-- [ ] 放置 `FlyingRangedEnemy`，确认能在空中远程攻击。
-- [ ] 所有敌人死亡后都能加分且只加一次。
+- [x] 在临时测试关卡中放置 `GroundEnemy`，确认能追击和近战攻击。
+- [x] 放置 `AdvancedGroundEnemy`，确认速度和血量区别明显。
+- [x] 放置 `EliteGroundEnemy`，确认更难击退和眩晕。
+- [x] 放置 `RangedEnemy`，确认能保持距离并发射投射物。
+- [x] 放置 `AdvancedRangedEnemy`，确认射速或弹速更高。
+- [x] 放置 `FlyingEnemy`，确认能悬浮并靠近玩家。
+- [x] 放置 `AdvancedFlyingEnemy`，确认速度和抗性区别明显。
+- [x] 放置 `FlyingRangedEnemy`，确认能在空中远程攻击。
+- [x] 所有敌人死亡后都能加分且只加一次。
 
 ### 6.9 Phase 6 验收
 
-- [ ] 八类敌人均有脚本、场景和数据资源。
-- [ ] 八类敌人颜色区分明显。
-- [ ] 八类敌人都能被 SpawnManager 或 EnemyManager 注册。
-- [ ] 八类敌人都能被击杀并计分。
-- [ ] 地面、远程、空中三种行为差异能在游戏内感受到。
-- [ ] 所有敌人都支持眩晕、击退、抓取占位接口。
+- [x] 八类敌人均有脚本、场景和数据资源。
+- [x] 八类敌人颜色区分明显。
+- [x] 八类敌人都能被 SpawnManager 或 EnemyManager 注册。
+- [x] 八类敌人都能被击杀并计分。
+- [x] 地面、远程、空中三种行为差异能在游戏内感受到。
+- [x] 所有敌人都支持眩晕、击退、抓取占位接口。
 
 ## Phase 7：刷怪与难度曲线
 
 ### 7.1 SpawnManager 基础
 
-- [ ] 新建 `scripts/enemy/spawn_manager.gd`，`class_name SpawnManager extends Node`。
-- [ ] 添加 `arena: ArenaLevel` 引用。
-- [ ] 添加 `enemy_manager: EnemyManager` 引用。
-- [ ] 添加 `run_stats: RunStats` 引用。
-- [ ] 添加 `is_active: bool`。
-- [ ] 添加 `active_enemy_limit: int = 60`。
-- [ ] 添加 `spawn_timer: float`。
-- [ ] 添加 `current_intensity: int = 1`。
-- [ ] 添加 `setup(arena, enemy_manager, run_stats)`。
-- [ ] 添加 `start()`、`stop()`、`reset()`。
-- [ ] 关卡开始时由 `Main` 创建或启用 SpawnManager。
-- [ ] 关卡结束、玩家死亡、返回菜单时停止 SpawnManager。
+- [x] 新建 `scripts/enemy/spawn_manager.gd`，`class_name SpawnManager extends Node`。
+- [x] 添加 `arena: ArenaLevel` 引用。
+- [x] 添加 `enemy_manager: EnemyManager` 引用。
+- [x] 添加 `run_stats: RunStats` 引用。
+- [x] 添加 `is_active: bool`。
+- [x] 添加 `active_enemy_limit: int = 60`。
+- [x] 添加 `spawn_timer: float`。
+- [x] 添加 `current_intensity: int = 1`。
+- [x] 添加 `setup(arena, enemy_manager, run_stats)`。
+- [x] 添加 `start()`、`stop()`、`reset()`。
+- [x] 关卡开始时由 `Main` 创建或启用 SpawnManager。
+- [x] 关卡结束、玩家死亡、返回菜单时停止 SpawnManager。
 
 ### 7.2 敌人池和条目配置
 
-- [ ] 新建 `scripts/enemy/spawn_entry.gd` 或在 SpawnManager 内使用 Dictionary 定义条目。
-- [ ] 每个条目包含 `enemy_id`、`scene_path`、`enemy_data_path`、`min_intensity`、`weight`。
-- [ ] 注册八类敌人的场景路径。
-- [ ] 普通地面敌人 `min_intensity = 1`。
-- [ ] 普通远程敌人 `min_intensity = 2`。
-- [ ] 普通空中敌人 `min_intensity = 3`。
-- [ ] 高级地面和高级远程 `min_intensity = 4`。
-- [ ] 高级空中和空中远程 `min_intensity = 5`。
-- [ ] 精英地面敌人 `min_intensity = 6`。
-- [ ] 条目权重用于同强度下随机选择。
+- [x] 新建 `scripts/enemy/spawn_entry.gd` 或在 SpawnManager 内使用 Dictionary 定义条目。
+- [x] 每个条目包含 `enemy_id`、`scene_path`、`enemy_data_path`、`min_intensity`、`weight`。
+- [x] 注册八类敌人的场景路径。
+- [x] 普通地面敌人 `min_intensity = 1`。
+- [x] 普通远程敌人 `min_intensity = 2`。
+- [x] 普通空中敌人 `min_intensity = 3`。
+- [x] 高级地面和高级远程 `min_intensity = 4`。
+- [x] 高级空中和空中远程 `min_intensity = 5`。
+- [x] 精英地面敌人 `min_intensity = 6`。
+- [x] 条目权重用于同强度下随机选择。
 
 ### 7.3 时间强度曲线
 
-- [ ] 根据 `run_stats.survival_time` 计算当前强度。
-- [ ] 0 到 30 秒为强度 1。
-- [ ] 30 到 75 秒为强度 2。
-- [ ] 75 到 130 秒为强度 3。
-- [ ] 130 到 210 秒为强度 4。
-- [ ] 210 到 320 秒为强度 5。
-- [ ] 320 秒后进入强度 6，并继续缓慢提升预算。
-- [ ] 强度变化时发出 `intensity_changed(new_intensity)` 信号。
-- [ ] HUD 当前强度显示接入该信号。
-- [ ] 强度曲线先写死，后续可改成 Resource。
+- [x] 根据 `run_stats.survival_time` 计算当前强度。
+- [x] 0 到 30 秒为强度 1。
+- [x] 30 到 75 秒为强度 2。
+- [x] 75 到 130 秒为强度 3。
+- [x] 130 到 210 秒为强度 4。
+- [x] 210 到 320 秒为强度 5。
+- [x] 320 秒后进入强度 6，并继续缓慢提升预算。
+- [x] 强度变化时发出 `intensity_changed(new_intensity)` 信号。
+- [x] HUD 当前强度显示接入该信号。
+- [x] 强度曲线先写死，后续可改成 Resource。
 
 ### 7.4 刷新间隔和波次预算
 
-- [ ] 添加 `get_spawn_interval() -> float`。
-- [ ] 初期刷新间隔较长，例如 4.0 秒。
-- [ ] 随强度提高逐步缩短到 1.2 到 1.5 秒。
-- [ ] 添加 `get_wave_budget() -> int`。
-- [ ] 初期每波预算 1 到 2。
-- [ ] 中期每波预算 3 到 5。
-- [ ] 后期每波预算 6 以上，但受存活上限限制。
-- [ ] 每个敌人的 `spawn_cost` 从 EnemyData 或 spawn entry 读取。
-- [ ] 每波按预算挑选敌人，直到预算不足或达到本波上限。
-- [ ] 如果当前存活敌人超过 `active_enemy_limit`，暂停刷新。
+- [x] 添加 `get_spawn_interval() -> float`。
+- [x] 初期刷新间隔较长，例如 4.0 秒。
+- [x] 随强度提高逐步缩短到 1.2 到 1.5 秒。
+- [x] 添加 `get_wave_budget() -> int`。
+- [x] 初期每波预算 1 到 2。
+- [x] 中期每波预算 3 到 5。
+- [x] 后期每波预算 6 以上，但受存活上限限制。
+- [x] 每个敌人的 `spawn_cost` 从 EnemyData 或 spawn entry 读取。
+- [x] 每波按预算挑选敌人，直到预算不足或达到本波上限。
+- [x] 如果当前存活敌人超过 `active_enemy_limit`，暂停刷新。
 
 ### 7.5 边界外刷新点
 
-- [ ] SpawnManager 调用 `arena.get_random_point_outside_boundary()` 或 ArenaRandomizer。
-- [ ] 刷新点必须在 `arena_radius` 外、`spawn_outer_radius` 内。
-- [ ] 刷新点与玩家保持最小距离，避免贴脸突然出现。
-- [ ] 刷新点与其他刚生成敌人保持最小距离。
-- [ ] 刷新点朝向玩家或竞技场中心。
-- [ ] 如果找不到合法点，延迟到下一次刷新。
-- [ ] 飞行敌人刷新时额外设置 Y 轴高度。
+- [x] SpawnManager 调用 `arena.get_random_point_outside_boundary()` 或 ArenaRandomizer。
+- [x] 刷新点必须在 `arena_radius` 外、`spawn_outer_radius` 内。
+- [x] 刷新点与玩家保持最小距离，避免贴脸突然出现。
+- [x] 刷新点与其他刚生成敌人保持最小距离。
+- [x] 刷新点朝向玩家或竞技场中心。
+- [x] 如果找不到合法点，延迟到下一次刷新。
+- [x] 飞行敌人刷新时额外设置 Y 轴高度。
 
 ### 7.6 刷新预警
 
-- [ ] 新建简单预警节点，可用半透明红色 CSGBox3D 或发光小柱。
-- [ ] SpawnManager 先创建预警节点，等待 `spawn_warning_time`。
-- [ ] 预警结束后再实例化敌人。
-- [ ] 玩家能看见边界外即将出现敌人的位置。
-- [ ] 预警节点在敌人生成后自动销毁。
-- [ ] 关卡结束时清理所有预警节点。
+- [x] 新建简单预警节点，可用半透明红色 CSGBox3D 或发光小柱。
+- [x] SpawnManager 先创建预警节点，等待 `spawn_warning_time`。
+- [x] 预警结束后再实例化敌人。
+- [x] 玩家能看见边界外即将出现敌人的位置。
+- [x] 预警节点在敌人生成后自动销毁。
+- [x] 关卡结束时清理所有预警节点。
 
 ### 7.7 关卡差异化刷怪
 
-- [ ] 荒漠关卡刷怪偏向地面敌人和普通远程敌人。
-- [ ] 熔岩关卡更早加入空中敌人和远程敌人。
-- [ ] 在 ArenaLevel 或 LevelRegistry 中提供 `spawn_profile`。
-- [ ] SpawnManager 根据当前关卡 profile 调整敌人权重。
-- [ ] 没有 profile 时使用默认权重。
+- [x] 荒漠关卡刷怪偏向地面敌人和普通远程敌人。
+- [x] 熔岩关卡更早加入空中敌人和远程敌人。
+- [x] 在 ArenaLevel 或 LevelRegistry 中提供 `spawn_profile`。
+- [x] SpawnManager 根据当前关卡 profile 调整敌人权重。
+- [x] 没有 profile 时使用默认权重。
 
 ### 7.8 击杀计分链路
 
-- [ ] EnemyManager 死亡信号传递 `score_value`。
-- [ ] RunStats 接收击杀并增加分数。
-- [ ] HUD 实时刷新分数和击杀数。
-- [ ] 处决额外分数接口先预留，Phase 8 再接入。
-- [ ] 被熔岩或环境伤害击杀的敌人是否给分先统一为给分，后续可调。
-- [ ] 同一个敌人死亡只结算一次。
+- [x] EnemyManager 死亡信号传递 `score_value`。
+- [x] RunStats 接收击杀并增加分数。
+- [x] HUD 实时刷新分数和击杀数。
+- [x] 处决额外分数接口先预留，Phase 8 再接入。
+- [x] 被熔岩或环境伤害击杀的敌人是否给分先统一为给分，后续可调。
+- [x] 同一个敌人死亡只结算一次。
 
 ### 7.9 SpawnManager 验收
 
-- [ ] 进入关卡后，敌人从圆形边界外刷新。
-- [ ] 刷新前有短暂预警。
-- [ ] 随时间推进，敌人数量和强度逐渐增加。
-- [ ] 不同强度阶段出现不同敌人类型。
-- [ ] 敌人数量达到上限后暂停刷新。
-- [ ] 玩家死亡或返回菜单后不再刷新。
-- [ ] 荒漠和熔岩刷怪权重有明显差异。
+- [x] 进入关卡后，敌人从圆形边界外刷新。
+- [x] 刷新前有短暂预警。
+- [x] 随时间推进，敌人数量和强度逐渐增加。
+- [x] 不同强度阶段出现不同敌人类型。
+- [x] 敌人数量达到上限后暂停刷新。
+- [x] 玩家死亡或返回菜单后不再刷新。
+- [x] 荒漠和熔岩刷怪权重有明显差异。
 
 ## Phase 8：铁鞭、眩晕、抓取与处决
 
 ### 8.1 输入和节点结构
 
-- [ ] 在 `project.godot` 中新增输入动作 `secondary_fire`，绑定鼠标右键。
-- [ ] 在 Player 场景的 Camera3D 下新增 `LeftHandHolder` 或在脚本中动态创建。
-- [ ] 新建 `scripts/weapon/iron_whip.gd`，`class_name IronWhip extends Node3D`。
-- [ ] IronWhip 挂在左手节点下。
-- [ ] IronWhip 只处理鼠标右键，不影响现有左键枪械。
-- [ ] 抓取状态下 `reload` 输入交给处决逻辑，非抓取状态仍交给武器换弹。
-- [ ] 确认菜单状态下鼠标右键不会触发铁鞭。
+- [x] 在 `project.godot` 中新增输入动作 `secondary_fire`，绑定鼠标右键。
+- [x] 在 Player 场景的 Camera3D 下新增 `LeftHandHolder` 或在脚本中动态创建。
+- [x] 新建 `scripts/weapon/iron_whip.gd`，`class_name IronWhip extends Node3D`。
+- [x] IronWhip 挂在左手节点下。
+- [x] IronWhip 只处理鼠标右键，不影响现有左键枪械。
+- [x] 抓取状态下 `reload` 输入交给处决逻辑，非抓取状态仍交给武器换弹。
+- [x] 确认菜单状态下鼠标右键不会触发铁鞭。
 
 ### 8.2 铁鞭数据参数
 
-- [ ] 新建 `assets/weapons/iron_whip.tres` 或专用 `WhipData` 资源。
-- [ ] 参数包含 `damage: float`。
-- [ ] 参数包含 `stun_damage: float`。
-- [ ] 参数包含 `knockback_force: float`。
-- [ ] 参数包含 `range: float`。
-- [ ] 参数包含 `cooldown: float`。
-- [ ] 参数包含 `pull_speed: float`。
-- [ ] 参数包含 `grab_distance: float`。
-- [ ] 参数包含 `execution_damage: float`。
-- [ ] 手枪和霰弹枪的 WeaponData 也增加 `stun_damage`。
-- [ ] 调整手枪、霰弹枪、铁鞭眩晕值，铁鞭应明显更偏控制。
+- [x] 新建 `assets/weapons/iron_whip.tres` 或专用 `WhipData` 资源。
+- [x] 参数包含 `damage: float`。
+- [x] 参数包含 `stun_damage: float`。
+- [x] 参数包含 `knockback_force: float`。
+- [x] 参数包含 `range: float`。
+- [x] 参数包含 `cooldown: float`。
+- [x] 参数包含 `pull_speed: float`。
+- [x] 参数包含 `grab_distance: float`。
+- [x] 参数包含 `execution_damage: float`。
+- [x] 手枪和霰弹枪的 WeaponData 也增加 `stun_damage`。
+- [x] 调整手枪、霰弹枪、铁鞭眩晕值，铁鞭应明显更偏控制。
 
 ### 8.3 铁鞭视觉占位
 
-- [ ] 铁鞭未攻击时显示左手小型深灰色立方体。
-- [ ] 攻击瞬间生成一条细长 CSGBox3D 或 ImmediateMesh 作为鞭影。
-- [ ] 鞭影从玩家左手方向延伸到命中点或最大距离。
-- [ ] 鞭影持续很短时间后自动隐藏。
-- [ ] 命中敌人时让敌人短暂闪色或眩晕条增长。
-- [ ] 未命中时也播放短暂挥鞭视觉，保证输入有反馈。
+- [x] 铁鞭未攻击时显示左手小型深灰色立方体。
+- [x] 攻击瞬间生成一条细长 CSGBox3D 或 ImmediateMesh 作为鞭影。
+- [x] 鞭影从玩家左手方向延伸到命中点或最大距离。
+- [x] 鞭影持续很短时间后自动隐藏。
+- [x] 命中敌人时让敌人短暂闪色或眩晕条增长。
+- [x] 未命中时也播放短暂挥鞭视觉，保证输入有反馈。
 
 ### 8.4 铁鞭命中判定
 
-- [ ] 第一版使用摄像机中心射线判定，范围使用 `range`。
-- [ ] 射线优先命中敌人，也能被掩体阻挡。
-- [ ] 后续可替换为扇形 Area3D，但第一版先保证稳定。
-- [ ] 命中敌人后调用 `take_damage(damage)`。
-- [ ] 命中敌人后调用 `apply_stun(stun_damage)`。
-- [ ] 命中敌人后调用 `apply_knockback(direction, knockback_force)`。
-- [ ] 命中眩晕满敌人时，不做普通击退，改为进入拉取流程。
-- [ ] 铁鞭冷却期间再次按右键无效。
+- [x] 第一版使用摄像机中心射线判定，范围使用 `range`。
+- [x] 射线优先命中敌人，也能被掩体阻挡。
+- [x] 后续可替换为扇形 Area3D，但第一版先保证稳定。
+- [x] 命中敌人后调用 `take_damage(damage)`。
+- [x] 命中敌人后调用 `apply_stun(stun_damage)`。
+- [x] 命中敌人后调用 `apply_knockback(direction, knockback_force)`。
+- [x] 命中眩晕满敌人时，不做普通击退，改为进入拉取流程。
+- [x] 铁鞭冷却期间再次按右键无效。
 
 ### 8.5 拉取流程
 
-- [ ] IronWhip 维护 `_pulled_enemy: Enemy`。
-- [ ] 命中 `enemy.can_be_grabbed()` 为 true 的敌人时，设置为拉取目标。
-- [ ] 拉取期间敌人停止普通 AI。
-- [ ] 每帧把敌人向玩家身前目标点移动。
-- [ ] 如果敌人与玩家距离小于 `grab_distance`，调用 `enemy.start_grab(player)`。
-- [ ] 拉取过程中如果敌人死亡，清空拉取目标。
-- [ ] 拉取过程中如果玩家死亡或切回菜单，释放目标。
-- [ ] 拉取过程中如果距离过远或被遮挡时间过长，可取消拉取。
+- [x] IronWhip 维护 `_pulled_enemy: Enemy`。
+- [x] 命中 `enemy.can_be_grabbed()` 为 true 的敌人时，设置为拉取目标。
+- [x] 拉取期间敌人停止普通 AI。
+- [x] 每帧把敌人向玩家身前目标点移动。
+- [x] 如果敌人与玩家距离小于 `grab_distance`，调用 `enemy.start_grab(player)`。
+- [x] 拉取过程中如果敌人死亡，清空拉取目标。
+- [x] 拉取过程中如果玩家死亡或切回菜单，释放目标。
+- [x] 拉取过程中如果距离过远或被遮挡时间过长，可取消拉取。
 
 ### 8.6 抓取状态和移动惩罚
 
-- [ ] 玩家或 IronWhip 维护 `_grabbed_enemy: Enemy`。
-- [ ] 抓取成功后敌人固定在玩家前方偏左或正前方。
-- [ ] 每帧调用 `enemy.update_grabbed_position()`。
-- [ ] 在 PlayerController 中新增移动速度倍率接口，例如 `set_external_speed_multiplier(multiplier)`。
-- [ ] 抓取敌人后根据 `enemy_data.weight` 降低玩家移动速度。
-- [ ] 轻敌人移动惩罚小，精英重敌人移动惩罚大。
-- [ ] 释放或处决敌人后恢复玩家移动速度。
-- [ ] 玩家同一时间只能抓取一个敌人。
+- [x] 玩家或 IronWhip 维护 `_grabbed_enemy: Enemy`。
+- [x] 抓取成功后敌人固定在玩家前方偏左或正前方。
+- [x] 每帧调用 `enemy.update_grabbed_position()`。
+- [x] 在 PlayerController 中新增移动速度倍率接口，例如 `set_external_speed_multiplier(multiplier)`。
+- [x] 抓取敌人后根据 `enemy_data.weight` 降低玩家移动速度。
+- [x] 轻敌人移动惩罚小，精英重敌人移动惩罚大。
+- [x] 释放或处决敌人后恢复玩家移动速度。
+- [x] 玩家同一时间只能抓取一个敌人。
 
 ### 8.7 盾牌抵挡
 
-- [ ] 新建 `scripts/combat/shield_blocker.gd` 或在 IronWhip 中实现盾牌判定。
-- [ ] 敌人攻击玩家前，先查询玩家是否有抓取盾牌。
-- [ ] 对 hitscan 攻击，判断攻击来源是否在玩家前方角度范围内。
-- [ ] 对投射物攻击，投射物碰到被抓取敌人时优先伤害该敌人。
-- [ ] 盾牌抵挡成功时，被抓取敌人承受伤害。
-- [ ] 盾牌抵挡成功时，玩家不受伤或受到降低后的伤害。
-- [ ] 被抓取敌人死亡后自动解除抓取。
-- [ ] HUD 可临时显示“盾牌抵挡”调试文本。
+- [x] 新建 `scripts/combat/shield_blocker.gd` 或在 IronWhip 中实现盾牌判定。
+- [x] 敌人攻击玩家前，先查询玩家是否有抓取盾牌。
+- [x] 对 hitscan 攻击，判断攻击来源是否在玩家前方角度范围内。
+- [x] 对投射物攻击，投射物碰到被抓取敌人时优先伤害该敌人。
+- [x] 盾牌抵挡成功时，被抓取敌人承受伤害。
+- [x] 盾牌抵挡成功时，玩家不受伤或受到降低后的伤害。
+- [x] 被抓取敌人死亡后自动解除抓取。
+- [x] HUD 可临时显示“盾牌抵挡”调试文本。
 
 ### 8.8 处决
 
-- [ ] 抓取状态下按 `R` 调用 `_execute_grabbed_enemy()`。
-- [ ] 未抓取状态下按 `R` 仍执行当前武器换弹。
-- [ ] 处决时锁定短暂时间，避免重复触发。
-- [ ] 处决对被抓取敌人造成 `execution_damage` 或直接调用 `execute()`。
-- [ ] 处决播放简单动画：敌人变白、缩小、下沉或爆开成方块占位。
-- [ ] 处决成功后给额外分数。
-- [ ] 处决成功后恢复玩家移动速度。
-- [ ] 处决成功后清空 `_grabbed_enemy`。
+- [x] 抓取状态下按 `R` 调用 `_execute_grabbed_enemy()`。
+- [x] 未抓取状态下按 `R` 仍执行当前武器换弹。
+- [x] 处决时锁定短暂时间，避免重复触发。
+- [x] 处决对被抓取敌人造成 `execution_damage` 或直接调用 `execute()`。
+- [x] 处决播放简单动画：敌人变白、缩小、下沉或爆开成方块占位。
+- [x] 处决成功后给额外分数。
+- [x] 处决成功后恢复玩家移动速度。
+- [x] 处决成功后清空 `_grabbed_enemy`。
 
 ### 8.9 与武器系统整合
 
-- [ ] `WeaponData` 新增 `stun_damage` 后，枪械命中敌人时调用 `apply_stun()`。
-- [ ] 手枪眩晕值较低。
-- [ ] 霰弹枪每颗弹丸眩晕值较低，但近距离全中总眩晕更高。
-- [ ] 铁鞭眩晕值最高，但攻击频率低。
-- [ ] HUD 或敌人头顶条能看到不同武器造成的眩晕差异。
-- [ ] 隐藏武器不应触发眩晕，沿用 Phase 0 的装备检查。
+- [x] `WeaponData` 新增 `stun_damage` 后，枪械命中敌人时调用 `apply_stun()`。
+- [x] 手枪眩晕值较低。
+- [x] 霰弹枪每颗弹丸眩晕值较低，但近距离全中总眩晕更高。
+- [x] 铁鞭眩晕值最高，但攻击频率低。
+- [x] HUD 或敌人头顶条能看到不同武器造成的眩晕差异。
+- [x] 隐藏武器不应触发眩晕，沿用 Phase 0 的装备检查。
 
 ### 8.10 Phase 8 验收
 
-- [ ] 鼠标右键能稳定挥鞭。
-- [ ] 铁鞭命中敌人能造成伤害、眩晕和击退。
-- [ ] 铁鞭不能穿过枯树、岩柱命中敌人。
-- [ ] 眩晕满敌人能被铁鞭拉到身前。
-- [ ] 抓取敌人后玩家移动速度降低。
-- [ ] 抓取敌人能抵挡正面攻击。
-- [ ] 抓取状态下按 `R` 处决。
-- [ ] 未抓取状态下按 `R` 换弹。
-- [ ] 抓取、处决、释放不会留下无效敌人引用。
+- [x] 鼠标右键能稳定挥鞭。
+- [x] 铁鞭命中敌人能造成伤害、眩晕和击退。
+- [x] 铁鞭不能穿过枯树、岩柱命中敌人。
+- [x] 眩晕满敌人能被铁鞭拉到身前。
+- [x] 抓取敌人后玩家移动速度降低。
+- [x] 抓取敌人能抵挡正面攻击。
+- [x] 抓取状态下按 `R` 处决。
+- [x] 未抓取状态下按 `R` 换弹。
+- [x] 抓取、处决、释放不会留下无效敌人引用。
 
 ## Phase 9：整合、平衡与验证
 
@@ -1151,78 +1151,78 @@
 
 ### 新增脚本
 
-- [ ] `scripts/core/game_state.gd`
-- [ ] `scripts/core/run_stats.gd`
-- [ ] `scripts/core/save_data.gd`
-- [ ] `scripts/level/level_registry.gd`
-- [ ] `scripts/level/arena_level.gd`
-- [ ] `scripts/level/arena_randomizer.gd`
-- [ ] `scripts/level/desert_arena.gd`
-- [ ] `scripts/level/lava_arena.gd`
-- [ ] `scripts/level/props/dead_tree_prop.gd`
-- [ ] `scripts/level/props/rock_column_prop.gd`
-- [ ] `scripts/level/hazards/lava_river.gd`
-- [ ] `scripts/enemy/spawn_entry.gd`
-- [ ] `scripts/enemy/spawn_manager.gd`
-- [ ] `scripts/enemy/ground_enemy.gd`
-- [ ] `scripts/enemy/advanced_ground_enemy.gd`
-- [ ] `scripts/enemy/elite_ground_enemy.gd`
-- [ ] `scripts/enemy/ranged_enemy.gd`
-- [ ] `scripts/enemy/advanced_ranged_enemy.gd`
-- [ ] `scripts/enemy/flying_enemy.gd`
-- [ ] `scripts/enemy/advanced_flying_enemy.gd`
-- [ ] `scripts/enemy/flying_ranged_enemy.gd`
-- [ ] `scripts/combat/shield_blocker.gd`
-- [ ] `scripts/weapon/iron_whip.gd`
-- [ ] `scripts/ui/main_menu.gd`
-- [ ] `scripts/ui/level_select.gd`
-- [ ] `scripts/ui/game_over_screen.gd`
+- [x] `scripts/core/game_state.gd`
+- [x] `scripts/core/run_stats.gd`
+- [x] `scripts/core/save_data.gd`
+- [x] `scripts/level/level_registry.gd`
+- [x] `scripts/level/arena_level.gd`
+- [x] `scripts/level/arena_randomizer.gd`
+- [x] `scripts/level/desert_arena.gd`
+- [x] `scripts/level/lava_arena.gd`
+- [x] `scripts/level/props/dead_tree_prop.gd`
+- [x] `scripts/level/props/rock_column_prop.gd`
+- [x] `scripts/level/hazards/lava_river.gd`
+- [ ] `scripts/enemy/spawn_entry.gd`（功能已整合在 spawn_manager.gd 内）
+- [x] `scripts/enemy/spawn_manager.gd`
+- [x] `scripts/enemy/ground_enemy.gd`
+- [x] `scripts/enemy/advanced_ground_enemy.gd`
+- [x] `scripts/enemy/elite_ground_enemy.gd`
+- [x] `scripts/enemy/ranged_enemy.gd`
+- [x] `scripts/enemy/advanced_ranged_enemy.gd`
+- [x] `scripts/enemy/flying_enemy.gd`
+- [x] `scripts/enemy/advanced_flying_enemy.gd`
+- [x] `scripts/enemy/flying_ranged_enemy.gd`
+- [ ] `scripts/combat/shield_blocker.gd`（功能已整合在 iron_whip.gd 内）
+- [x] `scripts/weapon/iron_whip.gd`
+- [x] `scripts/ui/main_menu.gd`
+- [x] `scripts/ui/level_select.gd`
+- [x] `scripts/ui/game_over_screen.gd`
 
 ### 新增场景
 
-- [ ] `scenes/levels/desert_arena.tscn`
-- [ ] `scenes/levels/lava_arena.tscn`
-- [ ] `scenes/props/dead_tree_prop.tscn`
-- [ ] `scenes/props/rock_column_prop.tscn`
-- [ ] `scenes/hazards/lava_river.tscn`
-- [ ] `scenes/enemies/ground_enemy.tscn`
-- [ ] `scenes/enemies/advanced_ground_enemy.tscn`
-- [ ] `scenes/enemies/elite_ground_enemy.tscn`
-- [ ] `scenes/enemies/ranged_enemy.tscn`
-- [ ] `scenes/enemies/advanced_ranged_enemy.tscn`
-- [ ] `scenes/enemies/flying_enemy.tscn`
-- [ ] `scenes/enemies/advanced_flying_enemy.tscn`
-- [ ] `scenes/enemies/flying_ranged_enemy.tscn`
-- [ ] `scenes/ui/main_menu.tscn`
-- [ ] `scenes/ui/level_select.tscn`
-- [ ] `scenes/ui/game_over_screen.tscn`
+- [x] `scenes/levels/desert_arena.tscn`
+- [x] `scenes/levels/lava_arena.tscn`
+- [x] `scenes/props/dead_tree_prop.tscn`
+- [x] `scenes/props/rock_column_prop.tscn`
+- [x] `scenes/hazards/lava_river.tscn`
+- [x] `scenes/enemies/ground_enemy.tscn`
+- [x] `scenes/enemies/advanced_ground_enemy.tscn`
+- [x] `scenes/enemies/elite_ground_enemy.tscn`
+- [x] `scenes/enemies/ranged_enemy.tscn`
+- [x] `scenes/enemies/advanced_ranged_enemy.tscn`
+- [x] `scenes/enemies/flying_enemy.tscn`
+- [x] `scenes/enemies/advanced_flying_enemy.tscn`
+- [x] `scenes/enemies/flying_ranged_enemy.tscn`
+- [x] `scenes/ui/main_menu.tscn`
+- [x] `scenes/ui/level_select.tscn`
+- [x] `scenes/ui/game_over_screen.tscn`
 
 ### 新增资源
 
-- [ ] `assets/enemies/ground_enemy.tres`
-- [ ] `assets/enemies/advanced_ground_enemy.tres`
-- [ ] `assets/enemies/elite_ground_enemy.tres`
-- [ ] `assets/enemies/ranged_enemy.tres`
-- [ ] `assets/enemies/advanced_ranged_enemy.tres`
-- [ ] `assets/enemies/flying_enemy.tres`
-- [ ] `assets/enemies/advanced_flying_enemy.tres`
-- [ ] `assets/enemies/flying_ranged_enemy.tres`
-- [ ] `assets/weapons/iron_whip.tres` 或专用 `WhipData .tres`
-- [ ] 两个关卡的配置资源：半径、障碍数量、颜色、刷怪曲线。
+- [x] `assets/enemies/ground_enemy.tres`
+- [x] `assets/enemies/advanced_ground_enemy.tres`
+- [x] `assets/enemies/elite_ground_enemy.tres`
+- [x] `assets/enemies/ranged_enemy.tres`
+- [x] `assets/enemies/advanced_ranged_enemy.tres`
+- [x] `assets/enemies/flying_enemy.tres`
+- [x] `assets/enemies/advanced_flying_enemy.tres`
+- [x] `assets/enemies/flying_ranged_enemy.tres`
+- [x] `assets/weapons/iron_whip.tres` 或专用 `WhipData .tres`
+- [ ] 两个关卡的配置资源：半径、障碍数量、颜色、刷怪曲线。（已通过导出变量实现）
 
 ### 重点修改文件
 
-- [ ] `scripts/main.gd`
-- [ ] `scripts/player/player_controller.gd`
-- [ ] `scripts/ui/player_status.gd`
-- [ ] `scripts/weapon/weapon_data.gd`
-- [ ] `scripts/weapon/weapon_node.gd`
-- [ ] `scripts/weapon/weapon_manager.gd`
-- [ ] `scripts/enemy/enemy_data.gd`
-- [ ] `scripts/enemy/enemy.gd`
-- [ ] `scripts/enemy/enemy_manager.gd`
-- [ ] `scripts/enemy/projectile.gd`
-- [ ] `project.godot`
+- [x] `scripts/main.gd`
+- [x] `scripts/player/player_controller.gd`
+- [x] `scripts/ui/player_status.gd`
+- [x] `scripts/weapon/weapon_data.gd`
+- [x] `scripts/weapon/weapon_node.gd`
+- [x] `scripts/weapon/weapon_manager.gd`
+- [x] `scripts/enemy/enemy_data.gd`
+- [x] `scripts/enemy/enemy.gd`
+- [x] `scripts/enemy/enemy_manager.gd`
+- [x] `scripts/enemy/projectile.gd`
+- [x] `project.godot`
 
 ## 推荐实现顺序
 
