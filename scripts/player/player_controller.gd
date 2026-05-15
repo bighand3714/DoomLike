@@ -172,9 +172,7 @@ func _input(event: InputEvent) -> void:
 
 	# --- Esc 键：通知 main.gd 切换暂停菜单 ---
 	if event.is_action_pressed("ui_cancel"):
-		var main := get_tree().root.get_node_or_null("Main")
-		if main != null and main.has_method("toggle_pause"):
-			main.toggle_pause()
+		GameBus.pause_toggle.emit()
 
 
 # ==============================================================================
@@ -254,9 +252,7 @@ func _physics_process(delta: float) -> void:
 # ==============================================================================
 func _on_player_damaged(amount: float, _type: WeaponData.DamageType) -> void:
 	# 通知 main.gd 做屏幕闪红效果
-	var main := get_tree().root.get_node_or_null("Main")
-	if main != null and main.has_method("player_hit"):
-		main.player_hit(amount)
+	GameBus.player_hit.emit(amount)
 
 
 # 设置外部速度倍率（铁鞭抓取时调用），抓取重量大的敌人时倍率更低

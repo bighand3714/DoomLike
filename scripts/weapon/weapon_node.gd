@@ -556,3 +556,21 @@ func reset_ammo() -> void:
 	_current_mag = weapon_data.mag_size
 	_current_reserve = weapon_data.reserve_ammo
 	ammo_changed.emit(_current_mag, _current_reserve)
+
+
+# ==============================================================================
+# 公共访问器 —— 供其他模块（Pickup / HUD）读取/修改弹药
+# ==============================================================================
+
+## 补充备弹（ammo_pickup 拾取时调用）
+func add_reserve_ammo(amount: int) -> void:
+	_current_reserve += amount
+	ammo_changed.emit(_current_mag, _current_reserve)
+
+## 返回当前弹匣弹药数（HUD 显示用）
+func get_current_mag() -> int:
+	return _current_mag
+
+## 返回当前备弹数（HUD 显示用）
+func get_current_reserve() -> int:
+	return _current_reserve

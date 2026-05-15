@@ -262,11 +262,7 @@ func _damage_player(amount: float, dtype: WeaponData.DamageType) -> void:
 			var shield_dmg = grabbed.get_node_or_null("Damageable") as Damageable
 			if shield_dmg != null:
 				shield_dmg.take_damage(amount, dtype)
-				var main := get_tree().root.get_node_or_null("Main")
-				if main != null:
-					var ps := main.get_node_or_null("UI/PlayerStatus")
-					if ps != null and ps.has_method("show_shield_block"):
-						ps.show_shield_block()
+				GameBus.shield_block.emit()
 				return
 
 	var dmg := _player.get_node_or_null("Damageable")
@@ -479,6 +475,12 @@ func _face_player_flat() -> void:
 # ==============================================================================
 # 受伤反馈
 # ==============================================================================
+
+## 公共方法：外部触发受击反馈（iron_whip 处决视觉效果用）
+func trigger_on_damaged(_amount: float, _type: WeaponData.DamageType) -> void:
+	_on_damaged(_amount, _type)
+
+
 func _on_damaged(_amount: float, _type: WeaponData.DamageType) -> void:
 	if _state == EnemyState.DEATH:
 		return

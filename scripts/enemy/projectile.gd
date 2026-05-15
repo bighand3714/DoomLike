@@ -93,11 +93,7 @@ func _on_body_entered(body: Node3D) -> void:
 			var shield_dmg = grabbed.get_node_or_null("Damageable") as Damageable
 			if shield_dmg != null:
 				shield_dmg.take_damage(damage, damage_type)
-				var main := get_tree().root.get_node_or_null("Main")
-				if main != null:
-					var ps := main.get_node_or_null("UI/PlayerStatus")
-					if ps != null and ps.has_method("show_shield_block"):
-						ps.show_shield_block()
+				GameBus.shield_block.emit()
 				_on_impact(body)
 				queue_free()
 				return

@@ -362,6 +362,11 @@ func set_player(player_node: CharacterBody3D) -> void:
 	_player = player_node
 
 
+## 返回随机位置生成器（SpawnManager 获取刷新点用）
+func get_randomizer() -> ArenaRandomizer:
+	return _randomizer
+
+
 # ==============================================================================
 # _process(delta) — 每帧检查玩家是否越界（Phase 2.5）
 # ==============================================================================

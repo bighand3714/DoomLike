@@ -212,3 +212,18 @@ func get_current_weapon() -> WeaponNode:
 	if _current_index < 0 or _current_index >= _weapons.size():
 		return null
 	return _weapons[_current_index]
+
+
+## 返回武器栏位总数（HUD 武器栏位显示用）
+func get_weapon_count() -> int:
+	return _weapons.size()
+
+## 返回指定栏位的武器节点（HUD 武器栏位显示用）
+func get_weapon_at(index: int) -> WeaponNode:
+	if index < 0 or index >= _weapons.size():
+		return null
+	return _weapons[index]
+
+## 返回当前装备武器的栏位索引（HUD 显示用）
+func get_current_index() -> int:
+	return _current_index

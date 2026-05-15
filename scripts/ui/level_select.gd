@@ -198,10 +198,9 @@ func show_menu() -> void:
 
 
 func _refresh_records() -> void:
-	var main := get_tree().root.get_node_or_null("Main")
-	if main == null or not main.has_method("get_save_data"):
+	if GameBus.save_data == null:
 		return
-	var save = main.get_save_data()
+	var save = GameBus.save_data
 	var level_ids := LevelRegistryClass.get_level_ids()
 	for i in range(level_ids.size()):
 		var best_score: int = save.get_best_score(level_ids[i])

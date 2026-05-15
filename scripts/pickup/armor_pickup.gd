@@ -15,9 +15,7 @@ func _on_pickup(player: Node3D) -> void:
 		return
 	dmg.add_armor(armor_amount)
 
-	var main := player.get_tree().root.get_node_or_null("Main")
-	if main != null and main.has_method("show_pickup_notification"):
-		main.show_pickup_notification("护甲 +%.0f" % armor_amount, Color.CORNFLOWER_BLUE)
+	GameBus.pickup_notification.emit("护甲 +%.0f" % armor_amount, Color.CORNFLOWER_BLUE)
 
 
 func _setup_visual() -> void:

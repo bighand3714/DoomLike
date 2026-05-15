@@ -14,12 +14,9 @@ func _on_pickup(player: Node3D) -> void:
 	var weapon := wm.get_current_weapon()
 	if weapon == null:
 		return
-	weapon._current_reserve += ammo_amount
-	weapon.ammo_changed.emit(weapon._current_mag, weapon._current_reserve)
+	weapon.add_reserve_ammo(ammo_amount)
 
-	var main := player.get_tree().root.get_node_or_null("Main")
-	if main != null and main.has_method("show_pickup_notification"):
-		main.show_pickup_notification("+%d 弹药" % ammo_amount, Color.GOLD)
+	GameBus.pickup_notification.emit("+%d 弹药" % ammo_amount, Color.GOLD)
 
 
 func _setup_visual() -> void:

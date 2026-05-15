@@ -4,6 +4,8 @@
 
 Godot 4.6 项目，正在构建一款DOOM风格的第一人称射击游戏。当前处于**Roadmap 2 Phase 8 已完成**——铁鞭左手武器（右键挥鞭/眩晕/拉取/抓取/盾牌/处决），枪械叠加眩晕值，武器→敌人→HUD 完整链路。已知问题：敌人头顶调试血条/眩晕条显示为深色（CSGBox3D 在无直接光照下材质偏暗）。下一步 Phase 9：整合、平衡与验证。
 
+- **多 Agent 开发基础设施已就位**：GameBus 信号总线解耦模块通信，文档见 `docs/module_interfaces/` + `docs/multi_agent/`
+
 - **引擎**：Godot 4.6 (Forward Plus, D3D12)
 - **物理**：Jolt Physics
 - **主场景**：`res://scenes/main.tscn`
@@ -14,10 +16,11 @@ Godot 4.6 项目，正在构建一款DOOM风格的第一人称射击游戏。当
 ```
 scripts/        GDScript 源代码
   main.gd           主游戏控制器（ArenaLevel加载管线/状态机/菜单信号/命中标记）
-  core/             运行状态、存档、统计（Phase 1 实现）
+  core/             运行状态、存档、统计、信号总线（Phase 1 + 多Agent基础设施）
     game_state.gd     GameState 枚举（BOOT→MAIN_MENU→LEVEL_SELECT→PLAYING→PAUSED→GAME_OVER）
     run_stats.gd      当前局统计（分数/击杀/时间）
     save_data.gd      ConfigFile 存档管理（最高分/最长时间）
+    game_bus.gd       GameBus Autoload（模块间信号总线 + RunStats/SaveData 共享引用）
   player/           玩家相关（player_controller.gd）
   ui/               UI系统
     player_status.gd  战斗HUD（位置/状态/生命条/护甲/击杀/武器/弹药/分数/时间/强度/边界警告）
@@ -76,7 +79,7 @@ assets/         游戏资源
   enemies/          EnemyData .tres（imp.tres, demon_soldier.tres + 8 Phase 6 .tres）
   audio/fonts/textures 子目录（当前为空）
 shaders/        自定义着色器（当前为空）
-docs/           文档（project_roadmap.md 原路线图, project_roadmap2.md 新路线图）
+docs/           文档（project_roadmap.md 原路线图, project_roadmap2.md 新路线图, module_interfaces/ 模块接口, multi_agent/ 多Agent工作流）
 ```
 
 ## 场景树结构
@@ -134,7 +137,7 @@ Main (Node3D)                          ← main.gd
 
 ## 当前架构说明
 
-- **无自动加载（Autoload）**，所有节点手动实例化
+- **唯一自动加载（Autoload）**：`GameBus` (`scripts/core/game_bus.gd`)，仅携带信号 + RunStats/SaveData 引用，用于模块间解耦通信。其余节点全部手动实例化
 - **关卡系统（Phase 2）**：`LevelRegistry` 管理关卡元数据 → `main.gd` 的 `_start_level()` 通过 PackedScene 加载 ArenaLevel → 实例化到 `_level_root`。ArenaLevel 自动生成圆形地面（CSGBox3D）+ 边界标志柱（沿圆周均匀排列）。玩家边界限制在 `_process()` 中检测，越界时夹回并发出 `boundary_warning_requested` 信号 → HUD 显示"已到达边界"。
 - **关卡切换流程**：`_start_level(id)` → `_unload_current_level()`（清理旧关卡+信号）→ `_load_arena_level(id)`（PackedScene.instantiate + 连接边界信号）→ `_reset_player_for_level()`（传送出生点+重置血量/护甲/弹药/HUD）→ PLAYING
 - **武器系统**：`WeaponData`(Resource) → `WeaponNode`(基类) → `WeaponManager`(栏位管理)。支持半自动/全自动/泵动式，`reset_ammo()` 和 `reset_all_weapons()` 用于关卡重启。枪械命中敌人时自动调用 `apply_stun(stun_damage)` 叠加眩晕值。

@@ -282,18 +282,13 @@ func _execute_grabbed() -> void:
 	enemy.execute()
 
 	# 加分
-	var main := get_tree().root.get_node_or_null("Main")
-	if main != null and main.has_method("get_run_stats"):
-		var stats = main.get_run_stats()
-		if stats != null:
-			stats.add_kill(_whip_data.execution_score_bonus)
-		# 通知 HUD
-		if main.has_method("show_pickup_notification"):
-			main.show_pickup_notification("处决 +" + str(_whip_data.execution_score_bonus), Color(1.0, 0.3, 0.1))
+	GameBus.run_stats.add_kill(_whip_data.execution_score_bonus)
+	# 通知 HUD
+	GameBus.pickup_notification.emit("处决 +" + str(_whip_data.execution_score_bonus), Color(1.0, 0.3, 0.1))
 
 	# 处决视觉：闪白
-	if enemy.has_method("_on_damaged"):
-		enemy._on_damaged(_whip_data.execution_damage, WeaponData.DamageType.MELEE)
+	if enemy.has_method("trigger_on_damaged"):
+		enemy.trigger_on_damaged(_whip_data.execution_damage, WeaponData.DamageType.MELEE)
 
 	_release_grab_internal()
 
@@ -329,24 +324,14 @@ func _find_enemy(node: Node) -> Enemy:
 
 
 func _show_grab_status(enemy: Enemy) -> void:
-	var main := get_tree().root.get_node_or_null("Main")
-	if main == null:
-		return
-	var ps := main.get_node_or_null("UI/PlayerStatus")
-	if ps != null and ps.has_method("show_grab_status"):
-		var name_str: String = "敌人"
-		if enemy.enemy_data != null:
-			name_str = enemy.enemy_data.enemy_name
-		ps.show_grab_status(name_str)
+	var name_str: String = "敌人"
+	if enemy.enemy_data != null:
+		name_str = enemy.enemy_data.enemy_name
+	GameBus.grab_status_show.emit(name_str)
 
 
 func _hide_grab_status() -> void:
-	var main := get_tree().root.get_node_or_null("Main")
-	if main == null:
-		return
-	var ps := main.get_node_or_null("UI/PlayerStatus")
-	if ps != null and ps.has_method("hide_grab_status"):
-		ps.hide_grab_status()
+	GameBus.grab_status_hide.emit()
 
 
 func is_grabbing() -> bool:

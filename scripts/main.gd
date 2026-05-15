@@ -69,6 +69,17 @@ func _ready() -> void:
 	_game_over_screen.level_select_requested.connect(_on_game_over_level_select)
 	_game_over_screen.main_menu_requested.connect(_on_game_over_main_menu)
 
+	# GameBus 信号连接（模块 → Main → HUD/内部处理）
+	GameBus.pickup_notification.connect(show_pickup_notification)
+	GameBus.player_hit.connect(player_hit)
+	GameBus.pause_toggle.connect(toggle_pause)
+	GameBus.shield_block.connect(_on_shield_block)
+	GameBus.grab_status_show.connect(_on_grab_status_show)
+	GameBus.grab_status_hide.connect(_on_grab_status_hide)
+
+	# 设置全局数据引用（供其他模块通过 GameBus 直接读取）
+	GameBus.save_data = _save_data
+
 	_set_game_state(GameState.State.MAIN_MENU)
 
 
@@ -359,6 +370,7 @@ func _process(delta: float) -> void:
 
 func _reset_run_stats() -> void:
 	_run_stats.start(_current_level_id)
+	GameBus.run_stats = _run_stats
 
 func _connect_player_death() -> void:
 	var dmg := _player.get_node_or_null("Damageable") as Damageable
@@ -524,6 +536,26 @@ func show_pickup_notification(text: String, color: Color) -> void:
 	var ps := get_node_or_null("UI/PlayerStatus")
 	if ps != null and ps.has_method("show_notification"):
 		ps.show_notification(text, color)
+
+
+# ==============================================================================
+# GameBus 信号处理器 —— 转发到 HUD 或内部处理
+# ==============================================================================
+
+func _on_shield_block() -> void:
+	var ps := get_node_or_null("UI/PlayerStatus")
+	if ps != null and ps.has_method("show_shield_block"):
+		ps.show_shield_block()
+
+func _on_grab_status_show(enemy_name: String) -> void:
+	var ps := get_node_or_null("UI/PlayerStatus")
+	if ps != null and ps.has_method("show_grab_status"):
+		ps.show_grab_status(enemy_name)
+
+func _on_grab_status_hide() -> void:
+	var ps := get_node_or_null("UI/PlayerStatus")
+	if ps != null and ps.has_method("hide_grab_status"):
+		ps.hide_grab_status()
 
 
 # ==============================================================================

@@ -354,13 +354,12 @@ func _get_state_text() -> String:
 #   Phase 7 会接入 SpawnManager 的时间驱动刷新频率系统，
 #   届时这里的 "1" 会被替换为实际的当前强度值。
 func _update_score_and_time() -> void:
-	var main := get_tree().root.get_node_or_null("Main")
-	if main == null or not main.has_method("get_run_stats"):
+	if GameBus.run_stats == null:
 		_score_label.text = ""
 		_time_label.text = ""
 		_intensity_label.text = ""
 		return
-	var stats = main.get_run_stats()
+	var stats = GameBus.run_stats
 	_score_label.text = "分数: %d" % stats.score
 	_time_label.text = "时间: %.1f" % stats.survival_time
 	_intensity_label.text = "强度: %d" % _current_intensity
@@ -373,12 +372,13 @@ func _update_weapon_slots() -> void:
 	if _weapon_manager == null:
 		return
 	var slots_text := ""
-	var weapons := _weapon_manager._weapons
-	for i in range(weapons.size()):
-		var w := weapons[i] as WeaponNode
+	var count := _weapon_manager.get_weapon_count()
+	var current_idx := _weapon_manager.get_current_index()
+	for i in range(count):
+		var w := _weapon_manager.get_weapon_at(i)
 		if w == null or w.weapon_data == null:
 			continue
-		if i == _weapon_manager._current_index:
+		if i == current_idx:
 			slots_text += "[%d] %s  " % [i + 1, w.weapon_data.weapon_name]
 		else:
 			slots_text += " %d  %s  " % [i + 1, w.weapon_data.weapon_name]
@@ -508,7 +508,7 @@ func _on_weapon_changed(weapon_name: String, _slot_index: int) -> void:
 
 	_weapon_label.text = weapon_name
 	if _current_weapon != null:
-		_on_ammo_changed(_current_weapon._current_mag, _current_weapon._current_reserve)
+		_on_ammo_changed(_current_weapon.get_current_mag(), _current_weapon.get_current_reserve())
 
 
 func _on_ammo_changed(current_mag: int, reserve: int) -> void:

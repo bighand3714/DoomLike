@@ -295,7 +295,7 @@ func _weighted_select(available: Array) -> SpawnEntry:
 func _get_spawn_point(center: Vector3, arena_radius: float, outer_radius: float) -> Vector3:
 	if arena == null:
 		return Vector3.ZERO
-	var randomizer = arena.get("_randomizer")
+	var randomizer = arena.get_randomizer()
 	if randomizer == null:
 		var inner := arena_radius + 3.0
 		var outer := outer_radius - 2.0

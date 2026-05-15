@@ -16,9 +16,7 @@ func _on_pickup(player: Node3D) -> void:
 	dmg.add_health(heal_amount)
 
 	# 拾取通知
-	var main := player.get_tree().root.get_node_or_null("Main")
-	if main != null and main.has_method("show_pickup_notification"):
-		main.show_pickup_notification("+%.0f 生命" % heal_amount, Color.GREEN)
+	GameBus.pickup_notification.emit("+%.0f 生命" % heal_amount, Color.GREEN)
 
 
 func _setup_visual() -> void:
