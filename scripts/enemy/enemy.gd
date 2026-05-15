@@ -253,6 +253,22 @@ func _execute_attack() -> void:
 
 
 func _damage_player(amount: float, dtype: WeaponData.DamageType) -> void:
+	# 盾牌阻挡检测
+	var grabbed: Node = _player.get("grabbed_enemy")
+	if grabbed != null and is_instance_valid(grabbed):
+		var to_enemy: Vector3 = _player.global_position.direction_to(global_position)
+		var player_forward: Vector3 = -_player.global_transform.basis.z
+		if to_enemy.dot(player_forward) > 0.35:
+			var shield_dmg = grabbed.get_node_or_null("Damageable") as Damageable
+			if shield_dmg != null:
+				shield_dmg.take_damage(amount, dtype)
+				var main := get_tree().root.get_node_or_null("Main")
+				if main != null:
+					var ps := main.get_node_or_null("UI/PlayerStatus")
+					if ps != null and ps.has_method("show_shield_block"):
+						ps.show_shield_block()
+				return
+
 	var dmg := _player.get_node_or_null("Damageable")
 	if dmg != null and dmg is Damageable:
 		dmg.take_damage(amount, dtype)

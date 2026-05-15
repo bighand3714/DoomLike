@@ -306,6 +306,7 @@ func _fire_single_pellet(direction: Vector3) -> void:
 	# 优先检查目标节点本身是否有 take_damage 方法（比如敌人自己就是 CharacterBody3D）
 	if target.has_method("take_damage"):
 		target.take_damage(weapon_data.damage, weapon_data.damage_type)
+		_try_apply_stun(target)
 	# 如果目标本身没有 take_damage，检查它的子节点（Damageable 作为子节点挂在上面）
 	else:
 		_try_damage_child(target)
@@ -331,12 +332,25 @@ func _try_damage_child(node: Node) -> void:
 	for child in node.get_children():
 		if child is Damageable:
 			child.take_damage(weapon_data.damage, weapon_data.damage_type)
+			_try_apply_stun(node)
 			return
 
 	# 没找到？向父节点继续找（靶子的碰撞体可能是 CSGBox3D 的子节点）
 	var parent := node.get_parent()
 	if parent:
 		_try_damage_child(parent)
+
+
+# 对命中目标尝试施加眩晕——从 node 向上查找 Enemy 节点，找到后调用 apply_stun
+func _try_apply_stun(node: Node) -> void:
+	if weapon_data.stun_damage <= 0.0:
+		return
+	var current: Node = node
+	while current != null:
+		if current is Enemy and current.has_method("apply_stun"):
+			current.apply_stun(weapon_data.stun_damage)
+			return
+		current = current.get_parent()
 
 
 # ==============================================================================

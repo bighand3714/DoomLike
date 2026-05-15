@@ -1,0 +1,15 @@
+[gd_resource type="Resource" script_class="WhipData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/weapon/whip_data.gd" id="1_whip"]
+
+[resource]
+script = ExtResource("1_whip")
+damage = 8.0
+stun_damage = 40.0
+knockback_force = 15.0
+whip_range = 3.0
+cooldown = 0.8
+pull_speed = 12.0
+grab_distance = 1.5
+execution_damage = 999.0
+execution_score_bonus = 25

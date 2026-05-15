@@ -23,6 +23,10 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.3, -0.15, -0.5)
 unique_name_in_owner = true
 script = ExtResource("2_wm")
 
+[node name="LeftHandHolder" type="Node3D" parent="Camera3D" unique_id=3125072891]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.3, -0.15, -0.5)
+unique_name_in_owner = true
+
 [node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=1384737840]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
 shape = SubResource("CapsuleShape3D_pshp")

@@ -17,3 +17,4 @@ reload_time = 2.0
 spread_angle = 10.0
 pellet_count = 7
 move_spread_mult = 1.5
+stun_damage = 5.0

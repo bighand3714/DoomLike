@@ -70,6 +70,14 @@ extends CharacterBody3D
 
 
 # ==============================================================================
+# 抓取状态（由 IronWhip 管理）
+# ==============================================================================
+
+## 当前被抓取的敌人，null 表示没有抓取
+var grabbed_enemy: Enemy = null
+
+
+# ==============================================================================
 # 内部状态变量（下划线开头表示"私有"，外部不应该直接访问）
 # ==============================================================================
 
@@ -78,6 +86,9 @@ var _yaw := 0.0
 
 ## 上下旋转的累计角度（弧度制）
 var _pitch := 0.0
+
+## 外部速度倍率（铁鞭抓取时降低速度），1.0 = 正常
+var _speed_multiplier: float = 1.0
 
 
 # ==============================================================================
@@ -214,12 +225,15 @@ func _physics_process(delta: float) -> void:
 	# .normalized() 确保方向向量的长度始终为 1（防止斜着走更快）。
 	var direction := (transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
 
+	# 应用外部速度倍率（铁鞭抓取时降低速度）
+	var effective_speed := move_speed * _speed_multiplier
+
 	# 如果有按键输入
 	if direction.length_squared() > 0.0:
 		# move_toward(from, to, delta) 让值从 from 向 to 平滑过渡，最大步长为 delta。
 		# 这里分别处理 X 和 Z 的速度，让角色加速到目标速度。
-		velocity.x = move_toward(velocity.x, direction.x * move_speed, acceleration * delta)
-		velocity.z = move_toward(velocity.z, direction.z * move_speed, acceleration * delta)
+		velocity.x = move_toward(velocity.x, direction.x * effective_speed, acceleration * delta)
+		velocity.z = move_toward(velocity.z, direction.z * effective_speed, acceleration * delta)
 	# 如果没按任何键
 	else:
 		# 用摩擦力逐渐把速度降到 0（模拟"滑步停止"，而不是瞬停）
@@ -243,3 +257,8 @@ func _on_player_damaged(amount: float, _type: WeaponData.DamageType) -> void:
 	var main := get_tree().root.get_node_or_null("Main")
 	if main != null and main.has_method("player_hit"):
 		main.player_hit(amount)
+
+
+# 设置外部速度倍率（铁鞭抓取时调用），抓取重量大的敌人时倍率更低
+func set_speed_multiplier(mult: float) -> void:
+	_speed_multiplier = clampf(mult, 0.2, 1.0)

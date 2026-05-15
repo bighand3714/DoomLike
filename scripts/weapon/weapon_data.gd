@@ -128,6 +128,12 @@ enum FireMode {
 ##   - 弹丸多了配合 spread_angle 才能形成散射效果
 @export var pellet_count: int = 1
 
+## 每颗弹丸命中时造成的眩晕值
+##   - 手枪：8.0，单发中等眩晕
+##   - 霰弹枪：5.0 × 7 = 全中 35.0，贴脸高眩晕
+##   - 铁鞭：40.0，独立控制，不走 WeaponData
+@export var stun_damage: float = 0.0
+
 ## 移动时的散布惩罚倍数
 ##   - 1.0 = 移动不影响精度
 ##   - 1.5 = 移动时散布角度 × 1.5（跑动中更难瞄准）

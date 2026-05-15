@@ -2,7 +2,7 @@
 
 ## 项目概览
 
-Godot 4.6 项目，正在构建一款DOOM风格的第一人称射击游戏。当前处于**Roadmap 2 Phase 6 已完成**——八类敌人全部实现（近战/远程/飞行 × 普通/高级/精英），Enemy基类扩展通用攻击系统（近战/hitscan/投射物）和飞行支持，所有敌人通过EnemyData差异化。已知问题：敌人头顶调试血条/眩晕条显示为深色（CSGBox3D 在无直接光照下材质偏暗）。下一步 Phase 7：刷怪与难度曲线。
+Godot 4.6 项目，正在构建一款DOOM风格的第一人称射击游戏。当前处于**Roadmap 2 Phase 8 已完成**——铁鞭左手武器（右键挥鞭/眩晕/拉取/抓取/盾牌/处决），枪械叠加眩晕值，武器→敌人→HUD 完整链路。已知问题：敌人头顶调试血条/眩晕条显示为深色（CSGBox3D 在无直接光照下材质偏暗）。下一步 Phase 9：整合、平衡与验证。
 
 - **引擎**：Godot 4.6 (Forward Plus, D3D12)
 - **物理**：Jolt Physics
@@ -31,6 +31,8 @@ scripts/        GDScript 源代码
     weapon_manager.gd  武器栏位管理（切换/重置所有武器）
     pistol.gd          手枪（半自动，CSG占位模型）
     shotgun.gd         霰弹枪（泵动式+多弹丸散射，CSG占位模型）
+    whip_data.gd        WhipData Resource（铁鞭参数：伤害/眩晕/击退/拉取/抓取/处决）
+    iron_whip.gd        铁鞭（右键挥鞭 → 眩晕满拉取 → 抓取 → 盾牌 → 处决）
   damage/           伤害系统
     damageable.gd      可受伤接口（血量/护甲/减伤/重置/治疗信号）
     shooting_target.gd 射击靶子（测试用，自动创建Damageable）
@@ -70,7 +72,7 @@ scenes/         Godot 场景文件
     lava_arena.tscn   熔岩地狱（挂 ArenaLevel，arena_radius=45，72边界柱）
   ui/                UI场景（当前均为代码创建，无 .tscn 文件）
 assets/         游戏资源
-  weapons/          WeaponData .tres（pistol.tres, shotgun.tres）
+  weapons/          WeaponData .tres（pistol.tres, shotgun.tres）+ iron_whip.tres
   enemies/          EnemyData .tres（imp.tres, demon_soldier.tres + 8 Phase 6 .tres）
   audio/fonts/textures 子目录（当前为空）
 shaders/        自定义着色器（当前为空）
@@ -85,6 +87,8 @@ Main (Node3D)                          ← main.gd
 │   ├── Damageable                     (100HP/100护甲，支持 reset())
 │   ├── Camera3D                       [%Camera3D]
 │   ├── CollisionShape3D               (胶囊体: 半径0.4, 高1.8)
+│   ├── LeftHandHolder (Node3D)        [%LeftHandHolder]
+│   │   └── IronWhip (Node3D)          ← iron_whip.gd (右键铁鞭/眩晕/拉取/抓取/处决)
 │   └── WeaponHolder (Node3D)
 │       └── WeaponManager (Node3D)     ← weapon_manager.gd (支持 reset_all_weapons())
 │           ├── Pistol (WeaponNode)    ← pistol.gd (reset_ammo())
@@ -114,7 +118,8 @@ Main (Node3D)                          ← main.gd
 | `move_forward/back/left/right` | WASD | 移动 |
 | `jump` | Space | 跳跃 |
 | `primary_fire` | 鼠标左键 | 开枪 |
-| `reload` | R | 换弹 |
+| `secondary_fire` | 鼠标右键 | 挥鞭 |
+| `reload` | R | 换弹 / 抓取中处决 |
 | `weapon_1` / `weapon_2` | 1 / 2 | 切换武器栏位 |
 | `ui_cancel` | Escape | 暂停/恢复 |
 
@@ -132,10 +137,11 @@ Main (Node3D)                          ← main.gd
 - **无自动加载（Autoload）**，所有节点手动实例化
 - **关卡系统（Phase 2）**：`LevelRegistry` 管理关卡元数据 → `main.gd` 的 `_start_level()` 通过 PackedScene 加载 ArenaLevel → 实例化到 `_level_root`。ArenaLevel 自动生成圆形地面（CSGBox3D）+ 边界标志柱（沿圆周均匀排列）。玩家边界限制在 `_process()` 中检测，越界时夹回并发出 `boundary_warning_requested` 信号 → HUD 显示"已到达边界"。
 - **关卡切换流程**：`_start_level(id)` → `_unload_current_level()`（清理旧关卡+信号）→ `_load_arena_level(id)`（PackedScene.instantiate + 连接边界信号）→ `_reset_player_for_level()`（传送出生点+重置血量/护甲/弹药/HUD）→ PLAYING
-- **武器系统**：`WeaponData`(Resource) → `WeaponNode`(基类) → `WeaponManager`(栏位管理)。支持半自动/全自动/泵动式，`reset_ammo()` 和 `reset_all_weapons()` 用于关卡重启。
+- **武器系统**：`WeaponData`(Resource) → `WeaponNode`(基类) → `WeaponManager`(栏位管理)。支持半自动/全自动/泵动式，`reset_ammo()` 和 `reset_all_weapons()` 用于关卡重启。枪械命中敌人时自动调用 `apply_stun(stun_damage)` 叠加眩晕值。
+- **铁鞭系统（Phase 8）**：`IronWhip` 挂 `LeftHandHolder` 下（`WhipData` 参数驱动）。右键射线检测（3m 近战范围）→ 命中敌人（伤害+40眩晕+击退），眩晕满自动进入拉取流程 → 到达抓取距离 `start_grab()` → 固定在前方 → 玩家移速按敌人 weight 降低 → R 键处决（敌人 `execute()` + 25 加分）。抓取中敌人作为盾牌：hitscan/melee 来自正面（`to_enemy.dot(player_forward) > 0.35`）由被抓敌人 Damageable 承受伤害，HUD 显示"盾牌抵挡!"。
 - **伤害系统**：`Damageable` 接口（血量/护甲/减伤），护甲吸收 50% 伤害（经典 DOOM 规则），`reset()` 恢复到满血满护甲。
 - **敌人系统（Phase 5+6）**：`Enemy` 基类 10 状态机（SPAWNING/IDLE/CHASE/ATTACK/PAIN/STUNNED/GRABBED/EXECUTED/DEATH），攻击采用三段式 windup→damage→recovery。眩晕系统（累积→满→STUNNED→可抓取窗口→自动恢复）、击退系统（weight/knockback_resistance 衰减）、抓取接口（can_be_grabbed/start_grab/execute）。头顶 CSGBox3D 调试条（血条+眩晕条）。`EnemyManager` 的 enemy_killed 信号携带 score_value，计分链路接入 RunStats。Phase 6 新增通用攻击系统：基类 `_execute_attack()` 根据 `enemy_data.damage_type` 自动分发 MELEE（近战距离判定）/ HITSCAN（射线命中检测）/ PROJECTILE（生成飞行投射物）。飞行敌人支持：`is_flying=true` 时 `_state_chase()` 自动调整 Y 轴悬浮高度（`hover_height` + `vertical_move_speed`）。八类敌人脚本仅覆写 `_setup_model()` 创建差异化 CSG 占位模型，核心行为由 EnemyData 参数驱动。
-- **战斗HUD**：生命条（绿→橙→红+闪烁）、护甲（蓝色）、击杀（黄色）、武器栏位、命中标记、受伤闪红、拾取通知、分数/时间/强度（左上角，从 RunStats 读取）、边界警告（屏幕中下，橙红色大字，1.5秒自动消失）
+- **战斗HUD**：生命条（绿→橙→红+闪烁）、护甲（蓝色）、击杀（黄色）、武器栏位、命中标记、受伤闪红、拾取通知、分数/时间/强度（左上角，从 RunStats 读取）、边界警告（屏幕中下，橙红色大字，1.5秒自动消失）、抓取状态（"抓取中: <敌人名> [R处决]"）、盾牌抵挡通知（蓝色，0.8秒自动消失）
 - **菜单系统**：主菜单 → 选关（动态读取 LevelRegistry）→ 加载竞技场 → 结算（从 LevelRegistry 获取关卡名）
 - **存档系统**：`SaveData` 用 ConfigFile 读写 `user://save.cfg`，`submit_run()` 比较并更新最高分/最长时间。选关和结算界面每次显示时刷新记录。
 - 部分 assets 子目录为空（audio/fonts/textures）
@@ -192,6 +198,21 @@ Main (Node3D)                          ← main.gd
 | `pellet_count` | 1 | 7 | 每次射击弹丸数 |
 | `move_spread_mult` | 1.5 | 1.5 | 移动散布惩罚倍数 |
 | `damage_type` | HITSCAN(0) | HITSCAN(0) | 伤害类型 |
+| `stun_damage` | 8.0 | 5.0 | 每颗弹丸眩晕值（铁鞭 40.0，见 WhipData） |
+
+## 铁鞭参数（whip_data.gd / WhipData Resource）
+
+| 属性 | 默认值 | 说明 |
+|------|--------|------|
+| `damage` | 8.0 | 挥鞭基础伤害 |
+| `stun_damage` | 40.0 | 眩晕值（远高于枪械） |
+| `knockback_force` | 15.0 | 击退力度 |
+| `whip_range` | 3.0m | 鞭子最大距离（近战范围） |
+| `cooldown` | 0.8s | 挥鞭冷却 |
+| `pull_speed` | 12.0m/s | 拉取眩晕敌人速度 |
+| `grab_distance` | 1.5m | 拉取到多近自动抓取 |
+| `execution_damage` | 999.0 | 处决伤害（一击必杀） |
+| `execution_score_bonus` | 25 | 处决额外分数 |
 
 ## 敌人参数（enemy_data.gd / EnemyData Resource）
 
@@ -299,6 +320,37 @@ FPS: 60                          位置: 0.0  1.6  0.0
 - Damageable → `.reset()`（满血满护甲）
 - WeaponManager → `.reset_all_weapons()`（弹药回满 + 切回第一把武器）
 - HUD 击杀计数 → `.reset_kill_count()`（击杀数归零）
+
+## 铁鞭抓取/盾牌/处决流程（Phase 8）
+
+```
+右键(挥鞭) → 射线检测(3m)
+  → 命中敌人：伤害 8 + 眩晕 40 + 击退 15
+  → 命中眩晕满敌人(can_be_grabbed=true) → 拉取流程
+    → 每帧 pull_speed 移向玩家前方 grab_distance
+    → 到达 < grab_distance*1.2 → start_grab(player)
+      → 敌人 collision_layer=0，固定在玩家前方
+      → 玩家移速 *= 1/(1+weight*0.35)（clamp 0.25-1.0）
+      → HUD 显示"抓取中: <敌人名> [R处决]"
+
+抓取中 R 键 → _execute_grabbed()
+  → enemy.execute()（health=0, died信号）
+  → 加分 execution_score_bonus(25)
+  → HUD 通知"处决 +25"
+  → 恢复移速，清除抓取状态
+
+盾牌抵挡（自动）：
+  enemy hitscan/melee → _damage_player()
+    → 检测 player.grabbed_enemy != null
+    → 攻击来自玩家正面(to_enemy⋅player_forward > 0.35)
+    → 伤害重定向到 grabbed_enemy.Damageable
+    → HUD 显示"盾牌抵挡!"(0.8s)
+
+enemy projectile → _on_body_entered(player)
+  → 同样检测 player.grabbed_enemy
+  → 重定向伤害到被抓敌人
+  → queue_free() + shield_block HUD
+```
 
 ## 已知问题
 

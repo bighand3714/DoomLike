@@ -53,6 +53,10 @@ var _current_intensity: int = 1
 var _notify_timer: float = 0.0
 var _boundary_warning_timer: float = 0.0
 
+var _grab_status_label: Label = null
+var _shield_block_label: Label = null
+var _shield_block_timer: float = 0.0
+
 const BAR_W := 200.0
 const BAR_H := 12.0
 const RIGHT_MARGIN := 12.0
@@ -142,6 +146,37 @@ func _create_labels() -> void:
 	_boundary_warning.offset_bottom = 168.0
 	_boundary_warning.hide()
 	add_child(_boundary_warning)
+
+	# 抓取状态（屏幕中下偏上，居中），显示"抓取中: <敌人名> [R处决]"
+	_grab_status_label = Label.new()
+	_grab_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_grab_status_label.add_theme_font_size_override("font_size", 18)
+	_grab_status_label.add_theme_color_override("font_color", Color(1.0, 0.6, 0.2))
+	_grab_status_label.anchor_left = 0.5
+	_grab_status_label.anchor_right = 0.5
+	_grab_status_label.anchor_top = 0.0
+	_grab_status_label.offset_left = -180.0
+	_grab_status_label.offset_right = 180.0
+	_grab_status_label.offset_top = 180.0
+	_grab_status_label.offset_bottom = 206.0
+	_grab_status_label.hide()
+	add_child(_grab_status_label)
+
+	# 盾牌抵挡通知（屏幕中上，短暂闪现）
+	_shield_block_label = Label.new()
+	_shield_block_label.text = "盾牌抵挡!"
+	_shield_block_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_shield_block_label.add_theme_font_size_override("font_size", 20)
+	_shield_block_label.add_theme_color_override("font_color", Color(0.3, 0.7, 1.0))
+	_shield_block_label.anchor_left = 0.5
+	_shield_block_label.anchor_right = 0.5
+	_shield_block_label.anchor_top = 0.0
+	_shield_block_label.offset_left = -150.0
+	_shield_block_label.offset_right = 150.0
+	_shield_block_label.offset_top = 110.0
+	_shield_block_label.offset_bottom = 136.0
+	_shield_block_label.hide()
+	add_child(_shield_block_label)
 
 
 # ==============================================================================
@@ -242,6 +277,10 @@ func _process(delta: float) -> void:
 			_boundary_warning_timer -= delta
 			if _boundary_warning_timer <= 0.0:
 				_boundary_warning.hide()
+		if _shield_block_timer > 0.0:
+			_shield_block_timer -= delta
+			if _shield_block_timer <= 0.0:
+				_shield_block_label.hide()
 		return
 	_update_timer = 0.0
 
@@ -421,6 +460,23 @@ func reset_kill_count() -> void:
 func update_intensity(new_intensity: int) -> void:
 	_current_intensity = new_intensity
 	_intensity_label.text = "强度: %d" % _current_intensity
+
+
+# 显示抓取状态（IronWhip 调用）
+func show_grab_status(enemy_name: String) -> void:
+	_grab_status_label.text = "抓取中: " + enemy_name + "  [R处决]"
+	_grab_status_label.show()
+
+
+# 隐藏抓取状态（IronWhip 调用）
+func hide_grab_status() -> void:
+	_grab_status_label.hide()
+
+
+# 盾牌抵挡通知（敌人攻击被盾牌吸收时调用）
+func show_shield_block() -> void:
+	_shield_block_label.show()
+	_shield_block_timer = 0.8
 
 
 # ==============================================================================

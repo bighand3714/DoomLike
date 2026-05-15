@@ -19,6 +19,8 @@ const GameOverClass = preload("res://scripts/ui/game_over_screen.gd")
 const ArenaLevelClass = preload("res://scripts/level/arena_level.gd")
 const LevelRegistryClass = preload("res://scripts/level/level_registry.gd")
 const SpawnManagerClass = preload("res://scripts/enemy/spawn_manager.gd")
+const IronWhipClass = preload("res://scripts/weapon/iron_whip.gd")
+const WhipDataClass = preload("res://scripts/weapon/whip_data.gd")
 
 @onready var _level_root: Node3D = %Level
 @onready var _crosshair: ColorRect = %Crosshair
@@ -34,6 +36,7 @@ var _current_level_id: String = ""
 var _current_level: Node3D = null
 var _current_arena: ArenaLevel = null
 var _spawn_manager: Node = null
+var _iron_whip: Node3D = null
 var _hit_marker_connected := false
 
 var _run_stats := RunStatsClass.new()
@@ -189,6 +192,10 @@ func _unload_current_level() -> void:
 	if _spawn_manager != null:
 		_spawn_manager.stop()
 		_spawn_manager = null
+	if _iron_whip != null and _iron_whip.has_method("release_grab"):
+		_iron_whip.release_grab()
+	_player.set_speed_multiplier(1.0)
+	_player.grabbed_enemy = null
 	if _current_arena != null:
 		if _current_arena.boundary_warning_requested.is_connected(_on_boundary_warning):
 			_current_arena.boundary_warning_requested.disconnect(_on_boundary_warning)
@@ -250,6 +257,9 @@ func _reset_player_for_level() -> void:
 	if ps != null and ps.has_method("reset_kill_count"):
 		ps.reset_kill_count()
 
+	# 重置铁鞭状态
+	_setup_iron_whip()
+
 	# 启动刷怪
 	if _spawn_manager != null:
 		_spawn_manager.start()
@@ -288,6 +298,37 @@ func _setup_spawn_manager() -> void:
 	# 挂在 Level 节点下
 	_level_root.add_child(sm)
 	_spawn_manager = sm
+
+
+# ==============================================================================
+# _setup_iron_whip —— 创建/配置左手铁鞭（Phase 8）
+# ==============================================================================
+func _setup_iron_whip() -> void:
+	var holder := _player.get_node_or_null("Camera3D/LeftHandHolder")
+	if holder == null:
+		return
+
+	var camera := _player.get_node_or_null("Camera3D") as Camera3D
+	if camera == null:
+		return
+
+	# 释放旧铁鞭抓取的敌人
+	if _iron_whip != null:
+		if _iron_whip.has_method("release_grab"):
+			_iron_whip.release_grab()
+		_iron_whip.queue_free()
+		_iron_whip = null
+
+	# 创建新铁鞭
+	var whip := IronWhipClass.new()
+	whip.name = "IronWhip"
+
+	# 加载 WhipData
+	var whip_data := load("res://assets/weapons/iron_whip.tres")
+	whip.setup(whip_data, camera, _player)
+
+	holder.add_child(whip)
+	_iron_whip = whip
 
 
 # ==============================================================================
@@ -334,6 +375,12 @@ func _on_enemy_killed_for_score(_enemy_name: String, score_value: int) -> void:
 	_run_stats.add_kill(score_value)
 
 func _on_player_died() -> void:
+	# 清理铁鞭状态（释放抓取敌人）
+	if _iron_whip != null and _iron_whip.has_method("release_grab"):
+		_iron_whip.release_grab()
+	_player.set_speed_multiplier(1.0)
+	_player.grabbed_enemy = null
+
 	if _game_state == GameState.State.PLAYING:
 		_run_stats.stop()
 		_set_game_state(GameState.State.GAME_OVER)
