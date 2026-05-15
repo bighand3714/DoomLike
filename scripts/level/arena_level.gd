@@ -50,7 +50,12 @@ signal level_ready(arena: ArenaLevel)
 
 ## 圆形竞技场可玩区域半径（米）。玩家不能超出此范围。
 ## 45 米 ≈ 直径 90 米的圆形战斗区域，足够大但有边界感。
-@export var arena_radius: float = 45.0
+## 编辑器中修改后自动重建地面和边界柱。
+@export var arena_radius: float = 45.0:
+	set(v):
+		arena_radius = v
+		if is_inside_tree():
+			_rebuild_arena()
 
 ## 刷怪外环半径（米）。敌人从 arena_radius 到 spawn_outer_radius
 ## 之间的环形区域刷新，确保敌人不会刷在玩家脸上。
@@ -58,7 +63,12 @@ signal level_ready(arena: ArenaLevel)
 
 ## 边界标志柱的数量。沿圆周等距排列，数值越大边界越密越明显。
 ## 64 根 ≈ 每根间距约 4.4 米，视觉上形成清晰的圆形围栏。
-@export var boundary_marker_count: int = 64
+## 编辑器中修改后自动重建边界柱。
+@export var boundary_marker_count: int = 64:
+	set(v):
+		boundary_marker_count = v
+		if is_inside_tree():
+			_rebuild_boundary()
 
 ## 随机种子。use_random_seed=true 时用于初始化 RandomNumberGenerator。
 ## 设为 0 则使用系统时间作为种子（每局都不同）。
@@ -251,6 +261,23 @@ func _build_boundary_markers() -> void:
 		pillar.material = mat
 
 		_boundary_root.add_child(pillar)
+
+
+# 编辑器中修改 arena_radius 后自动重建地面
+func _rebuild_arena() -> void:
+	for child in _geometry_root.get_children():
+		child.queue_free()
+	_build_base_arena()
+	_rebuild_boundary()
+
+
+# 编辑器中修改 boundary_marker_count 后自动重建边界柱
+func _rebuild_boundary() -> void:
+	if _boundary_root == null:
+		return
+	for child in _boundary_root.get_children():
+		child.queue_free()
+	_build_boundary_markers()
 
 
 # ==============================================================================

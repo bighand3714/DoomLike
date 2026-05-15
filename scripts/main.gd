@@ -204,6 +204,11 @@ func _unload_current_level() -> void:
 		_current_level.queue_free()
 		_current_level = null
 
+	# 清理残留在 root 的投射物（敌人火球等直接加在 root 上）
+	for child in get_tree().root.get_children():
+		if child is Area3D and child.has_method("_on_body_entered"):
+			child.queue_free()
+
 
 # ==============================================================================
 # _load_arena_level(level_id) — 加载竞技场关卡 PackedScene

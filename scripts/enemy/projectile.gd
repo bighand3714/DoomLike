@@ -84,9 +84,11 @@ func _on_body_entered(body: Node3D) -> void:
 	if _owner_node != null and (body == _owner_node.get_parent() or body == _owner_node):
 		return
 
-	# 盾牌阻挡检测：如果目标是玩家且玩家抓取了敌人，由被抓敌人承受伤害
-	if body.has_method("take_damage") and body is CharacterBody3D and body.is_in_group("player"):
-		var grabbed: Node = body.get("grabbed_enemy")
+	# 盾牌阻挡检测：目标为玩家且玩家抓取了敌人 → 伤害转移给被抓敌人
+	if body.is_in_group("player"):
+		var grabbed: Node = null
+		if body.has_method("get_grabbed_enemy"):
+			grabbed = body.get_grabbed_enemy()
 		if grabbed != null and is_instance_valid(grabbed):
 			var shield_dmg = grabbed.get_node_or_null("Damageable") as Damageable
 			if shield_dmg != null:

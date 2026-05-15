@@ -17,8 +17,7 @@ var _cooldown_timer: float = 0.0
 var _pulled_enemy: Enemy = null
 var _grabbed_enemy: Enemy = null
 
-var _idle_model: CSGBox3D = null
-var _whip_line: CSGBox3D = null
+var _whip_line_mesh: MeshInstance3D = null
 var _whip_line_timer: float = 0.0
 
 
@@ -30,41 +29,40 @@ func setup(data: WhipData, camera: Camera3D, player: CharacterBody3D) -> void:
 
 
 func _setup_model() -> void:
-	# 空闲时左手小方块（深灰色）
-	_idle_model = CSGBox3D.new()
-	_idle_model.name = "WhipIdleModel"
-	_idle_model.size = Vector3(0.06, 0.06, 0.06)
+	# 空闲时左手方块（亮铁灰色，无光照也能看清）
+	var idle_mesh := MeshInstance3D.new()
+	idle_mesh.name = "WhipIdleModel"
+	var box := BoxMesh.new()
+	box.size = Vector3(0.08, 0.08, 0.08)
+	idle_mesh.mesh = box
 	var mat := StandardMaterial3D.new()
-	mat.albedo_color = Color(0.25, 0.25, 0.25)
-	_idle_model.material_override = mat
-	_idle_model.use_collision = false
-	add_child(_idle_model)
+	mat.albedo_color = Color(0.4, 0.38, 0.35)
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	idle_mesh.material_override = mat
+	add_child(idle_mesh)
 
 	# 鞭影（挥鞭时显示，默认隐藏）
-	_whip_line = CSGBox3D.new()
-	_whip_line.name = "WhipLine"
-	_whip_line.size = Vector3(0.03, 0.03, 0.5)
-	_whip_line.visible = false
+	var line_mesh := MeshInstance3D.new()
+	line_mesh.name = "WhipLine"
+	var line_box := BoxMesh.new()
+	line_box.size = Vector3(0.05, 0.05, 0.5)
+	line_mesh.mesh = line_box
+	line_mesh.visible = false
 	var line_mat := StandardMaterial3D.new()
-	line_mat.albedo_color = Color(0.6, 0.55, 0.45)
+	line_mat.albedo_color = Color(1.0, 0.5, 0.1)
+	line_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	line_mat.emission_enabled = true
-	line_mat.emission = Color(0.3, 0.25, 0.15)
-	line_mat.emission_energy_multiplier = 2.0
-	_whip_line.material_override = line_mat
-	_whip_line.use_collision = false
-	add_child(_whip_line)
+	line_mat.emission = Color(1.0, 0.4, 0.0)
+	line_mat.emission_energy_multiplier = 5.0
+	line_mesh.material_override = line_mat
+	add_child(line_mesh)
+	_whip_line_mesh = line_mesh
 
 
 func _input(event: InputEvent) -> void:
 	if get_tree().paused:
 		return
 
-	# 右键 = 挥鞭
-	if event.is_action_pressed("secondary_fire") and _state == WhipState.IDLE:
-		_try_whip()
-		return
-
-	# R 键 = 抓取中处决，否则交给武器换弹
 	if event.is_action_pressed("reload"):
 		if _state == WhipState.GRABBING and _grabbed_enemy != null:
 			_execute_grabbed()
@@ -80,7 +78,16 @@ func _process(delta: float) -> void:
 	if _whip_line_timer > 0.0:
 		_whip_line_timer -= delta
 		if _whip_line_timer <= 0.0:
-			_whip_line.visible = false
+			_hide_whip_line()
+
+	# 右键挥鞭（Input 直接检测，不依赖事件传播）
+	if Input.is_action_just_pressed("secondary_fire") and _state == WhipState.IDLE:
+		_try_whip()
+
+	# R 键处决（Input 直接检测）
+	if Input.is_action_just_pressed("reload"):
+		if _state == WhipState.GRABBING and _grabbed_enemy != null:
+			_execute_grabbed()
 
 	match _state:
 		WhipState.WHIPPING:
@@ -98,12 +105,13 @@ func _process(delta: float) -> void:
 # 挥鞭
 # ==============================================================================
 func _try_whip() -> void:
-	var origin := _camera.global_position
+	# 射线从摄像机中心发出（和枪械一致，准星指哪打哪）
+	var ray_origin := _camera.global_position
 	var dir := -_camera.global_transform.basis.z.normalized()
-	var end: Vector3 = origin + dir * _whip_data.whip_range
+	var end: Vector3 = ray_origin + dir * _whip_data.whip_range
 
 	var space_state := get_world_3d().direct_space_state
-	var query := PhysicsRayQueryParameters3D.create(origin, end)
+	var query := PhysicsRayQueryParameters3D.create(ray_origin, end)
 	query.collision_mask = 1
 	query.exclude = [_player]
 
@@ -112,30 +120,52 @@ func _try_whip() -> void:
 	_cooldown_timer = _whip_data.cooldown
 	_state = WhipState.WHIPPING
 
-	# 显示鞭影
 	var hit_point: Vector3 = end
 	if not result.is_empty():
 		hit_point = result.position
 		var target: Node = result.collider
 		_execute_whip_hit(target)
 
-	_show_whip_line(origin, hit_point)
+	# 视觉从左手位置发出（global_position = LeftHandHolder 世界坐标）
+	_spawn_whip_effect(global_position, hit_point)
 
 
-func _show_whip_line(from: Vector3, to: Vector3) -> void:
-	if _whip_line == null:
-		return
-	var mid: Vector3 = (from + to) * 0.5
-	var length: float = from.distance_to(to)
+# 沿挥鞭路径生成多个发光小球，最稳妥的视觉方案
+func _spawn_whip_effect(from: Vector3, to: Vector3) -> void:
+	var root := get_tree().root
+	var to_dir := to - from
+	var total_len := to_dir.length()
+	var dir := to_dir.normalized() if total_len > 0.01 else Vector3.FORWARD
+	var segment_count: int = ceili(total_len / 0.3)  # 每 0.3m 一个球
+	segment_count = clampi(segment_count, 3, 20)
 
-	_whip_line.global_position = mid
-	_whip_line.size.z = max(length, 0.05)
-	# 让鞭影朝向命中点
-	var dir := (to - from).normalized()
-	if dir.length_squared() > 0.001:
-		_whip_line.look_at(mid + dir, Vector3.UP)
-	_whip_line.visible = true
-	_whip_line_timer = 0.12
+	for i in range(segment_count):
+		var t: float = float(i) / float(segment_count - 1)
+		var pos := from + dir * (total_len * t)
+
+		var sphere := MeshInstance3D.new()
+		var sphere_mesh := SphereMesh.new()
+		sphere_mesh.radius = 0.03
+		sphere_mesh.height = 0.06
+		sphere.mesh = sphere_mesh
+
+		var mat := StandardMaterial3D.new()
+		mat.albedo_color = Color(1.0, 0.4, 0.05)
+		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		sphere.material_override = mat
+
+		# 先加入场景树，再设 global_position（否则引擎报错）
+		root.add_child(sphere)
+		sphere.global_position = pos
+
+		# 0.25 秒后自动删除
+		var timer := get_tree().create_timer(0.25)
+		timer.timeout.connect(sphere.queue_free)
+
+
+func _hide_whip_line() -> void:
+	# 旧单条鞭影已废弃，此函数保留给 _process 调用
+	pass
 
 
 func _execute_whip_hit(target: Node) -> void:
@@ -143,13 +173,15 @@ func _execute_whip_hit(target: Node) -> void:
 	if enemy == null:
 		return
 
-	# 伤害 + 眩晕 + 击退
-	if enemy.has_method("take_damage"):
-		enemy.take_damage(_whip_data.damage, WeaponData.DamageType.MELEE)
-	if enemy.has_method("apply_stun"):
-		enemy.apply_stun(_whip_data.stun_damage)
+	# 伤害：通过 Damageable 子节点（Enemy 本身没有 take_damage）
+	var dmg := enemy.get_node_or_null("Damageable") as Damageable
+	if dmg != null:
+		dmg.take_damage(_whip_data.damage, WeaponData.DamageType.MELEE)
 
-	# 如果敌人可以被抓取 → 进入拉取流程；否则击退
+	# 眩晕
+	enemy.apply_stun(_whip_data.stun_damage)
+
+	# 击退（眩晕满 → 拉取；否则击退）
 	if enemy.can_be_grabbed():
 		_start_pull(enemy)
 	else:
@@ -158,8 +190,7 @@ func _execute_whip_hit(target: Node) -> void:
 		if kb_dir.length_squared() < 0.01:
 			kb_dir = -_camera.global_transform.basis.z.normalized()
 			kb_dir.y = 0.0
-		if enemy.has_method("apply_knockback"):
-			enemy.apply_knockback(kb_dir, _whip_data.knockback_force)
+		enemy.apply_knockback(kb_dir, _whip_data.knockback_force)
 
 
 # ==============================================================================
@@ -260,7 +291,7 @@ func _execute_grabbed() -> void:
 		if main.has_method("show_pickup_notification"):
 			main.show_pickup_notification("处决 +" + str(_whip_data.execution_score_bonus), Color(1.0, 0.3, 0.1))
 
-	# 处决视觉：闪白（通过 damageable 信号触发敌人白色闪烁）
+	# 处决视觉：闪白
 	if enemy.has_method("_on_damaged"):
 		enemy._on_damaged(_whip_data.execution_damage, WeaponData.DamageType.MELEE)
 
@@ -288,11 +319,9 @@ func release_grab() -> void:
 func _find_enemy(node: Node) -> Enemy:
 	if node is Enemy:
 		return node
-	# 在子节点中找
 	for child in node.get_children():
 		if child is Enemy:
 			return child
-	# 向父节点找
 	var parent := node.get_parent()
 	if parent != null:
 		return _find_enemy(parent)

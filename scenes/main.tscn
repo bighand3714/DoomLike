@@ -1,12 +1,12 @@
 [gd_scene format=3 uid="uid://3id15akegrw4"]
 
 [ext_resource type="Script" uid="uid://cc0085xwrw74f" path="res://scripts/main.gd" id="1_main"]
-[ext_resource type="PackedScene" uid="uid://cr2qkfl65i1eh" path="res://scenes/player/player.tscn" id="2_player_scene"]
+[ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="2_player_scene"]
 [ext_resource type="Script" uid="uid://dgl801sm08a3d" path="res://scripts/utils/fps_counter.gd" id="3_fps"]
 [ext_resource type="Script" uid="uid://bq7mxaap7n220" path="res://scripts/ui/player_status.gd" id="4_ps"]
 [ext_resource type="Script" uid="uid://bafh4ybw4u2ud" path="res://scripts/enemy/enemy_manager.gd" id="5_em"]
-[ext_resource type="PackedScene" uid="uid://b2ew0737wq1wx" path="res://scenes/enemies/imp.tscn" id="5_tipki"]
-[ext_resource type="PackedScene" uid="uid://cyaxtc64wp480" path="res://scenes/enemies/flying_enemy.tscn" id="9_choun"]
+[ext_resource type="PackedScene" path="res://scenes/enemies/imp.tscn" id="5_tipki"]
+[ext_resource type="PackedScene" path="res://scenes/enemies/flying_enemy.tscn" id="9_choun"]
 [ext_resource type="Script" uid="uid://bsg12huaf1u5i" path="res://addons/godot_mcp/runtime/mcp_runtime_probe.gd" id="10_choun"]
 
 [node name="Main" type="Node3D" unique_id=981212117]

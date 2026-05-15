@@ -262,3 +262,8 @@ func _on_player_damaged(amount: float, _type: WeaponData.DamageType) -> void:
 # 设置外部速度倍率（铁鞭抓取时调用），抓取重量大的敌人时倍率更低
 func set_speed_multiplier(mult: float) -> void:
 	_speed_multiplier = clampf(mult, 0.2, 1.0)
+
+
+# 返回当前被抓取的敌人（供 enemy/projectile 盾牌阻挡判定）
+func get_grabbed_enemy() -> Node:
+	return grabbed_enemy

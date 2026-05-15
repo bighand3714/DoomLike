@@ -37,10 +37,8 @@ var _stun_full_timer: float = 0.0
 var _knockback_velocity: Vector3 = Vector3.ZERO
 var _grab_owner: Node3D = null
 
-var _debug_stun_bar: CSGBox3D = null
-var _debug_stun_bg: CSGBox3D = null
-var _debug_hp_bar: CSGBox3D = null
-var _debug_hp_bg: CSGBox3D = null
+var _debug_stun_bar: MeshInstance3D = null
+var _debug_hp_bar: MeshInstance3D = null
 const DEBUG_BAR_FULL := 0.5
 const DEBUG_BAR_Y := 2.2
 
@@ -254,7 +252,9 @@ func _execute_attack() -> void:
 
 func _damage_player(amount: float, dtype: WeaponData.DamageType) -> void:
 	# 盾牌阻挡检测
-	var grabbed: Node = _player.get("grabbed_enemy")
+	var grabbed: Node = null
+	if _player.has_method("get_grabbed_enemy"):
+		grabbed = _player.get_grabbed_enemy()
 	if grabbed != null and is_instance_valid(grabbed):
 		var to_enemy: Vector3 = _player.global_position.direction_to(global_position)
 		var player_forward: Vector3 = -_player.global_transform.basis.z
@@ -342,12 +342,11 @@ func _state_grabbed(_delta: float) -> void:
 
 
 # ==============================================================================
-# 死亡 —— 快速缩小 + 缩短停留时间（最多 1.2 秒）
+# 死亡 —— 快速缩小 + 0.5 秒后消失
 # ==============================================================================
 func _state_death(delta: float) -> void:
 	_state_timer += delta
-	var effective_duration: float = minf(enemy_data.death_duration, 1.2)
-	if _state_timer >= effective_duration:
+	if _state_timer >= 0.5:
 		queue_free()
 
 
@@ -483,12 +482,16 @@ func _face_player_flat() -> void:
 func _on_damaged(_amount: float, _type: WeaponData.DamageType) -> void:
 	if _state == EnemyState.DEATH:
 		return
-	_flash_pain()
+	# 不同伤害类型不同颜色：近战(铁鞭)灰色，其他白色
+	if _type == WeaponData.DamageType.MELEE:
+		_flash_pain(Color(0.5, 0.5, 0.5))
+	else:
+		_flash_pain(Color.WHITE)
 	if _state != EnemyState.STUNNED and _state != EnemyState.GRABBED:
 		_transition_to(EnemyState.PAIN)
 
 
-func _flash_pain() -> void:
+func _flash_pain(flash_color: Color = Color.WHITE) -> void:
 	for child in get_children():
 		var geo: Node3D = null
 		if child is MeshInstance3D:
@@ -503,10 +506,11 @@ func _flash_pain() -> void:
 			_original_materials[key] = geo.material_override
 
 		var flash_mat := StandardMaterial3D.new()
-		flash_mat.albedo_color = Color.WHITE
+		flash_mat.albedo_color = flash_color
+		flash_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 		flash_mat.emission_enabled = true
-		flash_mat.emission = Color.WHITE
-		flash_mat.emission_energy_multiplier = 0.5
+		flash_mat.emission = flash_color
+		flash_mat.emission_energy_multiplier = 0.8
 		geo.material_override = flash_mat
 
 		var timer := get_tree().create_timer(enemy_data.pain_duration)
@@ -547,47 +551,53 @@ func _on_death_visual() -> void:
 # ==============================================================================
 func _create_debug_bars() -> void:
 	var bar_thick := 0.06
-	var bar_z := 0.05
+	# z 为负值：敌人正面是 -Z，负 Z 让血条在敌人前方可见
+	var bar_z: float = -0.06
 
-	_debug_stun_bg = _make_bar("StunBarBG", Color(0.1, 0.1, 0.1), DEBUG_BAR_Y, bar_thick, bar_z)
-	_debug_stun_bar = _make_bar("StunBar", Color(1.0, 0.9, 0.1), DEBUG_BAR_Y, bar_thick, bar_z + 0.03)
-	var stun_mat := _debug_stun_bar.material as StandardMaterial3D
+	# HP 血条（绿色，无黑底）
+	_debug_hp_bar = _make_bar("HPBar", Color(0.2, 0.9, 0.2), DEBUG_BAR_Y - 0.1, bar_thick, bar_z)
+
+	# 眩晕条（黄色，无黑底）
+	_debug_stun_bar = _make_bar("StunBar", Color(1.0, 0.9, 0.1), DEBUG_BAR_Y, bar_thick, bar_z)
+	var stun_mat := _debug_stun_bar.material_override as StandardMaterial3D
 	if stun_mat != null:
 		stun_mat.emission_enabled = true
 		stun_mat.emission = Color(1.0, 0.9, 0.1)
 		stun_mat.emission_energy_multiplier = 0.5
 
-	_debug_hp_bg = _make_bar("HPBarBG", Color(0.1, 0.1, 0.1), DEBUG_BAR_Y - 0.1, bar_thick, bar_z)
-	_debug_hp_bar = _make_bar("HPBar", Color(0.2, 0.9, 0.2), DEBUG_BAR_Y - 0.1, bar_thick, bar_z + 0.03)
 
-
-func _make_bar(bar_name: String, color: Color, y: float, thick: float, z: float) -> CSGBox3D:
-	var bar := CSGBox3D.new()
-	bar.name = bar_name
-	bar.size = Vector3(DEBUG_BAR_FULL, thick, 0.05)
-	bar.position = Vector3(0.0, y, z)
-	bar.use_collision = false
+func _make_bar(bar_name: String, color: Color, y: float, thick: float, z: float) -> MeshInstance3D:
+	var mesh := MeshInstance3D.new()
+	mesh.name = bar_name
+	var box := BoxMesh.new()
+	box.size = Vector3(DEBUG_BAR_FULL, thick, 0.05)
+	mesh.mesh = box
+	mesh.position = Vector3(0.0, y, z)
 	var mat := StandardMaterial3D.new()
 	mat.albedo_color = color
-	bar.material = mat
-	add_child(bar)
-	return bar
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mesh.material_override = mat
+	add_child(mesh)
+	return mesh
 
 
 func _update_debug_bars() -> void:
 	if _debug_stun_bar != null and enemy_data != null:
 		var ratio: float = _stun / enemy_data.max_stun
 		var w: float = DEBUG_BAR_FULL * ratio
-		_debug_stun_bar.size.x = w
+		var stun_box: BoxMesh = _debug_stun_bar.mesh
+		stun_box.size.x = w
 		_debug_stun_bar.position.x = -(DEBUG_BAR_FULL - w) / 2.0
 
 	if _debug_hp_bar != null and _damageable != null:
 		var ratio: float = _damageable.health / _damageable.max_health
 		var w: float = DEBUG_BAR_FULL * ratio
-		_debug_hp_bar.size.x = w
+		var hp_box: BoxMesh = _debug_hp_bar.mesh
+		hp_box.size.x = w
 		_debug_hp_bar.position.x = -(DEBUG_BAR_FULL - w) / 2.0
 
-		var hp_mat := _debug_hp_bar.material as StandardMaterial3D
+		var hp_mat := _debug_hp_bar.material_override as StandardMaterial3D
 		if hp_mat != null:
 			if ratio > 0.5:
 				hp_mat.albedo_color = Color(0.2, 0.9, 0.2)

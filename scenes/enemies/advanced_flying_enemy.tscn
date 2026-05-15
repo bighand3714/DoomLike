@@ -1,6 +1,6 @@
-[gd_scene format=3 uid="uid://dqk03h2yle8cx"]
+[gd_scene format=3 uid="uid://d4mpaxhq3wxab"]
 
-[ext_resource type="Script" uid="uid://ckt46lm5umhhe" path="res://scripts/enemy/advanced_flying_enemy.gd" id="1_script"]
+[ext_resource type="Script" path="res://scripts/enemy/advanced_flying_enemy.gd" id="1_script"]
 
 [sub_resource type="StandardMaterial3D" id="mat_body"]
 albedo_color = Color(0.95, 0.4, 0.05, 1)

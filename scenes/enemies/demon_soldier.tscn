@@ -1,6 +1,6 @@
-[gd_scene format=3 uid="uid://wdf5tuw2t4wd"]
+[gd_scene format=3 uid="uid://bpop56gl2rhe"]
 
-[ext_resource type="Script" uid="uid://b831jp6hchlku" path="res://scripts/enemy/demon_soldier.gd" id="1_soldier"]
+[ext_resource type="Script" path="res://scripts/enemy/demon_soldier.gd" id="1_soldier"]
 
 [sub_resource type="StandardMaterial3D" id="mat_body"]
 albedo_color = Color(0.35, 0.35, 0.4, 1)
