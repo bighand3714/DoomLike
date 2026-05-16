@@ -49,6 +49,9 @@ func _get_ground_color() -> Color:
 func _get_boundary_color() -> Color:
 	return Color(1.0, 0.35, 0.08)  # 亮橙红色边界柱
 
+func _get_fog_color() -> Color:
+	return Color(0.18, 0.08, 0.05)
+
 
 # ==============================================================================
 # _spawn_lava_rivers() — 随机生成熔岩河流（Phase 4.5）

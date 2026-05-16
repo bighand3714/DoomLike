@@ -87,6 +87,9 @@ func _on_enemy_died(enemy: Node) -> void:
 	var score_value: int = ed.get("score_value") if ed != null else 10
 	enemy_killed.emit(enemy_name, score_value)
 
+	# 通知掉落管理器
+	GameBus.enemy_death_position.emit(enemy.global_position)
+
 	if active_enemies.is_empty():
 		print("[EnemyManager] 所有敌人已被消灭！")
 		all_cleared.emit()

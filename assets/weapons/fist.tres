@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="WeaponData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/weapon/weapon_data.gd" id="1_data"]
+
+[resource]
+script = ExtResource("1_data")
+weapon_name = "拳头"
+slot_index = 3
+damage = 12.0
+max_range = 2.0
+damage_type = 3
+fire_rate = 2.5
+fire_mode = 0
+mag_size = 1
+reserve_ammo = 0
+reload_time = 0.0
+spread_angle = 0.0
+pellet_count = 1
+move_spread_mult = 1.0
+stun_damage = 10.0
+knockback_force = 8.0
+infinite_ammo = true
+is_melee = true
+melee_range = 2.0

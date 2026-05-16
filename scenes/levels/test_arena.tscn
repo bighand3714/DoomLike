@@ -1,0 +1,14 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/level/test_arena.gd" id="1_test"]
+
+[node name="TestArena" type="Node3D"]
+script = ExtResource("1_test")
+arena_radius = 45.0
+spawn_outer_radius = 56.0
+boundary_marker_count = 72
+random_seed = 0
+use_random_seed = true
+
+[node name="PlayerStart" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, 0)

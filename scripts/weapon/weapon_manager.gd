@@ -71,15 +71,21 @@ func _ready() -> void:
 		_equip(0)
 
 
-## 加载默认武器配置——手枪 + 霰弹枪
+## 加载默认武器配置——步枪 + 霰弹枪 + 手枪 + 拳头
 func _load_default_weapons() -> Array[WeaponData]:
 	var defaults: Array[WeaponData] = []
-	var pistol := load("res://assets/weapons/pistol.tres") as WeaponData
+	var rifle := load("res://assets/weapons/rifle.tres") as WeaponData
 	var shotgun := load("res://assets/weapons/shotgun.tres") as WeaponData
-	if pistol:
-		defaults.append(pistol)
+	var pistol := load("res://assets/weapons/pistol.tres") as WeaponData
+	var fist := load("res://assets/weapons/fist.tres") as WeaponData
+	if rifle:
+		defaults.append(rifle)
 	if shotgun:
 		defaults.append(shotgun)
+	if pistol:
+		defaults.append(pistol)
+	if fist:
+		defaults.append(fist)
 	return defaults
 
 
@@ -94,13 +100,15 @@ func _load_default_weapons() -> Array[WeaponData]:
 func _create_weapon(data: WeaponData) -> WeaponNode:
 	var weapon: WeaponNode
 
-	# 根据射击模式选武器子类
-	if data.fire_mode == WeaponData.FireMode.PUMP:
+	if data.is_melee:
+		weapon = Fist.new()
+	elif data.fire_mode == WeaponData.FireMode.PUMP:
 		weapon = Shotgun.new()
+	elif data.fire_mode == WeaponData.FireMode.AUTO:
+		weapon = Rifle.new()
 	else:
 		weapon = Pistol.new()
 
-	# 把数据注入到武器节点中（摄像机引用 + 配置数据）
 	weapon.setup(data, _camera)
 	return weapon
 
@@ -112,15 +120,17 @@ func _create_weapon(data: WeaponData) -> WeaponNode:
 # 射击和换弹输入由 WeaponNode 自己在 _input 中处理，
 # 因为它们需要知道武器的状态（换弹中？泵动中？）。
 func _input(event: InputEvent) -> void:
-	# --- 数字键切武器：按 1 切到栏位 0，按 2 切到栏位 1 ---
+	# --- 数字键切武器：按 1~4 切到栏位 0~3 ---
 	if event.is_action_pressed("weapon_1"):
 		_equip(0)
 	if event.is_action_pressed("weapon_2"):
 		_equip(1)
+	if event.is_action_pressed("weapon_3"):
+		_equip(2)
+	if event.is_action_pressed("weapon_4"):
+		_equip(3)
 
-	# --- 滚轮切换武器 ---
-	# MOUSE_BUTTON_WHEEL_UP = 向上滚（下一把武器）
-	# MOUSE_BUTTON_WHEEL_DOWN = 向下滚（上一把武器）
+	# --- 滚轮切换武器（非抓取状态下） ---
 	if event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_WHEEL_UP and event.pressed:
 			_next_weapon()

@@ -90,6 +90,13 @@ var _pitch := 0.0
 ## 外部速度倍率（铁鞭抓取时降低速度），1.0 = 正常
 var _speed_multiplier: float = 1.0
 
+# 冲刺状态
+var _is_dashing: bool = false
+var _dash_direction: Vector3 = Vector3.ZERO
+var _dash_speed: float = 0.0
+var _dash_distance: float = 0.0
+var _dash_travelled: float = 0.0
+
 
 # ==============================================================================
 # 节点引用
@@ -204,11 +211,19 @@ func _physics_process(delta: float) -> void:
 	# 这意味着不能在空中"二段跳"——这是 DOOM 经典设定。
 	# 未来如果想加二段跳，改成检查"剩余跳跃次数 > 0"即可。
 	if Input.is_action_just_pressed("jump") and is_on_floor():
-		# 把垂直速度直接设为一个正数（向上），覆盖掉重力累加的负值。
-		# 之后每帧重力会逐渐把这个值减小：
-		#   +12 → +10 → +7 → +3 → 0 → -3 → -8 → ...
-		# 对应运动轨迹：上升→顶点→下落，形成一条抛物线。
 		velocity.y = jump_velocity
+
+	# === 冲刺处理 ===
+	if _is_dashing:
+		velocity.x = _dash_direction.x * _dash_speed
+		velocity.z = _dash_direction.z * _dash_speed
+		velocity.y = 0.0
+		move_and_slide()
+		_dash_travelled += _dash_speed * delta
+		if _dash_travelled >= _dash_distance:
+			_is_dashing = false
+			_dash_direction = Vector3.ZERO
+		return
 
 	# === 水平移动 ===
 	# Input.get_vector() 一次性获取四个方向键的"组合值"。
@@ -251,13 +266,37 @@ func _physics_process(delta: float) -> void:
 # _on_player_damaged() — 玩家受伤时触发屏幕闪红
 # ==============================================================================
 func _on_player_damaged(amount: float, _type: WeaponData.DamageType) -> void:
-	# 通知 main.gd 做屏幕闪红效果
+	apply_screen_shake(0.03)
 	GameBus.player_hit.emit(amount)
 
 
 # 设置外部速度倍率（铁鞭抓取时调用），抓取重量大的敌人时倍率更低
 func set_speed_multiplier(mult: float) -> void:
 	_speed_multiplier = clampf(mult, 0.2, 1.0)
+
+
+# 冲刺（铁鞭盾牌模式下滚轮向下触发）
+func start_dash(direction: Vector3, speed: float, distance: float) -> void:
+	_is_dashing = true
+	_dash_direction = direction.normalized()
+	_dash_speed = speed
+	_dash_distance = distance
+	_dash_travelled = 0.0
+
+
+# 屏幕震动（受伤/开枪时触发）
+func apply_screen_shake(intensity: float) -> void:
+	var original_pos := _camera.position
+	var tween := create_tween()
+	var shake_count := 4
+	for i in range(shake_count):
+		var offset := Vector3(
+			randf_range(-intensity, intensity),
+			randf_range(-intensity, intensity),
+			0.0
+		)
+		tween.tween_property(_camera, "position", original_pos + offset, 0.03)
+		tween.tween_property(_camera, "position", original_pos, 0.03)
 
 
 # 返回当前被抓取的敌人（供 enemy/projectile 盾牌阻挡判定）

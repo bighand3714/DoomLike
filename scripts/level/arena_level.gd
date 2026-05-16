@@ -78,6 +78,15 @@ signal level_ready(arena: ArenaLevel)
 ## false=每次开局随机位置不同（正式游戏体验）。
 @export var use_random_seed: bool = true
 
+## 启用环境雾
+@export var fog_enabled: bool = true
+
+## 雾密度
+@export var fog_density: float = 0.02
+
+## 雾开始距离（距摄像机），约 arena_radius * 0.7
+@export var fog_start_distance: float = 31.5
+
 
 # ==============================================================================
 # 容器节点——把不同类型的子节点分门别类放好，方便清理和管理
@@ -139,7 +148,10 @@ func _ready() -> void:
 	_build_base_arena()
 	_build_boundary_markers()
 
-	# 第四步：通知 main.gd 竞技场已就绪
+	# 第四步：设置环境雾
+	_setup_fog()
+
+	# 第五步：通知 main.gd 竞技场已就绪
 	level_ready.emit(self)
 
 
@@ -436,3 +448,38 @@ func _get_ground_color() -> Color:
 ## 边界柱材质/颜色（子类覆写）
 func _get_boundary_color() -> Color:
 	return Color(1.0, 1.0, 0.0)  # 默认黄色
+
+## 雾颜色（子类覆写）
+func _get_fog_color() -> Color:
+	return Color(0.5, 0.5, 0.5)  # 默认灰色
+
+## 创建 WorldEnvironment 节点并设置深度雾
+func _setup_fog() -> void:
+	if not fog_enabled:
+		return
+
+	var existing := get_node_or_null("WorldEnvironment")
+	var env_node: WorldEnvironment
+	if existing != null and existing is WorldEnvironment:
+		env_node = existing
+	else:
+		env_node = WorldEnvironment.new()
+		env_node.name = "WorldEnvironment"
+		add_child(env_node)
+
+	var env := Environment.new()
+	env.background_mode = Environment.BG_COLOR
+	env.background_color = _get_fog_color()
+
+	var fog_color := _get_fog_color()
+	env.fog_enabled = true
+	env.fog_mode = Environment.FOG_MODE_DEPTH
+	env.fog_density = fog_density
+	env.fog_light_color = fog_color
+	env.fog_depth_begin = fog_start_distance
+	env.fog_depth_end = arena_radius + 20.0
+
+	env.ambient_light_color = fog_color * 0.3
+	env.ambient_light_energy = 0.5
+
+	env_node.environment = env

@@ -1,12 +1,12 @@
 # ==============================================================================
-# IronWhip — 左手铁鞭（右键控制/眩晕/拉取/抓取/处决）
+# IronWhip — 左手铁鞭（右键控制/眩晕/拉取/抓取/盾牌/甩出/冲刺处决）
 # ==============================================================================
 class_name IronWhip extends Node3D
 
 const WhipDataClass = preload("res://scripts/weapon/whip_data.gd")
 const EnemyClass = preload("res://scripts/enemy/enemy.gd")
 
-enum WhipState { IDLE, WHIPPING, PULLING, GRABBING }
+enum WhipState { IDLE, WHIPPING, PULLING, GRABBING, SHIELDING, THROWING, DASHING }
 
 var _whip_data: WhipData
 var _camera: Camera3D
@@ -20,6 +20,10 @@ var _grabbed_enemy: Enemy = null
 var _whip_line_mesh: MeshInstance3D = null
 var _whip_line_timer: float = 0.0
 
+# 右手键按住检测
+var _secondary_held: bool = false
+var _was_shielding: bool = false
+
 
 func setup(data: WhipData, camera: Camera3D, player: CharacterBody3D) -> void:
 	_whip_data = data
@@ -29,7 +33,6 @@ func setup(data: WhipData, camera: Camera3D, player: CharacterBody3D) -> void:
 
 
 func _setup_model() -> void:
-	# 空闲时左手方块（亮铁灰色，无光照也能看清）
 	var idle_mesh := MeshInstance3D.new()
 	idle_mesh.name = "WhipIdleModel"
 	var box := BoxMesh.new()
@@ -41,7 +44,6 @@ func _setup_model() -> void:
 	idle_mesh.material_override = mat
 	add_child(idle_mesh)
 
-	# 鞭影（挥鞭时显示，默认隐藏）
 	var line_mesh := MeshInstance3D.new()
 	line_mesh.name = "WhipLine"
 	var line_box := BoxMesh.new()
@@ -63,30 +65,46 @@ func _input(event: InputEvent) -> void:
 	if get_tree().paused:
 		return
 
+	# 滚轮向下：甩出 / 冲刺处决
+	if event.is_action_pressed("whip_throw"):
+		if _state == WhipState.GRABBING:
+			_state = WhipState.THROWING
+			_execute_throw()
+			get_viewport().set_input_as_handled()
+		elif _state == WhipState.SHIELDING and _grabbed_enemy != null:
+			_state = WhipState.DASHING
+			_start_dash()
+			get_viewport().set_input_as_handled()
+
+	# R 键处决
 	if event.is_action_pressed("reload"):
-		if _state == WhipState.GRABBING and _grabbed_enemy != null:
+		if (_state == WhipState.GRABBING or _state == WhipState.SHIELDING) and _grabbed_enemy != null:
 			_execute_grabbed()
 			get_viewport().set_input_as_handled()
 
 
 func _process(delta: float) -> void:
-	# 冷却计时
 	if _cooldown_timer > 0.0:
 		_cooldown_timer -= delta
 
-	# 鞭影计时
 	if _whip_line_timer > 0.0:
 		_whip_line_timer -= delta
-		if _whip_line_timer <= 0.0:
-			_hide_whip_line()
 
-	# 右键挥鞭（Input 直接检测，不依赖事件传播）
+	# 右键挥鞭（仅 IDLE 状态）
 	if Input.is_action_just_pressed("secondary_fire") and _state == WhipState.IDLE:
 		_try_whip()
 
+	# 盾牌模式：GRABBING 状态下按住右键进入 SHIELDING
+	var sec_pressed := Input.is_action_pressed("secondary_fire")
+	if _state == WhipState.GRABBING and sec_pressed and not _secondary_held:
+		_enter_shielding()
+	elif _state == WhipState.SHIELDING and not sec_pressed:
+		_exit_shielding()
+	_secondary_held = sec_pressed
+
 	# R 键处决（Input 直接检测）
 	if Input.is_action_just_pressed("reload"):
-		if _state == WhipState.GRABBING and _grabbed_enemy != null:
+		if (_state == WhipState.GRABBING or _state == WhipState.SHIELDING) and _grabbed_enemy != null:
 			_execute_grabbed()
 
 	match _state:
@@ -100,12 +118,17 @@ func _process(delta: float) -> void:
 		WhipState.GRABBING:
 			_process_grab(delta)
 
+		WhipState.SHIELDING:
+			_process_shielding(delta)
+
+		WhipState.DASHING:
+			_process_dash(delta)
+
 
 # ==============================================================================
 # 挥鞭
 # ==============================================================================
 func _try_whip() -> void:
-	# 射线从摄像机中心发出（和枪械一致，准星指哪打哪）
 	var ray_origin := _camera.global_position
 	var dir := -_camera.global_transform.basis.z.normalized()
 	var end: Vector3 = ray_origin + dir * _whip_data.whip_range
@@ -126,17 +149,15 @@ func _try_whip() -> void:
 		var target: Node = result.collider
 		_execute_whip_hit(target)
 
-	# 视觉从左手位置发出（global_position = LeftHandHolder 世界坐标）
 	_spawn_whip_effect(global_position, hit_point)
 
 
-# 沿挥鞭路径生成多个发光小球，最稳妥的视觉方案
 func _spawn_whip_effect(from: Vector3, to: Vector3) -> void:
 	var root := get_tree().root
 	var to_dir := to - from
 	var total_len := to_dir.length()
 	var dir := to_dir.normalized() if total_len > 0.01 else Vector3.FORWARD
-	var segment_count: int = ceili(total_len / 0.3)  # 每 0.3m 一个球
+	var segment_count: int = ceili(total_len / 0.3)
 	segment_count = clampi(segment_count, 3, 20)
 
 	for i in range(segment_count):
@@ -154,18 +175,11 @@ func _spawn_whip_effect(from: Vector3, to: Vector3) -> void:
 		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 		sphere.material_override = mat
 
-		# 先加入场景树，再设 global_position（否则引擎报错）
 		root.add_child(sphere)
 		sphere.global_position = pos
 
-		# 0.25 秒后自动删除
 		var timer := get_tree().create_timer(0.25)
 		timer.timeout.connect(sphere.queue_free)
-
-
-func _hide_whip_line() -> void:
-	# 旧单条鞭影已废弃，此函数保留给 _process 调用
-	pass
 
 
 func _execute_whip_hit(target: Node) -> void:
@@ -173,15 +187,12 @@ func _execute_whip_hit(target: Node) -> void:
 	if enemy == null:
 		return
 
-	# 伤害：通过 Damageable 子节点（Enemy 本身没有 take_damage）
 	var dmg := enemy.get_node_or_null("Damageable") as Damageable
 	if dmg != null:
 		dmg.take_damage(_whip_data.damage, WeaponData.DamageType.MELEE)
 
-	# 眩晕
 	enemy.apply_stun(_whip_data.stun_damage)
 
-	# 击退（眩晕满 → 拉取；否则击退）
 	if enemy.can_be_grabbed():
 		_start_pull(enemy)
 	else:
@@ -206,24 +217,19 @@ func _process_pull(delta: float) -> void:
 		_cancel_pull()
 		return
 
-	# 如果敌人死亡或不再可抓取
 	if not _pulled_enemy.can_be_grabbed():
 		_cancel_pull()
 		return
 
-	# 计算目标位置（玩家前方 grab_distance 处）
 	var target_pos: Vector3 = _player.global_position + (-_camera.global_transform.basis.z.normalized()) * _whip_data.grab_distance
 	target_pos.y = _player.global_position.y + 0.5
 
-	# 移动敌人朝向玩家
 	var to_target := target_pos - _pulled_enemy.global_position
-	var dist := to_target.length()
+	var dist: float = to_target.length()
 
 	if dist < _whip_data.grab_distance * 1.2:
-		# 到达抓取距离 → 自动抓取
 		_start_grab(_pulled_enemy)
 	else:
-		# 继续拉取
 		_pulled_enemy.global_position += to_target.normalized() * _whip_data.pull_speed * delta
 
 
@@ -233,7 +239,7 @@ func _cancel_pull() -> void:
 
 
 # ==============================================================================
-# 抓取
+# 抓取（左手举起模式）
 # ==============================================================================
 func _start_grab(enemy: Enemy) -> void:
 	if not enemy.start_grab(_player):
@@ -244,17 +250,18 @@ func _start_grab(enemy: Enemy) -> void:
 	_grabbed_enemy = enemy
 	_state = WhipState.GRABBING
 
-	# 设置玩家抓取状态
 	_player.grabbed_enemy = enemy
 
-	# 根据敌人重量降低玩家移速
+	# 缩小敌人模拟被举起
+	if enemy.has_method("set_scale"):
+		enemy.scale = Vector3(0.65, 0.65, 0.65)
+
 	var weight: float = 1.0
 	if enemy.enemy_data != null:
 		weight = enemy.enemy_data.weight
 	var speed_mult: float = clampf(1.0 / (1.0 + weight * 0.35), 0.25, 1.0)
 	_player.set_speed_multiplier(speed_mult)
 
-	# 通知 HUD
 	_show_grab_status(enemy)
 
 
@@ -263,12 +270,173 @@ func _process_grab(_delta: float) -> void:
 		_release_grab_internal()
 		return
 
-	# 更新被抓取敌人的位置（固定在玩家前方）
-	var grab_origin: Vector3 = _player.global_position
-	grab_origin += (-_camera.global_transform.basis.z).normalized() * _whip_data.grab_distance
-	grab_origin.y += 0.3
+	# 左手举起位置：LeftHandHolder 前方上方
+	var lh_pos := global_position + Vector3(0, 0.5, -0.3)
+	var grab_origin := lh_pos
 	var grab_transform := Transform3D(_player.global_transform.basis, grab_origin)
 	_grabbed_enemy.update_grabbed_position(grab_transform, _delta)
+
+
+# ==============================================================================
+# 盾牌模式
+# ==============================================================================
+func _enter_shielding() -> void:
+	if _grabbed_enemy == null:
+		return
+	_was_shielding = true
+	_state = WhipState.SHIELDING
+
+	# 恢复敌人大小
+	if _grabbed_enemy.has_method("set_scale"):
+		_grabbed_enemy.scale = Vector3(1.0, 1.0, 1.0)
+
+	GameBus.grab_status_show.emit("盾牌模式 [滚轮=冲刺处决]")
+
+
+func _exit_shielding() -> void:
+	if _grabbed_enemy == null or not is_instance_valid(_grabbed_enemy):
+		return
+	_was_shielding = false
+	_state = WhipState.GRABBING
+
+	# 缩回举起大小
+	if _grabbed_enemy.has_method("set_scale"):
+		_grabbed_enemy.scale = Vector3(0.65, 0.65, 0.65)
+
+	_show_grab_status(_grabbed_enemy)
+
+
+func _process_shielding(_delta: float) -> void:
+	if _grabbed_enemy == null or not is_instance_valid(_grabbed_enemy):
+		_release_grab_internal()
+		return
+
+	# 盾牌位置：摄像机正前方 1.5m
+	var shield_pos := _player.global_position + (-_camera.global_transform.basis.z).normalized() * 1.5 + Vector3(0, 0.3, 0)
+	var shield_transform := Transform3D(_player.global_transform.basis, shield_pos)
+	_grabbed_enemy.update_grabbed_position(shield_transform, _delta)
+
+
+# ==============================================================================
+# 甩出
+# ==============================================================================
+func _execute_throw() -> void:
+	if _grabbed_enemy == null or not is_instance_valid(_grabbed_enemy):
+		_release_grab_internal()
+		return
+
+	var enemy := _grabbed_enemy
+
+	# 恢复大小
+	if enemy.has_method("set_scale"):
+		enemy.scale = Vector3(1.0, 1.0, 1.0)
+
+	enemy.release_grab()
+
+	# 沿摄像机前方甩出
+	var throw_dir := (-_camera.global_transform.basis.z).normalized() + Vector3(0, 0.3, 0)
+	enemy.global_position = _camera.global_position + throw_dir.normalized() * 1.0
+
+	# 给敌人施加速度
+	if enemy is CharacterBody3D:
+		enemy.velocity = throw_dir.normalized() * _whip_data.throw_speed
+
+	# 碰撞伤害由 enemy.gd 的 move_and_slide 处理
+	# 简化：对附近敌人造成范围伤害
+	_apply_aoe_damage(enemy.global_position, 3.0, _whip_data.throw_damage, _whip_data.dash_knockback)
+
+	# 视觉：拖尾
+	_spawn_whip_effect(enemy.global_position - throw_dir.normalized() * 2.0, enemy.global_position)
+
+	_grabbed_enemy = null
+	_player.grabbed_enemy = null
+	_player.set_speed_multiplier(1.0)
+	_hide_grab_status()
+	_state = WhipState.IDLE
+
+
+# ==============================================================================
+# 冲刺处决（盾牌模式下滚轮向下）
+# ==============================================================================
+func _start_dash() -> void:
+	if _grabbed_enemy == null or not is_instance_valid(_grabbed_enemy):
+		_state = WhipState.IDLE
+		return
+
+	# 通知玩家开始冲刺
+	if _player.has_method("start_dash"):
+		var dash_dir := (-_camera.global_transform.basis.z).normalized()
+		dash_dir.y = 0.0
+		_player.start_dash(dash_dir, _whip_data.dash_speed, _whip_data.dash_distance)
+
+	# 等待冲刺完成
+	var timer := get_tree().create_timer(_whip_data.dash_distance / _whip_data.dash_speed)
+	timer.timeout.connect(_finish_dash)
+
+
+func _finish_dash() -> void:
+	if _state != WhipState.DASHING:
+		return
+
+	if _grabbed_enemy != null and is_instance_valid(_grabbed_enemy):
+		var enemy := _grabbed_enemy
+
+		# 大伤害给被抓敌人
+		var dmg := enemy.get_node_or_null("Damageable") as Damageable
+		if dmg != null:
+			dmg.take_damage(_whip_data.dash_grabbed_damage, WeaponData.DamageType.MELEE)
+
+		# 路径 AOE
+		_apply_aoe_damage(enemy.global_position, 4.0, _whip_data.dash_aoe_damage, _whip_data.dash_knockback)
+
+		enemy.release_grab()
+		if enemy.has_method("set_scale"):
+			enemy.scale = Vector3(1.0, 1.0, 1.0)
+
+		# 加分
+		GameBus.run_stats.add_kill(_whip_data.execution_score_bonus)
+		GameBus.pickup_notification.emit("冲刺处决 +" + str(_whip_data.execution_score_bonus), Color(1.0, 0.3, 0.1))
+
+	_grabbed_enemy = null
+	_player.grabbed_enemy = null
+	_player.set_speed_multiplier(1.0)
+	_hide_grab_status()
+	_state = WhipState.IDLE
+
+
+func _process_dash(_delta: float) -> void:
+	# 冲刺由 PlayerController._physics_process 处理
+	# Dash 状态在 _process 中保持，等待 _finish_dash 回调
+	pass
+
+
+# ==============================================================================
+# 范围伤害
+# ==============================================================================
+func _apply_aoe_damage(center: Vector3, radius: float, damage: float, knockback: float) -> void:
+	var enemies := get_tree().get_nodes_in_group("enemy")
+	for node in enemies:
+		if not is_instance_valid(node):
+			continue
+		var dist: float = node.global_position.distance_to(center)
+		if dist > radius:
+			continue
+
+		var enemy: Enemy = node as Enemy
+		if enemy == null:
+			continue
+		if enemy == _grabbed_enemy:
+			continue
+
+		var dmg := enemy.get_node_or_null("Damageable") as Damageable
+		if dmg != null:
+			dmg.take_damage(damage, WeaponData.DamageType.MELEE)
+
+		# 击退
+		var kb_dir := (enemy.global_position - center).normalized()
+		kb_dir.y = 0.0
+		if kb_dir.length_squared() > 0.01:
+			enemy.apply_knockback(kb_dir, knockback)
 
 
 # ==============================================================================
@@ -279,14 +447,15 @@ func _execute_grabbed() -> void:
 		return
 
 	var enemy := _grabbed_enemy
+
+	if enemy.has_method("set_scale"):
+		enemy.scale = Vector3(1.0, 1.0, 1.0)
+
 	enemy.execute()
 
-	# 加分
 	GameBus.run_stats.add_kill(_whip_data.execution_score_bonus)
-	# 通知 HUD
 	GameBus.pickup_notification.emit("处决 +" + str(_whip_data.execution_score_bonus), Color(1.0, 0.3, 0.1))
 
-	# 处决视觉：闪白
 	if enemy.has_method("trigger_on_damaged"):
 		enemy.trigger_on_damaged(_whip_data.execution_damage, WeaponData.DamageType.MELEE)
 
@@ -295,6 +464,8 @@ func _execute_grabbed() -> void:
 
 func _release_grab_internal() -> void:
 	if _grabbed_enemy != null and is_instance_valid(_grabbed_enemy):
+		if _grabbed_enemy.has_method("set_scale"):
+			_grabbed_enemy.scale = Vector3(1.0, 1.0, 1.0)
 		_grabbed_enemy.release_grab()
 	_grabbed_enemy = null
 	_pulled_enemy = null
@@ -335,7 +506,7 @@ func _hide_grab_status() -> void:
 
 
 func is_grabbing() -> bool:
-	return _state == WhipState.GRABBING and _grabbed_enemy != null
+	return (_state == WhipState.GRABBING or _state == WhipState.SHIELDING) and _grabbed_enemy != null
 
 
 func get_grabbed_enemy() -> Enemy:

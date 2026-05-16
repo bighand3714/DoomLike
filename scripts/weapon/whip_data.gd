@@ -29,3 +29,27 @@ class_name WhipData extends Resource
 
 ## 处决额外分数
 @export var execution_score_bonus: int = 25
+
+## 冲刺距离（米）
+@export var dash_distance: float = 5.0
+
+## 冲刺速度（米/秒）
+@export var dash_speed: float = 25.0
+
+## 对被撞敌人的伤害
+@export var dash_damage: float = 60.0
+
+## 路径上对其他敌人的伤害
+@export var dash_aoe_damage: float = 30.0
+
+## 冲刺击退力度
+@export var dash_knockback: float = 25.0
+
+## 对被抓起敌人的大伤害
+@export var dash_grabbed_damage: float = 150.0
+
+## 甩出对被甩敌人的伤害
+@export var throw_damage: float = 35.0
+
+## 甩出初速（米/秒）
+@export var throw_speed: float = 35.0

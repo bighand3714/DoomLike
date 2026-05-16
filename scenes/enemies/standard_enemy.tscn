@@ -1,0 +1,16 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/enemy/standard_enemy.gd" id="1_script"]
+[ext_resource type="Resource" path="res://assets/enemies/standard_enemy.tres" id="2_data"]
+
+[sub_resource type="CapsuleShape3D" id="capsule_shape"]
+radius = 0.4
+height = 1.8
+
+[node name="StandardEnemy" type="CharacterBody3D"]
+script = ExtResource("1_script")
+enemy_data = ExtResource("2_data")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+shape = SubResource("capsule_shape")

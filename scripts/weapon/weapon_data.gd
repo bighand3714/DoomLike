@@ -140,10 +140,22 @@ enum FireMode {
 ##   - 实际计算：最终散布 = spread_angle × move_spread_mult
 @export var move_spread_mult: float = 1.5
 
+## 每颗弹丸命中时造成的击退力度
+@export var knockback_force: float = 0.0
+
 
 # ==============================================================================
 # 特殊行为标记
 # ==============================================================================
+
+## 无限弹药——true 时射击不扣弹匣、不触发换弹（手枪保底、拳头）
+@export var infinite_ammo: bool = false
+
+## 近战武器标记——true 时使用近战距离判定而非射线检测
+@export var is_melee: bool = false
+
+## 近战攻击距离（米），仅在 is_melee=true 时生效
+@export var melee_range: float = 2.0
 
 ## 是否需要手动上膛（如泵动式霰弹枪）
 ##   - true：射击后自动进入"上膛"阶段，期间不能开枪

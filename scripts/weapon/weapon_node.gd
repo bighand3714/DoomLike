@@ -226,6 +226,11 @@ func _try_fire() -> void:
 # 霰弹枪 pellet_count=7 → 循环 7 次，每次随机方向不同 → 散射效果
 # 手枪 pellet_count=1 → 循环 1 次，方向接近准星中心 → 精准射击
 func _fire() -> void:
+	# 近战武器：短距离判定
+	if weapon_data.is_melee:
+		_fire_melee()
+		return
+
 	# 为每颗弹丸分别发射一根射线
 	for i in range(weapon_data.pellet_count):
 		# 计算这颗弹丸的随机散布方向
@@ -233,11 +238,10 @@ func _fire() -> void:
 		_fire_single_pellet(spread_dir)
 
 	# --- 弹药管理 ---
-	_current_mag -= 1
+	if not weapon_data.infinite_ammo:
+		_current_mag -= 1
 
 	# --- 射速冷却 ---
-	# 冷却时间 = 1 ÷ 每秒射速
-	# 例如 fire_rate=2.5（每秒 2.5 发） → 冷却 1/2.5=0.4 秒
 	_fire_cooldown = 1.0 / weapon_data.fire_rate
 
 	# --- 视觉反馈 ---
@@ -250,8 +254,50 @@ func _fire() -> void:
 	# --- 泵动式：射击后锁定，等待泵动完成 ---
 	if weapon_data.fire_mode == WeaponData.FireMode.PUMP:
 		_start_pump()
-	# --- 弹匣打空：自动换弹 ---
-	elif _current_mag <= 0:
+	# --- 弹匣打空：自动换弹（无限弹药跳过） ---
+	elif _current_mag <= 0 and not weapon_data.infinite_ammo:
+		_start_reload()
+
+
+# ==============================================================================
+# _fire_melee() — 近战攻击（拳头等）
+# ==============================================================================
+func _fire_melee() -> void:
+	var space_state := get_world_3d().direct_space_state
+	var origin := _camera.global_position
+	var dir := -_camera.global_transform.basis.z.normalized()
+	var end: Vector3 = origin + dir * weapon_data.melee_range
+	var query := PhysicsRayQueryParameters3D.create(origin, end)
+	query.collision_mask = 1
+
+	var result := space_state.intersect_ray(query)
+
+	if result.is_empty():
+		_spawn_tracer(_muzzle.global_position, end)
+	else:
+		var hit_point: Vector3 = result.position
+		var hit_normal: Vector3 = result.normal
+		var target: Node = result.collider
+		_spawn_tracer(_muzzle.global_position, hit_point)
+		if target.has_method("take_damage"):
+			target.take_damage(weapon_data.damage, weapon_data.damage_type)
+			_try_apply_stun(target)
+			_try_apply_knockback(target, dir)
+			_spawn_damage_number(hit_point, weapon_data.damage, false)
+			GameBus.play_sfx.emit("melee_hit", hit_point)
+		else:
+			_try_damage_child(target)
+		hit_something.emit(hit_point, hit_normal, target)
+
+	if not weapon_data.infinite_ammo:
+		_current_mag -= 1
+
+	_fire_cooldown = 1.0 / weapon_data.fire_rate
+	_apply_recoil()
+	fired.emit()
+	ammo_changed.emit(_current_mag, _current_reserve)
+
+	if _current_mag <= 0 and not weapon_data.infinite_ammo:
 		_start_reload()
 
 
@@ -289,30 +335,22 @@ func _fire_single_pellet(direction: Vector3) -> void:
 	# 如果没撞到任何东西，返回空字典 {}。
 	var result := space_state.intersect_ray(query)
 
-	# 空字典 = 子弹落空（射向了天空或空旷处）
+	# 弹道线：命中或落空都生成
 	if result.is_empty():
+		_spawn_tracer(_muzzle.global_position, end)
 		return
-
-	# --- 第四步：解析碰撞结果 ---
-	# result 字典包含以下键：
-	#   "position"  = 碰撞点的世界坐标（Vector3）
-	#   "normal"    = 碰撞面的法线方向（Vector3），垂直于墙面指向外侧
-	#   "collider"  = 被撞到的节点（CSGBox3D、CharacterBody3D 等）
 	var hit_point: Vector3 = result.position
 	var hit_normal: Vector3 = result.normal
 	var target: Node = result.collider
-
-	# --- 第五步：尝试对目标造成伤害 ---
-	# 优先检查目标节点本身是否有 take_damage 方法（比如敌人自己就是 CharacterBody3D）
+	_spawn_tracer(_muzzle.global_position, hit_point)
 	if target.has_method("take_damage"):
 		target.take_damage(weapon_data.damage, weapon_data.damage_type)
 		_try_apply_stun(target)
-	# 如果目标本身没有 take_damage，检查它的子节点（Damageable 作为子节点挂在上面）
+		_try_apply_knockback(target, direction)
+		_spawn_damage_number(hit_point, weapon_data.damage, false)
+		GameBus.play_sfx.emit("bullet_hit", hit_point)
 	else:
 		_try_damage_child(target)
-
-	# --- 第六步：发射命中信号 ---
-	# 其他模块（比如弹孔贴花系统、火花特效系统）可以监听这个信号
 	hit_something.emit(hit_point, hit_normal, target)
 
 
@@ -351,6 +389,67 @@ func _try_apply_stun(node: Node) -> void:
 			current.apply_stun(weapon_data.stun_damage)
 			return
 		current = current.get_parent()
+
+
+# 对命中目标尝试施加击退——从 node 向上查找 Enemy 节点
+func _try_apply_knockback(node: Node, direction: Vector3) -> void:
+	if weapon_data.knockback_force <= 0.0:
+		return
+	var current: Node = node
+	while current != null:
+		if current is Enemy and current.has_method("apply_knockback"):
+			var kb_dir := direction.normalized()
+			kb_dir.y = 0.0
+			if kb_dir.length_squared() < 0.01:
+				kb_dir = -_camera.global_transform.basis.z.normalized()
+				kb_dir.y = 0.0
+			current.apply_knockback(kb_dir, weapon_data.knockback_force)
+			return
+		current = current.get_parent()
+
+# ==============================================================================
+# _spawn_tracer(from, to) — 生成弹道线视效
+# ==============================================================================
+func _spawn_tracer(from: Vector3, to: Vector3) -> void:
+	var dir := to - from
+	var length := dir.length()
+	if length < 0.01:
+		return
+	var mid := from + dir * 0.5
+	var tracer := MeshInstance3D.new()
+	var box := BoxMesh.new()
+	box.size = Vector3(0.02, 0.02, length)
+	tracer.mesh = box
+	tracer.global_position = mid
+	tracer.look_at(to, Vector3.UP)
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(1, 1, 1, 0.4)
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	tracer.material_override = mat
+	get_tree().root.add_child(tracer)
+	var timer := get_tree().create_timer(0.12)
+	timer.timeout.connect(tracer.queue_free)
+
+# ==============================================================================
+# _spawn_damage_number(pos, amount, is_stun) — 生成浮动伤害数字
+# ==============================================================================
+func _spawn_damage_number(pos: Vector3, amount: float, is_stun: bool) -> void:
+	var label := Label3D.new()
+	label.text = str(roundi(amount))
+	label.font_size = 28
+	if is_stun:
+		label.modulate = Color(0.3, 0.6, 1.0)
+	else:
+		label.modulate = Color(1.0, 1.0, 1.0)
+	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	label.position = pos + Vector3(0, 1.0, 0)
+	get_tree().root.add_child(label)
+
+	var tween := create_tween()
+	tween.tween_property(label, "position:y", pos.y + 2.0, 0.6)
+	tween.parallel().tween_property(label, "modulate:a", 0.0, 0.6)
+	tween.tween_callback(label.queue_free)
 
 
 # ==============================================================================

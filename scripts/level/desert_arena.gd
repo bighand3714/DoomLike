@@ -50,6 +50,9 @@ func _get_ground_color() -> Color:
 func _get_boundary_color() -> Color:
 	return Color(1.0, 0.95, 0.7)  # 浅黄白色，远距离明显
 
+func _get_fog_color() -> Color:
+	return Color(0.76, 0.66, 0.4)
+
 
 # ==============================================================================
 # _spawn_dead_trees() —— 随机生成枯树道具（Phase 3.6）

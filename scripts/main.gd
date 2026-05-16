@@ -1,13 +1,6 @@
 # ==============================================================================
 # Main — 游戏主控制器
 # ==============================================================================
-# 挂在场景根节点（Main）上，负责游戏状态机、菜单信号、关卡加载管线、
-# RunStats 驱动、存档读写、命中标记和受伤效果。
-#
-# Phase 2.9：用 ArenaLevel PackedScene 加载替代 Phase 1.7 的
-# reload_current_scene()，实现真正的关卡切换。
-# ==============================================================================
-
 extends Node3D
 
 const RunStatsClass = preload("res://scripts/core/run_stats.gd")
@@ -19,6 +12,7 @@ const GameOverClass = preload("res://scripts/ui/game_over_screen.gd")
 const ArenaLevelClass = preload("res://scripts/level/arena_level.gd")
 const LevelRegistryClass = preload("res://scripts/level/level_registry.gd")
 const SpawnManagerClass = preload("res://scripts/enemy/spawn_manager.gd")
+const DropManagerClass = preload("res://scripts/pickup/drop_manager.gd")
 const IronWhipClass = preload("res://scripts/weapon/iron_whip.gd")
 const WhipDataClass = preload("res://scripts/weapon/whip_data.gd")
 
@@ -36,16 +30,16 @@ var _current_level_id: String = ""
 var _current_level: Node3D = null
 var _current_arena: ArenaLevel = null
 var _spawn_manager: Node = null
+var _drop_manager: Node = null
 var _iron_whip: Node3D = null
 var _hit_marker_connected := false
+var _crosshair_x1: ColorRect = null
+var _crosshair_x2: ColorRect = null
 
 var _run_stats := RunStatsClass.new()
 var _save_data := SaveDataClass.new()
 
 
-# ==============================================================================
-# _ready()
-# ==============================================================================
 func _ready() -> void:
 	_setup_crosshair()
 
@@ -69,23 +63,19 @@ func _ready() -> void:
 	_game_over_screen.level_select_requested.connect(_on_game_over_level_select)
 	_game_over_screen.main_menu_requested.connect(_on_game_over_main_menu)
 
-	# GameBus 信号连接（模块 → Main → HUD/内部处理）
 	GameBus.pickup_notification.connect(show_pickup_notification)
 	GameBus.player_hit.connect(player_hit)
 	GameBus.pause_toggle.connect(toggle_pause)
 	GameBus.shield_block.connect(_on_shield_block)
 	GameBus.grab_status_show.connect(_on_grab_status_show)
 	GameBus.grab_status_hide.connect(_on_grab_status_hide)
+	GameBus.play_sfx.connect(_on_play_sfx)
 
-	# 设置全局数据引用（供其他模块通过 GameBus 直接读取）
 	GameBus.save_data = _save_data
 
 	_set_game_state(GameState.State.MAIN_MENU)
 
 
-# ==============================================================================
-# _set_game_state(next_state) — 游戏状态切换
-# ==============================================================================
 func _set_game_state(next_state: GameState.State) -> void:
 	var prev := _game_state
 	_game_state = next_state
@@ -108,8 +98,6 @@ func _set_game_state(next_state: GameState.State) -> void:
 			Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
 		GameState.State.PLAYING:
-			# 从非 PAUSED 进入时连接信号（首次进入或重开）。
-			# 关卡加载在 _start_level() 中已完成，这里只做信号连接。
 			if prev != GameState.State.PAUSED:
 				_reset_run_stats()
 				_connect_player_death()
@@ -135,10 +123,6 @@ func _set_game_state(next_state: GameState.State) -> void:
 			_hide_hud()
 			_end_run()
 
-
-# ==============================================================================
-# 菜单信号回调
-# ==============================================================================
 
 func _on_start_requested() -> void:
 	_set_game_state(GameState.State.LEVEL_SELECT)
@@ -170,39 +154,21 @@ func _on_back_to_menu() -> void:
 	_set_game_state(GameState.State.MAIN_MENU)
 
 
-# ==============================================================================
-# _start_level(level_id) — 启动指定关卡（Phase 2.9 重写）
-# ==============================================================================
-# 完整的关卡启动流程：
-#   1. 卸载旧关卡（如果有）——清理节点树 + 重置引用
-#   2. 加载新关卡 PackedScene → 实例化 → 挂到 _level_root 下
-#   3. 设置出生点——把玩家传送到 ArenaLevel.get_player_spawn_transform()
-#   4. 连接边界警告信号 → HUD 显示"已到达边界"
-#   5. 重置玩家血量/护甲/弹药
-#   6. 切换到 PLAYING 状态
 func _start_level(level_id: String) -> void:
 	_current_level_id = level_id
-
-	# 1. 卸载旧关卡
 	_unload_current_level()
-
-	# 2. 加载新关卡
 	_load_arena_level(level_id)
-
-	# 3. 玩家出生
 	_reset_player_for_level()
-
-	# 4. 切换到战斗状态（PLAYING handler 中连接信号）
 	_set_game_state(GameState.State.PLAYING)
 
 
-# ==============================================================================
-# _unload_current_level() — 卸载当前关卡
-# ==============================================================================
 func _unload_current_level() -> void:
 	if _spawn_manager != null:
 		_spawn_manager.stop()
 		_spawn_manager = null
+	if _drop_manager != null:
+		_drop_manager.queue_free()
+		_drop_manager = null
 	if _iron_whip != null and _iron_whip.has_method("release_grab"):
 		_iron_whip.release_grab()
 	_player.set_speed_multiplier(1.0)
@@ -215,15 +181,11 @@ func _unload_current_level() -> void:
 		_current_level.queue_free()
 		_current_level = null
 
-	# 清理残留在 root 的投射物（敌人火球等直接加在 root 上）
 	for child in get_tree().root.get_children():
 		if child is Area3D and child.has_method("_on_body_entered"):
 			child.queue_free()
 
 
-# ==============================================================================
-# _load_arena_level(level_id) — 加载竞技场关卡 PackedScene
-# ==============================================================================
 func _load_arena_level(level_id: String) -> void:
 	var scene_path := LevelRegistryClass.get_scene_path(level_id)
 	var packed := load(scene_path) as PackedScene
@@ -234,58 +196,48 @@ func _load_arena_level(level_id: String) -> void:
 	_current_level = packed.instantiate()
 	_level_root.add_child(_current_level)
 
-	# 如果是 ArenaLevel，设置玩家引用并连接边界信号
 	if _current_level is ArenaLevelClass:
 		_current_arena = _current_level as ArenaLevel
 		_current_arena.set_player(_player)
 		if not _current_arena.boundary_warning_requested.is_connected(_on_boundary_warning):
 			_current_arena.boundary_warning_requested.connect(_on_boundary_warning)
 
-	# 创建/设置 SpawnManager
 	_setup_spawn_manager()
 
 
-# ==============================================================================
-# _reset_player_for_level() — 重置玩家状态到关卡初始值
-# ==============================================================================
 func _reset_player_for_level() -> void:
-	# 传送到出生点
 	if _current_arena != null:
 		var spawn := _current_arena.get_player_spawn_transform()
 		_player.global_position = spawn.origin
 		_player.rotation.y = spawn.basis.get_euler().y
 
-	# 重置速度
 	_player.velocity = Vector3.ZERO
 
-	# 重置血量/护甲
 	var dmg := _player.get_node_or_null("Damageable") as Damageable
 	if dmg != null:
 		dmg.reset()
 
-	# 重置武器弹药
 	var wm := _player.find_child("WeaponManager", true, false) as WeaponManager
 	if wm != null and wm.has_method("reset_all_weapons"):
 		wm.reset_all_weapons()
 
-	# 重置 HUD 击杀计数
 	var ps := get_node_or_null("UI/PlayerStatus")
 	if ps != null and ps.has_method("reset_kill_count"):
 		ps.reset_kill_count()
 
-	# 重置铁鞭状态
 	_setup_iron_whip()
 
-	# 启动刷怪
 	if _spawn_manager != null:
 		_spawn_manager.start()
 
+	if _drop_manager != null:
+		_drop_manager.queue_free()
+	_drop_manager = DropManagerClass.new()
+	_drop_manager.name = "DropManager"
+	add_child(_drop_manager)
 
-# ==============================================================================
-# _setup_spawn_manager —— 创建/配置 SpawnManager（Phase 7）
-# ==============================================================================
+
 func _setup_spawn_manager() -> void:
-	# 清除旧的
 	if _spawn_manager != null:
 		_spawn_manager.stop()
 		_spawn_manager = null
@@ -297,7 +249,6 @@ func _setup_spawn_manager() -> void:
 	var sm := SpawnManagerClass.new()
 	sm.name = "SpawnManager"
 
-	# 根据关卡选择刷怪 profile
 	var profile := "default"
 	if _current_level_id == "desert":
 		profile = "desert"
@@ -306,19 +257,14 @@ func _setup_spawn_manager() -> void:
 
 	sm.setup(_current_arena, em, _run_stats, profile)
 
-	# 连接强度变化信号 → HUD
 	if sm.intensity_changed.is_connected(_on_intensity_changed):
 		sm.intensity_changed.disconnect(_on_intensity_changed)
 	sm.intensity_changed.connect(_on_intensity_changed)
 
-	# 挂在 Level 节点下
 	_level_root.add_child(sm)
 	_spawn_manager = sm
 
 
-# ==============================================================================
-# _setup_iron_whip —— 创建/配置左手铁鞭（Phase 8）
-# ==============================================================================
 func _setup_iron_whip() -> void:
 	var holder := _player.get_node_or_null("Camera3D/LeftHandHolder")
 	if holder == null:
@@ -328,18 +274,15 @@ func _setup_iron_whip() -> void:
 	if camera == null:
 		return
 
-	# 释放旧铁鞭抓取的敌人
 	if _iron_whip != null:
 		if _iron_whip.has_method("release_grab"):
 			_iron_whip.release_grab()
 		_iron_whip.queue_free()
 		_iron_whip = null
 
-	# 创建新铁鞭
 	var whip := IronWhipClass.new()
 	whip.name = "IronWhip"
 
-	# 加载 WhipData
 	var whip_data := load("res://assets/weapons/iron_whip.tres")
 	whip.setup(whip_data, camera, _player)
 
@@ -347,26 +290,16 @@ func _setup_iron_whip() -> void:
 	_iron_whip = whip
 
 
-# ==============================================================================
-# _on_intensity_changed —— 强度变化 → 更新 HUD
-# ==============================================================================
 func _on_intensity_changed(new_intensity: int) -> void:
 	var ps := get_node_or_null("UI/PlayerStatus")
 	if ps != null and ps.has_method("update_intensity"):
 		ps.update_intensity(new_intensity)
 
 
-# ==============================================================================
-# _process(delta) — 每渲染帧更新 RunStats 计时器
-# ==============================================================================
 func _process(delta: float) -> void:
 	if _game_state == GameState.State.PLAYING and _run_stats.is_running:
 		_run_stats.update(delta)
 
-
-# ==============================================================================
-# RunStats 相关方法
-# ==============================================================================
 
 func _reset_run_stats() -> void:
 	_run_stats.start(_current_level_id)
@@ -392,7 +325,6 @@ func _on_enemy_killed_for_score(_enemy_name: String, score_value: int) -> void:
 	_run_stats.add_kill(score_value)
 
 func _on_player_died() -> void:
-	# 清理铁鞭状态（释放抓取敌人）
 	if _iron_whip != null and _iron_whip.has_method("release_grab"):
 		_iron_whip.release_grab()
 	_player.set_speed_multiplier(1.0)
@@ -423,9 +355,6 @@ func get_save_data() -> RefCounted:
 	return _save_data
 
 
-# ==============================================================================
-# toggle_pause() — Esc 键切换暂停
-# ==============================================================================
 func toggle_pause() -> void:
 	match _game_state:
 		GameState.State.PLAYING:
@@ -433,10 +362,6 @@ func toggle_pause() -> void:
 		GameState.State.PAUSED:
 			_set_game_state(GameState.State.PLAYING)
 
-
-# ==============================================================================
-# 菜单工厂方法
-# ==============================================================================
 
 func _create_main_menu() -> CanvasLayer:
 	var menu := MainMenuClass.new()
@@ -459,10 +384,6 @@ func _create_game_over_screen() -> CanvasLayer:
 	return menu
 
 
-# ==============================================================================
-# _show_hud() / _hide_hud()
-# ==============================================================================
-
 func _show_hud() -> void:
 	var ps := get_node_or_null("UI/PlayerStatus")
 	if ps != null:
@@ -483,7 +404,7 @@ func _hide_hud() -> void:
 
 
 # ==============================================================================
-# 命中标记
+# 命中标记 + X 字准星
 # ==============================================================================
 
 func _connect_hit_marker() -> void:
@@ -510,9 +431,10 @@ func _on_hit_something(_hit_point: Vector3, _hit_normal: Vector3, target: Node) 
 	var check: Node = target
 	while check != null:
 		if check is CharacterBody3D and check.has_method("take_damage"):
-			_flash_crosshair()
-			break
+			_show_x_crosshair()
+			return
 		check = check.get_parent()
+	_flash_crosshair()
 
 func _flash_crosshair() -> void:
 	_crosshair.color = Color(1.0, 0.0, 0.0, 0.9)
@@ -520,6 +442,20 @@ func _flash_crosshair() -> void:
 
 func _restore_crosshair() -> void:
 	_crosshair.color = Color(0.0, 1.0, 0.0, 0.7)
+
+func _show_x_crosshair() -> void:
+	_flash_crosshair()
+	if _crosshair_x1:
+		_crosshair_x1.visible = true
+	if _crosshair_x2:
+		_crosshair_x2.visible = true
+	get_tree().create_timer(0.12).timeout.connect(_hide_x_crosshair)
+
+func _hide_x_crosshair() -> void:
+	if _crosshair_x1:
+		_crosshair_x1.visible = false
+	if _crosshair_x2:
+		_crosshair_x2.visible = false
 
 
 # ==============================================================================
@@ -539,7 +475,7 @@ func show_pickup_notification(text: String, color: Color) -> void:
 
 
 # ==============================================================================
-# GameBus 信号处理器 —— 转发到 HUD 或内部处理
+# GameBus 信号处理器
 # ==============================================================================
 
 func _on_shield_block() -> void:
@@ -557,6 +493,9 @@ func _on_grab_status_hide() -> void:
 	if ps != null and ps.has_method("hide_grab_status"):
 		ps.hide_grab_status()
 
+func _on_play_sfx(_sfx_name: String, _position: Vector3) -> void:
+	pass  # SFX 占位：后续接入音频资源时替换
+
 
 # ==============================================================================
 # 准星
@@ -566,7 +505,44 @@ func _setup_crosshair() -> void:
 	_crosshair.color = Color(0.0, 1.0, 0.0, 0.7)
 	_crosshair.size = Vector2(4, 4)
 	_crosshair.position = Vector2(get_viewport().size) / 2.0 - _crosshair.size / 2.0
+
+	# X 字准星
+	var viewport_size: Vector2 = get_viewport().size
+	var cx: float = viewport_size.x / 2.0
+	var cy: float = viewport_size.y / 2.0
+	var x_len: float = 12.0
+	var x_thick: float = 3.0
+
+	_crosshair_x1 = ColorRect.new()
+	_crosshair_x1.color = Color(1.0, 0.0, 0.0, 0.9)
+	_crosshair_x1.size = Vector2(x_len, x_thick)
+	_crosshair_x1.pivot_offset = Vector2(x_len / 2.0, x_thick / 2.0)
+	_crosshair_x1.position = Vector2(cx - x_len / 2.0, cy - x_thick / 2.0)
+	_crosshair_x1.rotation = deg_to_rad(45.0)
+	_crosshair_x1.visible = false
+	_crosshair_x1.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_crosshair_x1)
+
+	_crosshair_x2 = ColorRect.new()
+	_crosshair_x2.color = Color(1.0, 0.0, 0.0, 0.9)
+	_crosshair_x2.size = Vector2(x_len, x_thick)
+	_crosshair_x2.pivot_offset = Vector2(x_len / 2.0, x_thick / 2.0)
+	_crosshair_x2.position = Vector2(cx - x_len / 2.0, cy - x_thick / 2.0)
+	_crosshair_x2.rotation = deg_to_rad(-45.0)
+	_crosshair_x2.visible = false
+	_crosshair_x2.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_crosshair_x2)
+
 	get_tree().root.size_changed.connect(_on_window_resized)
 
 func _on_window_resized() -> void:
-	_crosshair.position = Vector2(get_viewport().size) / 2.0 - _crosshair.size / 2.0
+	var viewport_size: Vector2 = get_viewport().size
+	var cx: float = viewport_size.x / 2.0
+	var cy: float = viewport_size.y / 2.0
+	var x_len: float = 12.0
+	var x_thick: float = 3.0
+	_crosshair.position = Vector2(cx - _crosshair.size.x / 2.0, cy - _crosshair.size.y / 2.0)
+	if _crosshair_x1:
+		_crosshair_x1.position = Vector2(cx - x_len / 2.0, cy - x_thick / 2.0)
+	if _crosshair_x2:
+		_crosshair_x2.position = Vector2(cx - x_len / 2.0, cy - x_thick / 2.0)

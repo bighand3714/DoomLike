@@ -27,6 +27,7 @@ class_name LevelRegistry extends RefCounted
 # 不如统一写 LevelRegistry.DESERT（写错了编译器会报错）。
 const DESERT := "desert"
 const LAVA := "lava"
+const TEST := "test"
 
 
 # ==============================================================================
@@ -49,6 +50,13 @@ static var _data := {
 		description = "熔岩河流持续伤害\n柱状岩石提供掩体",
 		scene_path = "res://scenes/levels/lava_arena.tscn",
 		color = Color(0.7, 0.2, 0.1),
+	},
+	TEST: {
+		display_name = "测试关卡",
+		description = "手动放置敌人
+用于武器/机制测试",
+		scene_path = "res://scenes/levels/test_arena.tscn",
+		color = Color(0.5, 0.5, 0.55),
 	},
 }
 

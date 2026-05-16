@@ -35,6 +35,12 @@ signal grab_status_show(enemy_name: String)
 ## 抓取状态 HUD 隐藏（iron_whip → Main → HUD）
 signal grab_status_hide()
 
+## 敌人死亡位置（EnemyManager → DropManager）
+signal enemy_death_position(position: Vector3)
+
+## 音效播放请求（各模块 → 音效系统，当前 print 占位）
+signal play_sfx(sfx_name: String, position: Vector3)
+
 
 # ==============================================================================
 # 共享数据引用 — 由 main.gd 在关卡生命周期中设置

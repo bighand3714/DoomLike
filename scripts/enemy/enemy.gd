@@ -48,6 +48,8 @@ func _ready() -> void:
 	if _player == null:
 		_player = get_node_or_null("/root/Main/Player") as CharacterBody3D
 
+	add_to_group("enemy")
+
 	_damageable = _get_or_create_damageable()
 	_damageable.damaged.connect(_on_damaged)
 	_damageable.died.connect(_on_died)
