@@ -68,6 +68,22 @@ func _create_ui() -> void:
 	back_btn.pressed.connect(_on_back)
 	add_child(back_btn)
 
+	# 测试关卡入口（右下角）
+	var test_btn := Button.new()
+	test_btn.text = "测试关卡"
+	test_btn.add_theme_font_size_override("font_size", 16)
+	test_btn.add_theme_color_override("font_color", Color(0.5, 0.5, 0.55))
+	test_btn.anchor_left = 1.0
+	test_btn.anchor_right = 1.0
+	test_btn.anchor_top = 1.0
+	test_btn.anchor_bottom = 1.0
+	test_btn.offset_left = -130.0
+	test_btn.offset_right = -16.0
+	test_btn.offset_top = -60.0
+	test_btn.offset_bottom = -20.0
+	test_btn.pressed.connect(_on_level_selected.bind("test"))
+	add_child(test_btn)
+
 
 # _create_level_panel(index, level_id) — 创建一个关卡面板
 # ==============================================================================

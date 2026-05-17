@@ -228,7 +228,8 @@ func _reset_player_for_level() -> void:
 	_setup_iron_whip()
 
 	if _spawn_manager != null:
-		_spawn_manager.start()
+		if _current_level_id != "test":
+			_spawn_manager.start()
 
 	if _drop_manager != null:
 		_drop_manager.queue_free()

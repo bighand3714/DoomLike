@@ -35,9 +35,14 @@ var total_kills: int = 0
 # _ready()
 # ==============================================================================
 func _ready() -> void:
-	for child in get_parent().get_children():
+	_scan_for_enemies(get_parent())
+
+
+func _scan_for_enemies(node: Node) -> void:
+	for child in node.get_children():
 		if child is EnemyClass:
 			register_enemy(child)
+		_scan_for_enemies(child)
 
 
 # ==============================================================================

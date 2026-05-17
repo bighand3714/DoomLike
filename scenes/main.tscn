@@ -1,12 +1,10 @@
 [gd_scene format=3 uid="uid://3id15akegrw4"]
 
 [ext_resource type="Script" uid="uid://cc0085xwrw74f" path="res://scripts/main.gd" id="1_main"]
-[ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="2_player_scene"]
+[ext_resource type="PackedScene" uid="uid://bn0rmxpmchm1q" path="res://scenes/player/player.tscn" id="2_player_scene"]
 [ext_resource type="Script" uid="uid://dgl801sm08a3d" path="res://scripts/utils/fps_counter.gd" id="3_fps"]
 [ext_resource type="Script" uid="uid://bq7mxaap7n220" path="res://scripts/ui/player_status.gd" id="4_ps"]
 [ext_resource type="Script" uid="uid://bafh4ybw4u2ud" path="res://scripts/enemy/enemy_manager.gd" id="5_em"]
-[ext_resource type="PackedScene" path="res://scenes/enemies/imp.tscn" id="5_tipki"]
-[ext_resource type="PackedScene" path="res://scenes/enemies/flying_enemy.tscn" id="9_choun"]
 [ext_resource type="Script" uid="uid://bsg12huaf1u5i" path="res://addons/godot_mcp/runtime/mcp_runtime_probe.gd" id="10_choun"]
 
 [node name="Main" type="Node3D" unique_id=981212117]
@@ -29,12 +27,6 @@ size = Vector3(400, 0.3, 400)
 
 [node name="PlayerStart" type="Node3D" parent="Level" unique_id=1326714825]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -9.473101, 1.3648834, 5.883645)
-
-[node name="Imp" parent="Level" unique_id=1711322783 instance=ExtResource("5_tipki")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12.048926, 0.2748685, -10.1339)
-
-[node name="FlyingEnemy" parent="Level" unique_id=1664249890 instance=ExtResource("9_choun")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.817074, 1.6521549, -0.56815004)
 
 [node name="UI" type="CanvasLayer" parent="." unique_id=608529813]
 

@@ -1,16 +1,39 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://blo2fnnxmn1yu"]
 
-[ext_resource type="Script" path="res://scripts/enemy/standard_enemy.gd" id="1_script"]
-[ext_resource type="Resource" path="res://assets/enemies/standard_enemy.tres" id="2_data"]
+[ext_resource type="Script" uid="uid://er7geu3idnul" path="res://scripts/enemy/standard_enemy.gd" id="1_script"]
+[ext_resource type="Resource" uid="uid://53aharkyxsd0" path="res://assets/enemies/standard_enemy.tres" id="2_data"]
 
-[sub_resource type="CapsuleShape3D" id="capsule_shape"]
-radius = 0.4
-height = 1.8
+[sub_resource type="StandardMaterial3D" id="mat_body"]
+albedo_color = Color(0.15, 0.45, 0.85, 1)
+roughness = 0.25
+emission_enabled = true
+emission = Color(0.05, 0.15, 0.3, 1)
+emission_energy_multiplier = 0.3
 
-[node name="StandardEnemy" type="CharacterBody3D"]
+[sub_resource type="StandardMaterial3D" id="mat_eye"]
+roughness = 0.1
+
+[sub_resource type="SphereShape3D" id="sphere_shape"]
+
+[node name="StandardEnemy" type="CharacterBody3D" unique_id=1065712478]
 script = ExtResource("1_script")
 enemy_data = ExtResource("2_data")
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
-shape = SubResource("capsule_shape")
+[node name="Body" type="CSGSphere3D" parent="." unique_id=1375723230]
+transform = Transform3D(1.654, 0, 0, 0, 1.195, 0, 0, 0, 1.563, 0, 0.75, 0)
+material_override = SubResource("mat_body")
+radius = 0.55
+
+[node name="LeftEye" type="CSGSphere3D" parent="." unique_id=1614862688]
+transform = Transform3D(1.837778, 0, 0, 0, 1.8384616, 0, 0, 0, 1.8388236, -0.2572889, 1.3015385, -0.69875294)
+material_override = SubResource("mat_eye")
+radius = 0.1
+
+[node name="RightEye" type="CSGSphere3D" parent="." unique_id=1146099755]
+transform = Transform3D(1.837778, 0, 0, 0, 1.8384616, 0, 0, 0, 1.8388236, 0.2572889, 1.3015385, -0.69875294)
+material_override = SubResource("mat_eye")
+radius = 0.1
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=1959435672]
+transform = Transform3D(1.825, 0, 0, 0, 1.825, 0, 0, 0, 1.825, 0, 0.75, 0)
+shape = SubResource("sphere_shape")

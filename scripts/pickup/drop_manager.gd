@@ -32,6 +32,8 @@ func _ready() -> void:
 
 
 func _on_enemy_death(position: Vector3) -> void:
+	# 飞行敌人死亡位置在空中，掉落物落到地面
+	position.y = 0.0
 	var roll := _rng.randf()
 	var cumulative := 0.0
 
@@ -83,8 +85,4 @@ func _setup_pickup(pickup: Area3D, pos: Vector3, _color: Color, _emit: Color) ->
 
 	# 30 秒后自动消失
 	var timer := get_tree().create_timer(pickup_lifetime)
-	timer.timeout.connect(_cleanup_pickup.bind(pickup))
-
-func _cleanup_pickup(pickup: Area3D) -> void:
-	if is_instance_valid(pickup):
-		pickup.queue_free()
+	timer.timeout.connect(pickup.queue_free)

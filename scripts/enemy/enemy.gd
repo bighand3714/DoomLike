@@ -50,6 +50,9 @@ func _ready() -> void:
 
 	add_to_group("enemy")
 
+	# 向 EnemyManager 自注册（支持编辑器中手动放置敌人）
+	_register_to_manager()
+
 	_damageable = _get_or_create_damageable()
 	_damageable.damaged.connect(_on_damaged)
 	_damageable.died.connect(_on_died)
@@ -62,7 +65,7 @@ func _ready() -> void:
 
 	var _has_model := false
 	for child in get_children():
-		if child is CSGBox3D or child is CSGPolygon3D or child is MeshInstance3D:
+		if child is CSGShape3D or child is MeshInstance3D:
 			_has_model = true
 			break
 	if not _has_model:
@@ -439,6 +442,16 @@ func execute() -> void:
 # ==============================================================================
 # 移动辅助
 # ==============================================================================
+func _register_to_manager() -> void:
+	var parent := get_parent()
+	while parent != null:
+		for child in parent.get_children():
+			if child is EnemyManager and not child.active_enemies.has(self):
+				child.register_enemy(self)
+				return
+		parent = parent.get_parent()
+
+
 func _get_player_flat_direction() -> Vector3:
 	var dir := _player.global_position - global_position
 	dir.y = 0.0
@@ -500,7 +513,7 @@ func _flash_pain(flash_color: Color = Color.WHITE) -> void:
 		var geo: Node3D = null
 		if child is MeshInstance3D:
 			geo = child
-		elif child is CSGBox3D or child is CSGPolygon3D:
+		elif child is CSGShape3D:
 			geo = child
 		if geo == null:
 			continue
@@ -543,7 +556,7 @@ func _on_death_visual() -> void:
 	var tween := create_tween()
 	tween.tween_property(self, "scale", Vector3(0.3, 0.3, 0.3), shrink_time)
 	for child in get_children():
-		if child is MeshInstance3D or child is CSGBox3D or child is CSGPolygon3D:
+		if child is MeshInstance3D or child is CSGShape3D:
 			var geo: Node3D = child
 			var death_mat := StandardMaterial3D.new()
 			death_mat.albedo_color = Color(0.3, 0.3, 0.3)
@@ -555,11 +568,16 @@ func _on_death_visual() -> void:
 # ==============================================================================
 func _create_debug_bars() -> void:
 	var bar_thick := 0.06
-	# z 为负值：敌人正面是 -Z，负 Z 让血条在敌人前方可见
-	var bar_z: float = -0.06
+	# z 负值：敌人正面是 -Z，放在身体前方
+	var bar_z: float = -0.5
 
-	# HP 血条（绿色，无黑底）
+	# HP 血条（绿色发光）
 	_debug_hp_bar = _make_bar("HPBar", Color(0.2, 0.9, 0.2), DEBUG_BAR_Y - 0.1, bar_thick, bar_z)
+	var hp_mat := _debug_hp_bar.material_override as StandardMaterial3D
+	if hp_mat != null:
+		hp_mat.emission_enabled = true
+		hp_mat.emission = Color(0.2, 0.9, 0.2)
+		hp_mat.emission_energy_multiplier = 0.5
 
 	# 眩晕条（黄色，无黑底）
 	_debug_stun_bar = _make_bar("StunBar", Color(1.0, 0.9, 0.1), DEBUG_BAR_Y, bar_thick, bar_z)
