@@ -107,6 +107,7 @@ var _dash_travelled: float = 0.0
 # 在场景编辑器中右键节点 → "设为唯一名称"后就可以这样引用。
 # 这样做比写路径（如 $"Camera3D"）更安全，不会因为改了节点名字就出错。
 @onready var _camera: Camera3D = %Camera3D
+@onready var _player_model: Node3D = $PlayerModel
 
 
 # ==============================================================================
@@ -309,3 +310,10 @@ func apply_screen_shake(intensity: float) -> void:
 # 返回当前被抓取的敌人（供 enemy/projectile 盾牌阻挡判定）
 func get_grabbed_enemy() -> Node:
 	return grabbed_enemy
+
+
+
+# 切换角色模型可见性（调试/第三人称/多人模式用）
+func set_player_model_visible(v: bool) -> void:
+	if _player_model:
+		_player_model.visible = v

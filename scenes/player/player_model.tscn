@@ -1,0 +1,224 @@
+[gd_scene format=3 uid="uid://cwo63byn04212"]
+
+[ext_resource type="Material" uid="uid://dt01uvlt0hykg" path="res://assets/materials/player_body.tres" id="1_body"]
+[ext_resource type="Material" uid="uid://de5of3ptfyqfr" path="res://assets/materials/player_skin.tres" id="2_skin"]
+[ext_resource type="Material" uid="uid://cggtx3eaw0q8w" path="res://assets/materials/player_hair.tres" id="3_hair"]
+[ext_resource type="Material" uid="uid://dobslroaioeyw" path="res://assets/materials/player_hair_dark.tres" id="4_hair_dark"]
+[ext_resource type="Material" uid="uid://bbdpd0m8iej13" path="res://assets/materials/player_skirt.tres" id="5_skirt"]
+[ext_resource type="Material" uid="uid://dtuh6ukt5mc15" path="res://assets/materials/player_scarf.tres" id="6_scarf"]
+[ext_resource type="Material" uid="uid://cqvhc0r8ybib" path="res://assets/materials/player_ear_inner.tres" id="7_ear_inner"]
+[ext_resource type="Material" uid="uid://b3nast54jyqs5" path="res://assets/materials/player_socks.tres" id="8_socks"]
+[ext_resource type="Material" uid="uid://c1b0nc4xanpgo" path="res://assets/materials/player_shoes.tres" id="9_shoes"]
+
+[sub_resource type="BoxMesh" id="mesh_body"]
+size = Vector3(0.32, 0.40, 0.18)
+
+[sub_resource type="BoxMesh" id="mesh_pelvis"]
+size = Vector3(0.28, 0.16, 0.14)
+
+[sub_resource type="CylinderMesh" id="mesh_skirt"]
+top_radius = 0.20
+bottom_radius = 0.20
+height = 0.22
+radial_segments = 6
+
+[sub_resource type="CylinderMesh" id="mesh_neck"]
+top_radius = 0.06
+bottom_radius = 0.06
+height = 0.08
+radial_segments = 6
+
+[sub_resource type="BoxMesh" id="mesh_skull"]
+size = Vector3(0.18, 0.20, 0.18)
+
+[sub_resource type="BoxMesh" id="mesh_jaw"]
+size = Vector3(0.16, 0.07, 0.14)
+
+[sub_resource type="PrismMesh" id="mesh_ear"]
+size = Vector3(0.05, 0.12, 0.05)
+
+[sub_resource type="BoxMesh" id="mesh_hair_back"]
+size = Vector3(0.20, 0.05, 0.14)
+
+[sub_resource type="BoxMesh" id="mesh_hair_side"]
+size = Vector3(0.04, 0.12, 0.15)
+
+[sub_resource type="BoxMesh" id="mesh_bangs"]
+size = Vector3(0.20, 0.03, 0.07)
+
+[sub_resource type="BoxMesh" id="mesh_upper_arm"]
+size = Vector3(0.09, 0.24, 0.09)
+
+[sub_resource type="BoxMesh" id="mesh_forearm"]
+size = Vector3(0.08, 0.22, 0.08)
+
+[sub_resource type="BoxMesh" id="mesh_hand"]
+size = Vector3(0.07, 0.10, 0.04)
+
+[sub_resource type="BoxMesh" id="mesh_upper_leg"]
+size = Vector3(0.12, 0.30, 0.12)
+
+[sub_resource type="BoxMesh" id="mesh_lower_leg"]
+size = Vector3(0.10, 0.28, 0.10)
+
+[sub_resource type="BoxMesh" id="mesh_foot"]
+size = Vector3(0.10, 0.06, 0.16)
+
+[sub_resource type="BoxMesh" id="mesh_scarf_knot"]
+size = Vector3(0.06, 0.06, 0.04)
+
+[sub_resource type="BoxMesh" id="mesh_scarf_tail"]
+size = Vector3(0.04, 0.20, 0.01)
+
+[node name="PlayerModel" type="Node3D"]
+
+[node name="Body" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.08, 0)
+mesh = SubResource("mesh_body")
+surface_material_override/0 = ExtResource("1_body")
+
+[node name="Pelvis" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.82, 0)
+mesh = SubResource("mesh_pelvis")
+surface_material_override/0 = ExtResource("5_skirt")
+
+[node name="Skirt" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.73, 0)
+mesh = SubResource("mesh_skirt")
+surface_material_override/0 = ExtResource("5_skirt")
+
+[node name="Neck" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.26, 0)
+mesh = SubResource("mesh_neck")
+surface_material_override/0 = ExtResource("2_skin")
+
+[node name="Head" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.36, 0)
+
+[node name="Skull" type="MeshInstance3D" parent="Head"]
+mesh = SubResource("mesh_skull")
+surface_material_override/0 = ExtResource("2_skin")
+
+[node name="Jaw" type="MeshInstance3D" parent="Head"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.13, 0.02)
+mesh = SubResource("mesh_jaw")
+surface_material_override/0 = ExtResource("2_skin")
+
+[node name="LeftEar" type="MeshInstance3D" parent="Head"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.07, 0.12, 0)
+mesh = SubResource("mesh_ear")
+surface_material_override/0 = ExtResource("3_hair")
+
+[node name="RightEar" type="MeshInstance3D" parent="Head"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.07, 0.12, 0)
+mesh = SubResource("mesh_ear")
+surface_material_override/0 = ExtResource("3_hair")
+
+[node name="HairBack" type="MeshInstance3D" parent="Head"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.04, -0.08)
+mesh = SubResource("mesh_hair_back")
+surface_material_override/0 = ExtResource("4_hair_dark")
+
+[node name="HairLeft" type="MeshInstance3D" parent="Head"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.10, -0.02, 0)
+mesh = SubResource("mesh_hair_side")
+surface_material_override/0 = ExtResource("3_hair")
+
+[node name="HairRight" type="MeshInstance3D" parent="Head"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.10, -0.02, 0)
+mesh = SubResource("mesh_hair_side")
+surface_material_override/0 = ExtResource("3_hair")
+
+[node name="Bangs" type="MeshInstance3D" parent="Head"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.08, 0.08)
+mesh = SubResource("mesh_bangs")
+surface_material_override/0 = ExtResource("3_hair")
+
+[node name="LeftArm" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.19, 1.14, 0)
+
+[node name="LeftUpperArm" type="MeshInstance3D" parent="LeftArm"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.12, 0)
+mesh = SubResource("mesh_upper_arm")
+surface_material_override/0 = ExtResource("1_body")
+
+[node name="LeftForearm" type="MeshInstance3D" parent="LeftArm"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.35, 0)
+mesh = SubResource("mesh_forearm")
+surface_material_override/0 = ExtResource("2_skin")
+
+[node name="LeftHand" type="MeshInstance3D" parent="LeftArm"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.50, 0)
+mesh = SubResource("mesh_hand")
+surface_material_override/0 = ExtResource("2_skin")
+
+[node name="RightArm" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.19, 1.14, 0)
+
+[node name="RightUpperArm" type="MeshInstance3D" parent="RightArm"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.12, 0)
+mesh = SubResource("mesh_upper_arm")
+surface_material_override/0 = ExtResource("1_body")
+
+[node name="RightForearm" type="MeshInstance3D" parent="RightArm"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.35, 0)
+mesh = SubResource("mesh_forearm")
+surface_material_override/0 = ExtResource("2_skin")
+
+[node name="RightHand" type="MeshInstance3D" parent="RightArm"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.50, 0)
+mesh = SubResource("mesh_hand")
+surface_material_override/0 = ExtResource("2_skin")
+
+[node name="LeftLeg" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.09, 0.75, 0)
+
+[node name="LeftUpperLeg" type="MeshInstance3D" parent="LeftLeg"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.15, 0)
+mesh = SubResource("mesh_upper_leg")
+surface_material_override/0 = ExtResource("5_skirt")
+
+[node name="LeftLowerLeg" type="MeshInstance3D" parent="LeftLeg"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.42, 0)
+mesh = SubResource("mesh_lower_leg")
+surface_material_override/0 = ExtResource("8_socks")
+
+[node name="LeftFoot" type="MeshInstance3D" parent="LeftLeg"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.56, 0.04)
+mesh = SubResource("mesh_foot")
+surface_material_override/0 = ExtResource("9_shoes")
+
+[node name="RightLeg" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.09, 0.75, 0)
+
+[node name="RightUpperLeg" type="MeshInstance3D" parent="RightLeg"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.15, 0)
+mesh = SubResource("mesh_upper_leg")
+surface_material_override/0 = ExtResource("5_skirt")
+
+[node name="RightLowerLeg" type="MeshInstance3D" parent="RightLeg"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.42, 0)
+mesh = SubResource("mesh_lower_leg")
+surface_material_override/0 = ExtResource("8_socks")
+
+[node name="RightFoot" type="MeshInstance3D" parent="RightLeg"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.56, 0.04)
+mesh = SubResource("mesh_foot")
+surface_material_override/0 = ExtResource("9_shoes")
+
+[node name="Scarf" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.22, 0.12)
+
+[node name="ScarfKnot" type="MeshInstance3D" parent="Scarf"]
+mesh = SubResource("mesh_scarf_knot")
+surface_material_override/0 = ExtResource("6_scarf")
+
+[node name="ScarfLeft" type="MeshInstance3D" parent="Scarf"]
+transform = Transform3D(0.965926, 0.258819, 0, -0.258819, 0.965926, 0, 0, 0, 1, -0.04, -0.12, 0)
+mesh = SubResource("mesh_scarf_tail")
+surface_material_override/0 = ExtResource("6_scarf")
+
+[node name="ScarfRight" type="MeshInstance3D" parent="Scarf"]
+transform = Transform3D(0.965926, -0.258819, 0, 0.258819, 0.965926, 0, 0, 0, 1, 0.04, -0.12, 0)
+mesh = SubResource("mesh_scarf_tail")
+surface_material_override/0 = ExtResource("6_scarf")
