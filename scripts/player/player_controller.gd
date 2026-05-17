@@ -284,10 +284,17 @@ func start_dash(direction: Vector3, speed: float, distance: float) -> void:
 	_dash_travelled = 0.0
 
 
+var _shake_tween: Tween = null
+var _camera_base_pos: Vector3
+
 # 屏幕震动（受伤/开枪时触发）
 func apply_screen_shake(intensity: float) -> void:
-	var original_pos := _camera.position
-	var tween := create_tween()
+	if not _camera_base_pos:
+		_camera_base_pos = _camera.position
+	if _shake_tween != null and _shake_tween.is_valid():
+		_shake_tween.kill()
+		_camera.position = _camera_base_pos
+	_shake_tween = create_tween()
 	var shake_count := 4
 	for i in range(shake_count):
 		var offset := Vector3(
@@ -295,8 +302,8 @@ func apply_screen_shake(intensity: float) -> void:
 			randf_range(-intensity, intensity),
 			0.0
 		)
-		tween.tween_property(_camera, "position", original_pos + offset, 0.03)
-		tween.tween_property(_camera, "position", original_pos, 0.03)
+		_shake_tween.tween_property(_camera, "position", _camera_base_pos + offset, 0.03)
+		_shake_tween.tween_property(_camera, "position", _camera_base_pos, 0.03)
 
 
 # 返回当前被抓取的敌人（供 enemy/projectile 盾牌阻挡判定）

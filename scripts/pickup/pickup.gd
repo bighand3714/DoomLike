@@ -20,6 +20,11 @@ func _ready() -> void:
 	body_entered.connect(_on_body_entered)
 	_setup_visual()
 
+## 供 DropManager 修正悬浮基准高度
+func set_hover_base_y(y: float) -> void:
+	_hover_base_y = y
+	position.y = y
+
 
 func _process(delta: float) -> void:
 	# 悬浮旋转动画

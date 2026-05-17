@@ -76,22 +76,15 @@ func _spawn_armor(pos: Vector3) -> void:
 
 
 func _setup_pickup(pickup: Area3D, pos: Vector3, _color: Color, _emit: Color) -> void:
-	pickup.global_position = pos + Vector3(0, 0.3, 0)
 	get_tree().root.add_child(pickup)
-
-	# 弹起动画
-	var original_y := pickup.global_position.y
-	pickup.global_position = pos  # 从地面开始
-	var tween := pickup.create_tween()
-	tween.tween_property(pickup, "global_position:y", original_y, 0.2).set_ease(Tween.EASE_OUT)
-	tween.tween_property(pickup, "global_position:y", original_y - 0.15, 0.08)
-	tween.tween_property(pickup, "global_position:y", original_y, 0.08)
+	var rest_y: float = pos.y + 0.4
+	pickup.global_position = Vector3(pos.x, rest_y, pos.z)
+	pickup.set_hover_base_y(rest_y)
 
 	# 30 秒后自动消失
 	var timer := get_tree().create_timer(pickup_lifetime)
 	timer.timeout.connect(_cleanup_pickup.bind(pickup))
 
-
-func _cleanup_pickup(pickup: Node) -> void:
+func _cleanup_pickup(pickup: Area3D) -> void:
 	if is_instance_valid(pickup):
 		pickup.queue_free()

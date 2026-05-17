@@ -82,6 +82,13 @@ var _reload_token: int = 0
 ## 泵动 token——切武器后递增，使旧泵动 timer 失效（0.4）
 var _pump_token: int = 0
 
+## 后坐力 tween 引用——连发时 kill 旧 tween 防止堆积
+var _recoil_tween: Tween = null
+
+## 后坐力基准位置——武器初始位置，防止累积上移
+var _recoil_base_pos: Vector3 = Vector3.ZERO
+var _recoil_base_set: bool = false
+
 
 # ==============================================================================
 # 子节点引用（在 _ready 中动态创建）
@@ -420,14 +427,14 @@ func _spawn_tracer(from: Vector3, to: Vector3) -> void:
 	var box := BoxMesh.new()
 	box.size = Vector3(0.02, 0.02, length)
 	tracer.mesh = box
-	tracer.global_position = mid
-	tracer.look_at(to, Vector3.UP)
 	var mat := StandardMaterial3D.new()
 	mat.albedo_color = Color(1, 1, 1, 0.4)
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	tracer.material_override = mat
 	get_tree().root.add_child(tracer)
+	tracer.global_position = mid
+	tracer.look_at(to, Vector3.UP)
 	var timer := get_tree().create_timer(0.12)
 	timer.timeout.connect(tracer.queue_free)
 
@@ -590,16 +597,17 @@ func _finish_pump(token: int) -> void:
 #
 # 两段动画连起来 = 杆子被撞了一下 → 弹回来的感觉。
 func _apply_recoil() -> void:
-	var original_pos := position
+	# 用固定的基准位置，防止连发累积上移
+	if not _recoil_base_set:
+		_recoil_base_pos = position
+		_recoil_base_set = true
+	if _recoil_tween != null and _recoil_tween.is_valid():
+		_recoil_tween.kill()
 
-	var tween := create_tween()
-
-	# 第一段：快速后座（模拟冲击）
-	tween.tween_property(self, "position",
-		original_pos + Vector3(0.0, 0.03, 0.06), 0.03)
-
-	# 第二段：慢速回位（模拟恢复）
-	tween.tween_property(self, "position", original_pos, 0.15)
+	_recoil_tween = create_tween()
+	_recoil_tween.tween_property(self, "position",
+		_recoil_base_pos + Vector3(0.0, 0.03, 0.06), 0.03)
+	_recoil_tween.tween_property(self, "position", _recoil_base_pos, 0.15)
 
 
 # ==============================================================================

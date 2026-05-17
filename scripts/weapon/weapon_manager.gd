@@ -130,12 +130,16 @@ func _input(event: InputEvent) -> void:
 	if event.is_action_pressed("weapon_4"):
 		_equip(3)
 
-	# --- 滚轮切换武器（非抓取状态下） ---
+	# --- 滚轮切换武器（抓取中不切，留给铁鞭处理甩出/冲刺） ---
 	if event is InputEventMouseButton:
+		var player := get_tree().get_first_node_in_group("player") as CharacterBody3D
+		var is_grabbing := player != null and player.grabbed_enemy != null
 		if event.button_index == MOUSE_BUTTON_WHEEL_UP and event.pressed:
-			_next_weapon()
+			if not is_grabbing:
+				_next_weapon()
 		if event.button_index == MOUSE_BUTTON_WHEEL_DOWN and event.pressed:
-			_prev_weapon()
+			if not is_grabbing:
+				_prev_weapon()
 
 
 # ==============================================================================

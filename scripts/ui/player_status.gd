@@ -512,7 +512,10 @@ func _on_weapon_changed(weapon_name: String, _slot_index: int) -> void:
 
 
 func _on_ammo_changed(current_mag: int, reserve: int) -> void:
-	_ammo_label.text = "%d / %d" % [current_mag, reserve]
+	if _current_weapon != null and _current_weapon.weapon_data != null and _current_weapon.weapon_data.infinite_ammo:
+		_ammo_label.text = "∞ / ∞"
+	else:
+		_ammo_label.text = "%d / %d" % [current_mag, reserve]
 
 
 func _on_reload_started(_reload_time: float) -> void:

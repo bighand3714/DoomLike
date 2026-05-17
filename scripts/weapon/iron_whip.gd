@@ -136,7 +136,9 @@ func _try_whip() -> void:
 	var space_state := get_world_3d().direct_space_state
 	var query := PhysicsRayQueryParameters3D.create(ray_origin, end)
 	query.collision_mask = 1
-	query.exclude = [_player]
+	query.exclude = [self, _player]
+	if _grabbed_enemy != null:
+		query.exclude.append(_grabbed_enemy)
 
 	var result := space_state.intersect_ray(query)
 
@@ -252,10 +254,6 @@ func _start_grab(enemy: Enemy) -> void:
 
 	_player.grabbed_enemy = enemy
 
-	# 缩小敌人模拟被举起
-	if enemy.has_method("set_scale"):
-		enemy.scale = Vector3(0.65, 0.65, 0.65)
-
 	var weight: float = 1.0
 	if enemy.enemy_data != null:
 		weight = enemy.enemy_data.weight
@@ -270,10 +268,14 @@ func _process_grab(_delta: float) -> void:
 		_release_grab_internal()
 		return
 
-	# 左手举起位置：LeftHandHolder 前方上方
-	var lh_pos := global_position + Vector3(0, 0.5, -0.3)
-	var grab_origin := lh_pos
-	var grab_transform := Transform3D(_player.global_transform.basis, grab_origin)
+	# 左手举起位置：画面左侧（左手抓着敌人）
+	var cam_forward := -_camera.global_transform.basis.z.normalized()
+	cam_forward.y = 0.0
+	var cam_right := _camera.global_transform.basis.x.normalized()
+	var target_pos := _player.global_position - cam_right * 1.2 + cam_forward * 0.8 + Vector3(0, 0.5, 0)
+	var current_pos := _grabbed_enemy.global_position
+	var smoothed_pos := current_pos.lerp(target_pos, 0.3)
+	var grab_transform := Transform3D(_player.global_transform.basis, smoothed_pos)
 	_grabbed_enemy.update_grabbed_position(grab_transform, _delta)
 
 
@@ -287,8 +289,6 @@ func _enter_shielding() -> void:
 	_state = WhipState.SHIELDING
 
 	# 恢复敌人大小
-	if _grabbed_enemy.has_method("set_scale"):
-		_grabbed_enemy.scale = Vector3(1.0, 1.0, 1.0)
 
 	GameBus.grab_status_show.emit("盾牌模式 [滚轮=冲刺处决]")
 
@@ -300,8 +300,6 @@ func _exit_shielding() -> void:
 	_state = WhipState.GRABBING
 
 	# 缩回举起大小
-	if _grabbed_enemy.has_method("set_scale"):
-		_grabbed_enemy.scale = Vector3(0.65, 0.65, 0.65)
 
 	_show_grab_status(_grabbed_enemy)
 
@@ -311,9 +309,13 @@ func _process_shielding(_delta: float) -> void:
 		_release_grab_internal()
 		return
 
-	# 盾牌位置：摄像机正前方 1.5m
-	var shield_pos := _player.global_position + (-_camera.global_transform.basis.z).normalized() * 1.5 + Vector3(0, 0.3, 0)
-	var shield_transform := Transform3D(_player.global_transform.basis, shield_pos)
+	# 盾牌位置：画面正中
+	var cam_forward := -_camera.global_transform.basis.z.normalized()
+	cam_forward.y = 0.0
+	var shield_pos := _player.global_position + cam_forward * 1.5 + Vector3(0, 0.3, 0)
+	var current := _grabbed_enemy.global_position
+	var smoothed := current.lerp(shield_pos, 0.4)
+	var shield_transform := Transform3D(_player.global_transform.basis, smoothed)
 	_grabbed_enemy.update_grabbed_position(shield_transform, _delta)
 
 
@@ -328,25 +330,23 @@ func _execute_throw() -> void:
 	var enemy := _grabbed_enemy
 
 	# 恢复大小
-	if enemy.has_method("set_scale"):
-		enemy.scale = Vector3(1.0, 1.0, 1.0)
 
 	enemy.release_grab()
 
-	# 沿摄像机前方甩出
-	var throw_dir := (-_camera.global_transform.basis.z).normalized() + Vector3(0, 0.3, 0)
-	enemy.global_position = _camera.global_position + throw_dir.normalized() * 1.0
+	# 沿摄像机前方水平甩出
+	var throw_dir := -_camera.global_transform.basis.z.normalized()
+	throw_dir.y = 0.0
+	throw_dir = throw_dir.normalized()
+	enemy.global_position = _player.global_position + throw_dir * 2.0 + Vector3(0, 0.5, 0)
 
-	# 给敌人施加速度
-	if enemy is CharacterBody3D:
-		enemy.velocity = throw_dir.normalized() * _whip_data.throw_speed
+	# 用击退代替 velocity（velocity 会被 CHASE 状态覆盖）
+	enemy.apply_knockback(throw_dir, _whip_data.throw_speed)
 
-	# 碰撞伤害由 enemy.gd 的 move_and_slide 处理
-	# 简化：对附近敌人造成范围伤害
+	# 对附近敌人造成范围伤害
 	_apply_aoe_damage(enemy.global_position, 3.0, _whip_data.throw_damage, _whip_data.dash_knockback)
 
 	# 视觉：拖尾
-	_spawn_whip_effect(enemy.global_position - throw_dir.normalized() * 2.0, enemy.global_position)
+	_spawn_whip_effect(enemy.global_position, enemy.global_position + throw_dir * 3.0)
 
 	_grabbed_enemy = null
 	_player.grabbed_enemy = null
@@ -390,8 +390,6 @@ func _finish_dash() -> void:
 		_apply_aoe_damage(enemy.global_position, 4.0, _whip_data.dash_aoe_damage, _whip_data.dash_knockback)
 
 		enemy.release_grab()
-		if enemy.has_method("set_scale"):
-			enemy.scale = Vector3(1.0, 1.0, 1.0)
 
 		# 加分
 		GameBus.run_stats.add_kill(_whip_data.execution_score_bonus)
@@ -448,8 +446,6 @@ func _execute_grabbed() -> void:
 
 	var enemy := _grabbed_enemy
 
-	if enemy.has_method("set_scale"):
-		enemy.scale = Vector3(1.0, 1.0, 1.0)
 
 	enemy.execute()
 
@@ -464,8 +460,6 @@ func _execute_grabbed() -> void:
 
 func _release_grab_internal() -> void:
 	if _grabbed_enemy != null and is_instance_valid(_grabbed_enemy):
-		if _grabbed_enemy.has_method("set_scale"):
-			_grabbed_enemy.scale = Vector3(1.0, 1.0, 1.0)
 		_grabbed_enemy.release_grab()
 	_grabbed_enemy = null
 	_pulled_enemy = null
