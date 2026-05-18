@@ -75,6 +75,8 @@ func _on_damaged(amount: float, type: WeaponData.DamageType) -> void:
 		return
 
 	if _state == EnemyState.ATTACK:
+		# Counter 触发！
+		GameBus.counter_triggered.emit(self, global_position)
 		# Windup 阶段可打断
 		if _attack_phase == 0:
 			_set_windup_glow(false)

@@ -56,6 +56,8 @@ var _boundary_warning_timer: float = 0.0
 var _grab_status_label: Label = null
 var _shield_block_label: Label = null
 var _shield_block_timer: float = 0.0
+var _wave_notify_label: Label = null
+var _wave_notify_timer: float = 0.0
 
 const BAR_W := 200.0
 const BAR_H := 12.0
@@ -176,6 +178,20 @@ func _create_labels() -> void:
 	_shield_block_label.offset_top = 110.0
 	_shield_block_label.offset_bottom = 136.0
 	_shield_block_label.hide()
+
+	_wave_notify_label = Label.new()
+	_wave_notify_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_wave_notify_label.add_theme_font_size_override("font_size", 36)
+	_wave_notify_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.2))
+	_wave_notify_label.anchor_left = 0.5
+	_wave_notify_label.anchor_right = 0.5
+	_wave_notify_label.anchor_top = 0.5
+	_wave_notify_label.offset_left = -200.0
+	_wave_notify_label.offset_right = 200.0
+	_wave_notify_label.offset_top = -40.0
+	_wave_notify_label.offset_bottom = 10.0
+	_wave_notify_label.hide()
+	add_child(_wave_notify_label)
 	add_child(_shield_block_label)
 
 
@@ -277,12 +293,18 @@ func _process(delta: float) -> void:
 			_boundary_warning_timer -= delta
 			if _boundary_warning_timer <= 0.0:
 				_boundary_warning.hide()
-		if _shield_block_timer > 0.0:
-			_shield_block_timer -= delta
-			if _shield_block_timer <= 0.0:
-				_shield_block_label.hide()
-		return
-	_update_timer = 0.0
+			if _wave_notify_timer > 0.0:
+				_wave_notify_timer -= delta
+				if _wave_notify_timer <= 0.0:
+					_wave_notify_label.hide()
+				elif _wave_notify_timer < 0.5:
+					_wave_notify_label.modulate.a = _wave_notify_timer / 0.5
+			if _shield_block_timer > 0.0:
+				_shield_block_timer -= delta
+				if _shield_block_timer <= 0.0:
+					_shield_block_label.hide()
+			return
+		_update_timer = 0.0
 
 	var pos := _player.global_position
 	_position_label.text = "位置: %.1f  %.1f  %.1f" % [pos.x, pos.y, pos.z]
@@ -525,3 +547,13 @@ func _on_reload_started(_reload_time: float) -> void:
 
 func _on_reload_finished() -> void:
 	_reload_label.hide()
+
+
+## 显示波次通知（居中大字"第 N 波"，2s 渐隐）
+func show_wave_notification(wave_number: int) -> void:
+	if _wave_notify_label == null:
+		return
+	_wave_notify_label.text = "第 %d 波" % wave_number
+	_wave_notify_label.modulate = Color.WHITE
+	_wave_notify_label.show()
+	_wave_notify_timer = 2.0

@@ -50,6 +50,21 @@ class_name EnemyData extends Resource
 ## 击退抗性（0.0~0.9）——值越大击退效果越弱
 @export var knockback_resistance: float = 0.0
 
+## 护甲值（1 护甲 = 吸收 1 伤害）——仅敌人使用
+@export var armor: float = 0.0
+
+## 身高（米）——影响碰撞体尺寸
+@export var height: float = 1.8
+
+## 防御时举盾格挡概率（0.0~1.0）
+@export var shield_block_chance: float = 0.0
+
+## 是否具备防御技能
+@export var can_defend: bool = false
+
+## AI 检测间隔（秒）——每 N 秒检测一次而非每帧
+@export var detection_interval: float = 0.5
+
 
 # ==============================================================================
 # 眩晕系统（Phase 5 新增）

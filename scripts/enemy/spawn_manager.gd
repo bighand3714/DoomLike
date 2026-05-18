@@ -22,6 +22,7 @@ const ENEMY_SCENES := {
 	"flying_enemy": "res://scenes/enemies/flying_enemy.tscn",
 	"advanced_flying_enemy": "res://scenes/enemies/advanced_flying_enemy.tscn",
 	"flying_ranged_enemy": "res://scenes/enemies/flying_ranged_enemy.tscn",
+	"orc_melee": "res://scenes/enemies/orc_enemy.tscn",
 }
 
 
@@ -59,11 +60,13 @@ const DESERT_WEIGHTS := {
 	"ground_enemy": 3.0, "advanced_ground_enemy": 2.0, "elite_ground_enemy": 1.5,
 	"ranged_enemy": 1.5, "advanced_ranged_enemy": 1.0,
 	"flying_enemy": 0.3, "advanced_flying_enemy": 0.2, "flying_ranged_enemy": 0.3,
+	"orc_melee": 2.5,
 }
 const LAVA_WEIGHTS := {
 	"ground_enemy": 1.5, "advanced_ground_enemy": 1.0, "elite_ground_enemy": 1.0,
 	"ranged_enemy": 2.0, "advanced_ranged_enemy": 1.5,
 	"flying_enemy": 2.0, "advanced_flying_enemy": 1.5, "flying_ranged_enemy": 2.0,
+	"orc_melee": 1.5,
 }
 
 
@@ -118,6 +121,7 @@ func _build_spawn_entries() -> void:
 		{ "id": "flying_enemy",         "min_intensity": 3, "weight": 1.5 },
 		{ "id": "advanced_flying_enemy","min_intensity": 5, "weight": 1.0 },
 		{ "id": "flying_ranged_enemy",  "min_intensity": 5, "weight": 1.5 },
+		{ "id": "orc_melee",           "min_intensity": 2, "weight": 2.5 },
 	]
 	for ed in entries_data:
 		var eid: String = ed.id

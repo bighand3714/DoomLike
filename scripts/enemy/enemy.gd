@@ -1,5 +1,5 @@
 # ==============================================================================
-# Enemy — 敌人基类（Phase 5 扩展 + Phase 7 优化）
+# Enemy — 敌人基类（Phase 5 扩展 + Phase 7 优化 + Roadmap 4 Counter/距离档位）
 # ==============================================================================
 class_name Enemy extends CharacterBody3D
 
@@ -8,7 +8,21 @@ const ProjectileClass = preload("res://scripts/enemy/projectile.gd")
 
 
 enum EnemyState {
-	SPAWNING, IDLE, CHASE, ATTACK, PAIN, STUNNED, GRABBED, EXECUTED, DEATH
+	SPAWNING, IDLE, CHASE, ATTACK,
+	WALKING, RUNNING,
+	ATTACK_PREPARE, ATTACK_ACTIVE, ATTACK_RECOVER,
+	DEFENDING,
+	PAIN, STUNNED, GRABBED,
+	KNOCKED_DOWN, EXECUTED, DEATH
+}
+
+## 距离档位枚举——全系统统一的五档距离判定
+enum DistanceBracket {
+	MELEE,        # < 0.5m  贴身
+	CLOSE,        # 0.5~1m  近距离
+	MEDIUM,       # 1~2m    中距离
+	FAR,          # 2~5m    远距离
+	SUPER_FAR     # > 5m    超远距离
 }
 
 
@@ -37,13 +51,58 @@ var _stun_full_timer: float = 0.0
 var _knockback_velocity: Vector3 = Vector3.ZERO
 var _grab_owner: Node3D = null
 
+## AI 检测计时器——每 detection_interval 秒执行一次决策
+var _detection_timer: float = 0.0
+
+## 增伤标记——下次受击消耗，倍率 + 剩余时间
+var _damage_mark_multiplier: float = 1.0
+var _damage_mark_timer: float = 0.0
+
+## 定身剩余时间
+var _snare_timer: float = 0.0
+
 var _debug_stun_bar: MeshInstance3D = null
 var _debug_hp_bar: MeshInstance3D = null
 const DEBUG_BAR_FULL := 0.5
 const DEBUG_BAR_Y := 2.2
 
 
+# ==============================================================================
+# 距离档位工具方法
+# ==============================================================================
+
+## 根据目标位置返回距离档位
+func _get_distance_bracket(to_target: Vector3) -> int:
+	var dist_xz: float = Vector2(to_target.x, to_target.z).length()
+	if dist_xz < 0.5:
+		return DistanceBracket.MELEE
+	elif dist_xz < 1.0:
+		return DistanceBracket.CLOSE
+	elif dist_xz < 2.0:
+		return DistanceBracket.MEDIUM
+	elif dist_xz < 5.0:
+		return DistanceBracket.FAR
+	return DistanceBracket.SUPER_FAR
+
+## 获取当前敌人与玩家的距离档位
+func get_player_distance_bracket() -> int:
+	if _player == null:
+		return DistanceBracket.SUPER_FAR
+	return _get_distance_bracket(_player.global_position - global_position)
+
+## 判断当前是否处于攻击阶段（PREPARE / ACTIVE / RECOVER 全部视为 Counter 窗口）
+func _is_in_attack_state() -> bool:
+	return _state == EnemyState.ATTACK_PREPARE or _state == EnemyState.ATTACK_ACTIVE or _state == EnemyState.ATTACK_RECOVER or _state == EnemyState.ATTACK
+
+
+# ==============================================================================
+# _ready() — 初始化
+# ==============================================================================
 func _ready() -> void:
+	_stun = 0.0
+	_is_stun_full = false
+	_stun_full_timer = 0.0
+
 	_player = get_tree().get_first_node_in_group("player")
 	if _player == null:
 		_player = get_node_or_null("/root/Main/Player") as CharacterBody3D
@@ -112,12 +171,25 @@ func _setup_model() -> void:
 	add_child(collision)
 
 
+# ==============================================================================
+# _physics_process(delta) — 主循环
+# ==============================================================================
 func _physics_process(delta: float) -> void:
 	if enemy_data == null or _player == null:
 		return
 
 	if _attack_cooldown_timer > 0.0:
 		_attack_cooldown_timer -= delta
+
+	# 定身计时器
+	if _snare_timer > 0.0:
+		_snare_timer -= delta
+
+	# 增伤标记计时器
+	if _damage_mark_timer > 0.0:
+		_damage_mark_timer -= delta
+		if _damage_mark_timer <= 0.0:
+			_damage_mark_multiplier = 1.0
 
 	if _stun > 0.0 and _state != EnemyState.STUNNED and _state != EnemyState.GRABBED:
 		_stun -= enemy_data.stun_recovery_rate * delta
@@ -127,28 +199,63 @@ func _physics_process(delta: float) -> void:
 	if _knockback_velocity.length_squared() > 0.001:
 		_knockback_velocity = _knockback_velocity.move_toward(Vector3.ZERO, 10.0 * delta)
 
+	# --- AI 检测计时器：每 detection_interval 秒执行一次 AI 决策 ---
+	if _detection_timer > 0.0:
+		_detection_timer -= delta
+	if _detection_timer <= 0.0:
+		_detection_timer = enemy_data.detection_interval
+		_ai_tick()
+
 	match _state:
 		EnemyState.IDLE:
 			_state_idle(delta)
 		EnemyState.CHASE:
 			_state_chase(delta)
+		EnemyState.WALKING:
+			_state_walking(delta)
+		EnemyState.RUNNING:
+			_state_running(delta)
 		EnemyState.ATTACK:
 			_state_attack(delta)
+		EnemyState.ATTACK_PREPARE:
+			_state_attack_prepare(delta)
+		EnemyState.ATTACK_ACTIVE:
+			_state_attack_active(delta)
+		EnemyState.ATTACK_RECOVER:
+			_state_attack_recover(delta)
+		EnemyState.DEFENDING:
+			_state_defending(delta)
 		EnemyState.PAIN:
 			_state_pain(delta)
 		EnemyState.STUNNED:
 			_state_stunned(delta)
 		EnemyState.GRABBED:
 			_state_grabbed(delta)
+		EnemyState.KNOCKED_DOWN:
+			_state_knocked_down(delta)
 		EnemyState.DEATH:
 			_state_death(delta)
 
 	if _state != EnemyState.DEATH and _state != EnemyState.GRABBED:
 		velocity += _knockback_velocity
 
+	# 定身状态下强制归零速度
+	if _snare_timer > 0.0 and _state not in [EnemyState.GRABBED, EnemyState.DEATH]:
+		velocity = Vector3.ZERO
+
 	_update_debug_bars()
 
 
+# ==============================================================================
+# AI tick — 子类覆写以自定义行为
+# ==============================================================================
+func _ai_tick() -> void:
+	pass  # 默认什么都不做——子类（如 OrcEnemy）会覆写此方法
+
+
+# ==============================================================================
+# 状态转移
+# ==============================================================================
 func _transition_to(new_state: EnemyState) -> void:
 	if _state == EnemyState.DEATH:
 		return
@@ -168,7 +275,7 @@ func _state_exit(_old_state: EnemyState) -> void:
 
 
 # ==============================================================================
-# IDLE → 距离检测（不再要求射线穿透，边界柱不会挡住发现玩家）
+# IDLE → 距离检测
 # ==============================================================================
 func _state_idle(_delta: float) -> void:
 	if _player == null:
@@ -178,6 +285,9 @@ func _state_idle(_delta: float) -> void:
 		_transition_to(EnemyState.CHASE)
 
 
+# ==============================================================================
+# CHASE — 追逐状态（向后兼容，旧敌人仍使用此状态）
+# ==============================================================================
 func _state_chase(delta: float) -> void:
 	var to_player := _player.global_position - global_position
 	to_player.y = 0.0
@@ -207,6 +317,45 @@ func _state_chase(delta: float) -> void:
 	move_and_slide()
 
 
+# ==============================================================================
+# WALKING — 走动接近（基础移速）
+# ==============================================================================
+func _state_walking(delta: float) -> void:
+	var to_player := _player.global_position - global_position
+	to_player.y = 0.0
+	var dist := to_player.length()
+
+	if dist > enemy_data.sight_range * 1.5:
+		_transition_to(EnemyState.IDLE)
+		return
+
+	_move_towards_player(delta, enemy_data.move_speed)
+	velocity.y = 0.0
+	_face_player_flat()
+	move_and_slide()
+
+
+# ==============================================================================
+# RUNNING — 跑动接近（1.5 倍移速）
+# ==============================================================================
+func _state_running(delta: float) -> void:
+	var to_player := _player.global_position - global_position
+	to_player.y = 0.0
+	var dist := to_player.length()
+
+	if dist > enemy_data.sight_range * 1.5:
+		_transition_to(EnemyState.IDLE)
+		return
+
+	_move_towards_player(delta, enemy_data.move_speed * 1.5)
+	velocity.y = 0.0
+	_face_player_flat()
+	move_and_slide()
+
+
+# ==============================================================================
+# ATTACK — 旧版统一攻击状态（向后兼容，内部三段式）
+# ==============================================================================
 func _state_attack(delta: float) -> void:
 	_face_player_flat()
 
@@ -237,6 +386,41 @@ func _state_attack(delta: float) -> void:
 		_transition_to(EnemyState.CHASE)
 
 
+# ==============================================================================
+# 新版三段式攻击状态
+# ==============================================================================
+func _state_attack_prepare(delta: float) -> void:
+	_face_player_flat()
+	_state_timer += delta
+	if _state_timer >= enemy_data.attack_windup:
+		_transition_to(EnemyState.ATTACK_ACTIVE)
+
+func _state_attack_active(delta: float) -> void:
+	_face_player_flat()
+	if _state_timer == 0.0:
+		_execute_attack()
+		_attack_cooldown_timer = enemy_data.attack_cooldown
+	_state_timer += delta
+	if _state_timer >= enemy_data.attack_duration:
+		_transition_to(EnemyState.ATTACK_RECOVER)
+
+func _state_attack_recover(delta: float) -> void:
+	_face_player_flat()
+	_state_timer += delta
+	if _state_timer >= enemy_data.attack_recovery:
+		_transition_to(EnemyState.CHASE)
+
+
+# ==============================================================================
+# DEFENDING — 举盾/防御状态
+# ==============================================================================
+func _state_defending(_delta: float) -> void:
+	_face_player_flat()
+
+
+# ==============================================================================
+# 攻击执行
+# ==============================================================================
 func _execute_attack() -> void:
 	if _player == null:
 		return
@@ -323,6 +507,9 @@ func _is_player_target(collider: Node) -> bool:
 	return false
 
 
+# ==============================================================================
+# PAIN / STUNNED / GRABBED / KNOCKED_DOWN / DEATH
+# ==============================================================================
 func _state_pain(delta: float) -> void:
 	_state_timer += delta
 	if _state_timer >= enemy_data.pain_duration:
@@ -342,9 +529,14 @@ func _state_grabbed(_delta: float) -> void:
 		release_grab()
 
 
-# ==============================================================================
-# 死亡 —— 快速缩小 + 0.5 秒后消失
-# ==============================================================================
+func _state_knocked_down(delta: float) -> void:
+	_state_timer += delta
+	if _state_timer >= 1.5:
+		_is_stun_full = false
+		_stun = enemy_data.max_stun * 0.5
+		_transition_to(EnemyState.CHASE)
+
+
 func _state_death(delta: float) -> void:
 	_state_timer += delta
 	if _state_timer >= 0.5:
@@ -380,7 +572,7 @@ func _can_see_player() -> bool:
 
 
 # ==============================================================================
-# 眩晕 / 击退 / 抓取 / 处决
+# 眩晕 / 击退 / 抓取 / 处决 / 倒地 / 定身 / 增伤标记
 # ==============================================================================
 func apply_stun(amount: float) -> void:
 	if _state == EnemyState.DEATH or _state == EnemyState.EXECUTED:
@@ -439,6 +631,29 @@ func execute() -> void:
 	_damageable.died.emit()
 
 
+## 使敌人倒地
+func knock_down() -> void:
+	if _state == EnemyState.DEATH or _state == EnemyState.EXECUTED:
+		return
+	_transition_to(EnemyState.KNOCKED_DOWN)
+
+
+## 判断敌人是否倒地
+func is_knocked_down() -> bool:
+	return _state == EnemyState.KNOCKED_DOWN
+
+
+## 定身：velocity=0，持续 duration 秒
+func apply_snare(duration: float) -> void:
+	_snare_timer = duration
+
+
+## 增伤标记：下次受击时乘以 multiplier，持续 duration 秒或被消耗
+func apply_damage_mark(duration: float, multiplier: float) -> void:
+	_damage_mark_multiplier = multiplier
+	_damage_mark_timer = duration
+
+
 # ==============================================================================
 # 移动辅助
 # ==============================================================================
@@ -488,7 +703,7 @@ func _face_player_flat() -> void:
 
 
 # ==============================================================================
-# 受伤反馈
+# 受伤反馈（含 Counter 系统 + 护甲减伤）
 # ==============================================================================
 
 ## 公共方法：外部触发受击反馈（iron_whip 处决视觉效果用）
@@ -496,14 +711,40 @@ func trigger_on_damaged(_amount: float, _type: WeaponData.DamageType) -> void:
 	_on_damaged(_amount, _type)
 
 
-func _on_damaged(_amount: float, _type: WeaponData.DamageType) -> void:
+func _on_damaged(amount: float, _type: WeaponData.DamageType) -> void:
 	if _state == EnemyState.DEATH:
 		return
-	# 不同伤害类型不同颜色：近战(铁鞭)灰色，其他白色
+
+	# 增伤标记消耗
+	if _damage_mark_multiplier > 1.0:
+		amount *= _damage_mark_multiplier
+		_damage_mark_multiplier = 1.0
+		_damage_mark_timer = 0.0
+
+	# --- COUNTER 检测：处于攻击阶段时受击 → 眩晕大幅上涨 + 青蓝闪白 ---
+	if _is_in_attack_state():
+		# Counter 额外眩晕（2 倍基础值）
+		apply_stun(amount * 2.0)
+		# 青蓝色闪白
+		_flash_pain(Color(0.3, 0.7, 1.0))
+		# 发射 Counter 信号
+		GameBus.counter_triggered.emit(self, global_position)
+		# 打断攻击 → 进入 PAIN
+		_transition_to(EnemyState.PAIN)
+		return
+
+	# 护甲减伤（敌人护甲系统）
+	if enemy_data != null and enemy_data.armor > 0.0:
+		var absorbed: float = mini(amount, enemy_data.armor)
+		enemy_data.armor -= absorbed
+		amount -= absorbed
+
+	# 正常受击闪白
 	if _type == WeaponData.DamageType.MELEE:
 		_flash_pain(Color(0.5, 0.5, 0.5))
 	else:
 		_flash_pain(Color.WHITE)
+
 	if _state != EnemyState.STUNNED and _state != EnemyState.GRABBED:
 		_transition_to(EnemyState.PAIN)
 
@@ -568,7 +809,6 @@ func _on_death_visual() -> void:
 # ==============================================================================
 func _create_debug_bars() -> void:
 	var bar_thick := 0.06
-	# z 负值：敌人正面是 -Z，放在身体前方
 	var bar_z: float = -0.5
 
 	# HP 血条（绿色发光）
@@ -579,7 +819,7 @@ func _create_debug_bars() -> void:
 		hp_mat.emission = Color(0.2, 0.9, 0.2)
 		hp_mat.emission_energy_multiplier = 0.5
 
-	# 眩晕条（黄色，无黑底）
+	# 眩晕条（黄色）
 	_debug_stun_bar = _make_bar("StunBar", Color(1.0, 0.9, 0.1), DEBUG_BAR_Y, bar_thick, bar_z)
 	var stun_mat := _debug_stun_bar.material_override as StandardMaterial3D
 	if stun_mat != null:
@@ -605,7 +845,7 @@ func _make_bar(bar_name: String, color: Color, y: float, thick: float, z: float)
 
 
 func _update_debug_bars() -> void:
-	if _debug_stun_bar != null and enemy_data != null:
+	if _debug_stun_bar != null and enemy_data != null and enemy_data.max_stun > 0.0:
 		var ratio: float = _stun / enemy_data.max_stun
 		var w: float = DEBUG_BAR_FULL * ratio
 		var stun_box: BoxMesh = _debug_stun_bar.mesh

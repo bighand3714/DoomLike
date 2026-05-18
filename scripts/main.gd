@@ -70,8 +70,18 @@ func _ready() -> void:
 	GameBus.grab_status_show.connect(_on_grab_status_show)
 	GameBus.grab_status_hide.connect(_on_grab_status_hide)
 	GameBus.play_sfx.connect(_on_play_sfx)
+	GameBus.counter_triggered.connect(_on_counter_triggered)
+	GameBus.wave_started.connect(_on_wave_started)
 
 	GameBus.save_data = _save_data
+
+	# UI 增强组件
+	var hit_indicator: Control = load("res://scripts/ui/hit_direction_indicator.gd").new()
+	hit_indicator.name = "HitDirectionIndicator"
+	ui.add_child(hit_indicator)
+	var minimap: Control = load("res://scripts/ui/minimap.gd").new()
+	minimap.name = "Minimap"
+	ui.add_child(minimap)
 
 	_set_game_state(GameState.State.MAIN_MENU)
 
@@ -496,6 +506,18 @@ func _on_grab_status_hide() -> void:
 
 func _on_play_sfx(_sfx_name: String, _position: Vector3) -> void:
 	pass  # SFX 占位：后续接入音频资源时替换
+
+func _on_counter_triggered(_enemy: Enemy, _position: Vector3) -> void:
+	_crosshair.color = Color(0.3, 0.8, 1.0, 1.0)
+	get_tree().create_timer(0.15).timeout.connect(_restore_crosshair)
+	var ps := get_node_or_null("UI/PlayerStatus")
+	if ps != null and ps.has_method("show_notification"):
+		ps.show_notification("Counter!", Color(0.3, 0.8, 1.0))
+
+func _on_wave_started(wave_number: int) -> void:
+	var ps := get_node_or_null("UI/PlayerStatus")
+	if ps != null and ps.has_method("show_wave_notification"):
+		ps.show_wave_notification(wave_number)
 
 
 # ==============================================================================

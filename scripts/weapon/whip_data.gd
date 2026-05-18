@@ -15,6 +15,9 @@ class_name WhipData extends Resource
 ## 鞭子最大攻击距离（米），近战范围
 @export var whip_range: float = 3.0
 
+## 铁链最大有效长度（米）
+@export var whip_length: float = 2.0
+
 ## 挥鞭冷却时间（秒）
 @export var cooldown: float = 0.8
 

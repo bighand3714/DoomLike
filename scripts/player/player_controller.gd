@@ -138,6 +138,8 @@ func _ready() -> void:
 		# 受伤时触发屏幕闪红
 		dmg.damaged.connect(_on_player_damaged)
 
+	_create_distance_rings()
+
 
 # ==============================================================================
 # _input(event) — 每次有输入事件（按键、鼠标移动）时自动调用
@@ -266,6 +268,30 @@ func _physics_process(delta: float) -> void:
 # ==============================================================================
 # _on_player_damaged() — 玩家受伤时触发屏幕闪红
 # ==============================================================================
+
+func _create_distance_rings() -> void:
+	var ring_specs := [
+		{ "radius": 0.5, "color": Color(1.0, 0.2, 0.1, 0.3), "name": "RingRed" },
+		{ "radius": 1.0, "color": Color(1.0, 0.85, 0.1, 0.2), "name": "RingYellow" },
+		{ "radius": 2.0, "color": Color(0.1, 1.0, 0.2, 0.15), "name": "RingGreen" },
+	]
+	for spec in ring_specs:
+		var ring := MeshInstance3D.new()
+		ring.name = spec.name
+		var torus := TorusMesh.new()
+		torus.inner_radius = spec.radius - 0.02
+		torus.outer_radius = spec.radius + 0.02
+		ring.mesh = torus
+		var mat := StandardMaterial3D.new()
+		mat.albedo_color = spec.color
+		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+		ring.material_override = mat
+		ring.position = Vector3(0, 0.05, 0)
+		ring.rotation_degrees = Vector3(90, 0, 0)
+		add_child(ring)
+
 func _on_player_damaged(amount: float, _type: WeaponData.DamageType) -> void:
 	apply_screen_shake(0.03)
 	GameBus.player_hit.emit(amount)

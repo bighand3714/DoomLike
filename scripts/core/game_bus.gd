@@ -41,6 +41,12 @@ signal enemy_death_position(position: Vector3)
 @warning_ignore("unused_signal")
 signal play_sfx(sfx_name: String, position: Vector3)
 
+@warning_ignore("unused_signal")
+signal counter_triggered(enemy: Enemy, position: Vector3)
+
+@warning_ignore("unused_signal")
+signal wave_started(wave_number: int)
+
 
 # ==============================================================================
 # 共享数据引用 — 由 main.gd 在关卡生命周期中设置

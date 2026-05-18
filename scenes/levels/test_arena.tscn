@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" uid="uid://b2ergiluj72b6" path="res://scripts/level/test_arena.gd" id="1_test"]
 [ext_resource type="PackedScene" uid="uid://d4mpaxhq3wxab" path="res://scenes/enemies/advanced_flying_enemy.tscn" id="2_4brh2"]
+[ext_resource type="PackedScene" uid="uid://d0gscp10sfk0o" path="res://scenes/enemies/orc_enemy.tscn" id="4_4brh2"]
 [ext_resource type="PackedScene" uid="uid://blo2fnnxmn1yu" path="res://scenes/enemies/standard_enemy.tscn" id="4_8124a"]
 
 [node name="TestArena" type="Node3D" unique_id=1113493267]
@@ -17,3 +18,6 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.2251844, 6.4639626, -15.93
 
 [node name="StandardEnemy" parent="." unique_id=1065712478 instance=ExtResource("4_8124a")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.2835097, 0, -6.3939247)
+
+[node name="orc_enemy" parent="." unique_id=449402768 instance=ExtResource("4_4brh2")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6.962081, 0, -1.6482887)
