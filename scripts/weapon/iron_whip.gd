@@ -148,14 +148,14 @@ func _process(delta: float) -> void:
 # 挥鞭
 # ==============================================================================
 func _try_whip() -> void:
-	var ray_origin := _camera.global_position
 	var dir := -_camera.global_transform.basis.z.normalized()
+	# 射线从摄像机前方 0.6m 开始，避免起点在玩家碰撞体内导致检测异常
+	var ray_origin := _camera.global_position + dir * 0.6
 	var end: Vector3 = ray_origin + dir * _whip_data.whip_range
 
 	var space_state := get_world_3d().direct_space_state
 	var query := PhysicsRayQueryParameters3D.create(ray_origin, end)
 	query.collision_mask = 1
-	query.exclude = [self, _player]
 	if _grabbed_enemy != null:
 		query.exclude.append(_grabbed_enemy)
 
@@ -208,10 +208,16 @@ func _execute_whip_hit(target: Node) -> void:
 	if enemy == null:
 		return
 
-	# 护甲检查：有护甲的敌人免疫铁链伤害和眩晕（但铁链可削减护甲）
+	# 护甲检查：有护甲时削减护甲，眩晕效果按护甲比例减免
 	if enemy.has_method("deplete_armor"):
 		var absorbed: float = enemy.deplete_armor(_whip_data.damage * 0.5)
 		if absorbed > 0.0:
+			# 护甲存在：按已破护甲比例增加眩晕（破甲越多眩晕越多，30%~100%）
+			var armor_ratio: float = 0.3
+			if enemy.enemy_data != null and enemy.enemy_data.armor > 0.0:
+				var remaining := enemy.get_current_armor()
+				armor_ratio = clampf(1.0 - remaining / enemy.enemy_data.armor, 0.3, 1.0)
+			enemy.apply_stun(_whip_data.stun_damage * armor_ratio)
 			return
 
 	var dmg := enemy.get_node_or_null("Damageable") as Damageable

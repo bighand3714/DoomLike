@@ -50,6 +50,8 @@ func _state_entered(new_state: EnemyState) -> void:
 			_on_defending_entered()
 		EnemyState.KNOCKED_DOWN:
 			_on_knocked_down_entered()
+		EnemyState.STUNNED:
+			_on_stunned_entered()
 
 
 func _state_exit(old_state: EnemyState) -> void:
@@ -74,8 +76,10 @@ func _ai_tick() -> void:
 	if _player == null or enemy_data == null:
 		return
 
-	# 已在攻击流程中，不打断
+	# 已在攻击流程或受控状态中，不打断
 	if _is_in_attack_state():
+		return
+	if _state in [EnemyState.STUNNED, EnemyState.GRABBED, EnemyState.PAIN, EnemyState.KNOCKED_DOWN, EnemyState.EXECUTED, EnemyState.DEATH]:
 		return
 
 	var bracket: int = get_player_distance_bracket()
@@ -161,22 +165,25 @@ func _on_attack_prepare_entered() -> void:
 		if dist > 1.0:
 			var dir := to_player.normalized()
 			global_position += dir * (dist - 1.0) * 0.3
-	# 举斧发光提示
+	# 举斧发光 + 向后旋转30°（蓄力姿态）
 	if _axe_hand != null:
 		_set_node_glow(_axe_hand, true)
+		var tween := create_tween()
+		tween.tween_property(_axe_hand, "rotation_degrees:x", 30.0, 0.3)
 
 
 func _on_attack_prepare_exited() -> void:
+	# 关闭发光即可，旋转由 ACTIVE 阶段衔接
 	if _axe_hand != null:
 		_set_node_glow(_axe_hand, false)
 
 
 func _on_attack_active_entered() -> void:
-	# 左手斧旋转360° 攻击动画
+	# 从当前蓄力角度向前挥砍一整圈（30°→0°→-330°连续过渡）
 	if _axe_hand != null:
-		_axe_hand.rotation_degrees = Vector3(0, 0, 0)
+		var current_x := _axe_hand.rotation_degrees.x
 		var tween := create_tween()
-		tween.tween_property(_axe_hand, "rotation_degrees", Vector3(-360, 0, 0), 0.3)
+		tween.tween_property(_axe_hand, "rotation_degrees:x", current_x - 360.0, 0.3)
 	# 激活攻击判定框
 	if _attack_hitbox != null:
 		_attack_hitbox.monitoring = true
@@ -195,6 +202,24 @@ func _on_attack_active_exited() -> void:
 
 func _on_attack_recover_entered() -> void:
 	pass
+
+
+func _on_stunned_entered() -> void:
+	# 眩晕：武器回正 + 蓝白闪
+	if _axe_hand != null:
+		_axe_hand.rotation_degrees = Vector3(0, 0, 0)
+	# 确保蓝白闪一定触发（兜底）
+	_flash_pain(Color(0.3, 0.7, 1.0))
+	# 每 2s 重复一次闪烁，持续显示眩晕状态
+	var repeat_timer := get_tree().create_timer(2.0)
+	repeat_timer.timeout.connect(_stun_pulse)
+
+
+func _stun_pulse() -> void:
+	if _state == EnemyState.STUNNED:
+		_flash_pain(Color(0.3, 0.7, 1.0))
+		var t := get_tree().create_timer(2.0)
+		t.timeout.connect(_stun_pulse)
 
 
 # ==============================================================================
@@ -269,20 +294,34 @@ func _on_damaged(amount: float, type: WeaponData.DamageType) -> void:
 		_damage_mark_multiplier = 1.0
 		_damage_mark_timer = 0.0
 
-	# Counter 检测
-	if _is_in_attack_state():
-		GameBus.counter_triggered.emit(self, global_position)
-		apply_stun(amount * 2.0)
-		_flash_pain(Color(0.3, 0.7, 1.0))
-		# 如果 stun 满 → apply_stun 已置为 STUNNED，不再覆盖为 PAIN
-		if _state != EnemyState.STUNNED:
-			_transition_to(EnemyState.PAIN)
+	# ATTACK_PREPARE 受击：3倍眩晕但不触发 Counter
+	if _state == EnemyState.ATTACK_PREPARE:
+		apply_stun(amount * 3.0)
+		_flash_pain(Color(0.7, 0.7, 0.3))
+		_transition_to(EnemyState.PAIN)
 		return
 
-	# 防御状态：扣护甲（使用每实例变量，避免共享 Resource 变异）
-	if _state == EnemyState.DEFENDING and _current_armor > 0.0:
+	# Counter 检测：仅 ATTACK_ACTIVE 判定窗口受击触发，直接眩晕满
+	if _state == EnemyState.ATTACK_ACTIVE:
+		# 武器回正（打断攻击动画）
+		if _axe_hand != null:
+			_axe_hand.rotation_degrees = Vector3(0, 0, 0)
+		GameBus.counter_triggered.emit(self, global_position)
+		_stun = enemy_data.max_stun
+		if not _is_stun_full:
+			_is_stun_full = true
+			_stun_full_timer = enemy_data.stun_full_duration
+		_flash_pain(Color(0.3, 0.7, 1.0))
+		_transition_to(EnemyState.STUNNED)
+		return
+
+	# 护甲吸收（所有状态通用，不仅是 DEFENDING）
+	# Damageable.take_damage() 已预先扣除全额 HP，护甲吸收的部分需退回
+	if _current_armor > 0.0:
 		var absorbed: float = deplete_armor(amount)
 		amount -= absorbed
+		if absorbed > 0.0 and _damageable != null:
+			_damageable.health = minf(_damageable.health + absorbed, _damageable.max_health)
 		if amount <= 0.0:
 			_flash_pain(Color(0.6, 0.6, 0.7))  # 护甲格挡闪白
 			return

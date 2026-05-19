@@ -61,10 +61,14 @@ var _damage_mark_timer: float = 0.0
 ## 定身剩余时间
 var _snare_timer: float = 0.0
 
+## 眩晕衰减延迟——受击后 1s 内不衰减，1s 后慢慢回落
+var _stun_decay_delay: float = 0.0
+
 ## 每实例护甲值（从 enemy_data.armor 初始化，避免共享 Resource 变异）
 var _current_armor: float = 0.0
 
 var _debug_stun_bar: MeshInstance3D = null
+var _debug_armor_bar: MeshInstance3D = null
 var _debug_hp_bar: MeshInstance3D = null
 const DEBUG_BAR_FULL := 0.5
 const DEBUG_BAR_Y := 2.2
@@ -98,6 +102,11 @@ func _is_in_attack_state() -> bool:
 	return _state == EnemyState.ATTACK_PREPARE or _state == EnemyState.ATTACK_ACTIVE or _state == EnemyState.ATTACK_RECOVER or _state == EnemyState.ATTACK
 
 
+## 获取当前护甲值（供外部查询，如 whip 计算眩晕倍率）
+func get_current_armor() -> float:
+	return _current_armor
+
+
 ## 消耗护甲值，返回吸收的伤害量（每实例数据，不会影响其他同类型敌人）
 func deplete_armor(amount: float) -> float:
 	if _current_armor <= 0.0:
@@ -114,6 +123,7 @@ func _ready() -> void:
 	_stun = 0.0
 	_is_stun_full = false
 	_stun_full_timer = 0.0
+	_stun_decay_delay = 0.0
 	if enemy_data != null:
 		_current_armor = enemy_data.armor
 
@@ -205,10 +215,14 @@ func _physics_process(delta: float) -> void:
 		if _damage_mark_timer <= 0.0:
 			_damage_mark_multiplier = 1.0
 
+	# 眩晕衰减延迟：受击后保持 1s 不变，1s 后慢慢回落
+	if _stun_decay_delay > 0.0:
+		_stun_decay_delay -= delta
 	if _stun > 0.0 and _state != EnemyState.STUNNED and _state != EnemyState.GRABBED:
-		_stun -= enemy_data.stun_recovery_rate * delta
-		if _stun < 0.0:
-			_stun = 0.0
+		if _stun_decay_delay <= 0.0:
+			_stun -= enemy_data.stun_recovery_rate * delta
+			if _stun < 0.0:
+				_stun = 0.0
 
 	if _knockback_velocity.length_squared() > 0.001:
 		_knockback_velocity = _knockback_velocity.move_toward(Vector3.ZERO, 10.0 * delta)
@@ -599,11 +613,13 @@ func apply_stun(amount: float) -> void:
 		return
 	var effective: float = amount * (1.0 - enemy_data.stun_resistance)
 	_stun = clampf(_stun + effective, 0.0, enemy_data.max_stun)
+	_stun_decay_delay = 1.0
 	stun_changed.emit(_stun, enemy_data.max_stun)
 	if _stun >= enemy_data.max_stun and not _is_stun_full:
 		_is_stun_full = true
 		_stun_full_timer = enemy_data.stun_full_duration
 		stun_filled.emit(self)
+		_flash_pain(Color(0.3, 0.7, 1.0))
 		_transition_to(EnemyState.STUNNED)
 
 
@@ -741,22 +757,28 @@ func _on_damaged(amount: float, _type: WeaponData.DamageType) -> void:
 		_damage_mark_multiplier = 1.0
 		_damage_mark_timer = 0.0
 
-	# --- COUNTER 检测：处于攻击阶段时受击 → 眩晕大幅上涨 + 青蓝闪白 ---
-	if _is_in_attack_state():
-		# Counter 额外眩晕（2 倍基础值）
-		apply_stun(amount * 2.0)
+	# --- COUNTER 检测：仅 ATTACK_ACTIVE 判定窗口受击触发，直接眩晕满 ---
+	if _state == EnemyState.ATTACK_ACTIVE:
+		# Counter：眩晕值直接拉满，无视抗性
+		_stun = enemy_data.max_stun
+		if not _is_stun_full:
+			_is_stun_full = true
+			_stun_full_timer = enemy_data.stun_full_duration
+			stun_filled.emit(self)
+			_transition_to(EnemyState.STUNNED)
 		# 青蓝色闪白
 		_flash_pain(Color(0.3, 0.7, 1.0))
 		# 发射 Counter 信号
 		GameBus.counter_triggered.emit(self, global_position)
-		# 打断攻击 → 进入 PAIN
-		_transition_to(EnemyState.PAIN)
 		return
 
 	# 护甲减伤（敌人护甲系统——使用每实例变量，避免共享 Resource 变异）
+	# Damageable.take_damage() 已预先扣除了全额 HP，护甲吸收的部分需退回
 	if _current_armor > 0.0:
 		var absorbed: float = deplete_armor(amount)
 		amount -= absorbed
+		if absorbed > 0.0 and _damageable != null:
+			_damageable.health = minf(_damageable.health + absorbed, _damageable.max_health)
 
 	# 正常受击闪白
 	if _type == WeaponData.DamageType.MELEE:
@@ -824,27 +846,35 @@ func _on_death_visual() -> void:
 
 
 # ==============================================================================
-# 调试条
+# 调试条 — 从上至下：眩晕(黄) / 护甲(蓝) / 血量(绿→橙→红)
 # ==============================================================================
 func _create_debug_bars() -> void:
 	var bar_thick := 0.06
 	var bar_z: float = -0.5
 
-	# HP 血条（绿色发光）
+	# 眩晕条（黄色，最上方）
+	_debug_stun_bar = _make_bar("StunBar", Color(1.0, 0.9, 0.1), DEBUG_BAR_Y + 0.1, bar_thick, bar_z)
+	var stun_mat := _debug_stun_bar.material_override as StandardMaterial3D
+	if stun_mat != null:
+		stun_mat.emission_enabled = true
+		stun_mat.emission = Color(1.0, 0.9, 0.1)
+		stun_mat.emission_energy_multiplier = 0.5
+
+	# 护甲条（蓝色，中间）
+	_debug_armor_bar = _make_bar("ArmorBar", Color(0.2, 0.4, 1.0), DEBUG_BAR_Y, bar_thick, bar_z)
+	var armor_mat := _debug_armor_bar.material_override as StandardMaterial3D
+	if armor_mat != null:
+		armor_mat.emission_enabled = true
+		armor_mat.emission = Color(0.2, 0.4, 1.0)
+		armor_mat.emission_energy_multiplier = 0.5
+
+	# HP 血条（绿色→橙→红，最下方）
 	_debug_hp_bar = _make_bar("HPBar", Color(0.2, 0.9, 0.2), DEBUG_BAR_Y - 0.1, bar_thick, bar_z)
 	var hp_mat := _debug_hp_bar.material_override as StandardMaterial3D
 	if hp_mat != null:
 		hp_mat.emission_enabled = true
 		hp_mat.emission = Color(0.2, 0.9, 0.2)
 		hp_mat.emission_energy_multiplier = 0.5
-
-	# 眩晕条（黄色）
-	_debug_stun_bar = _make_bar("StunBar", Color(1.0, 0.9, 0.1), DEBUG_BAR_Y, bar_thick, bar_z)
-	var stun_mat := _debug_stun_bar.material_override as StandardMaterial3D
-	if stun_mat != null:
-		stun_mat.emission_enabled = true
-		stun_mat.emission = Color(1.0, 0.9, 0.1)
-		stun_mat.emission_energy_multiplier = 0.5
 
 
 func _make_bar(bar_name: String, color: Color, y: float, thick: float, z: float) -> MeshInstance3D:
@@ -870,6 +900,15 @@ func _update_debug_bars() -> void:
 		var stun_box: BoxMesh = _debug_stun_bar.mesh
 		stun_box.size.x = w
 		_debug_stun_bar.position.x = -(DEBUG_BAR_FULL - w) / 2.0
+
+	if _debug_armor_bar != null and enemy_data != null:
+		var armor_max: float = enemy_data.armor
+		if armor_max > 0.0:
+			var ratio: float = _current_armor / armor_max
+			var w: float = DEBUG_BAR_FULL * ratio
+			var arm_box: BoxMesh = _debug_armor_bar.mesh
+			arm_box.size.x = w
+			_debug_armor_bar.position.x = -(DEBUG_BAR_FULL - w) / 2.0
 
 	if _debug_hp_bar != null and _damageable != null:
 		var ratio: float = _damageable.health / _damageable.max_health

@@ -81,6 +81,14 @@ func _ready() -> void:
 	ui.add_child(hit_indicator)
 	var minimap: Control = load("res://scripts/ui/minimap.gd").new()
 	minimap.name = "Minimap"
+	minimap.anchor_left = 1.0
+	minimap.anchor_right = 1.0
+	minimap.anchor_top = 0.0
+	minimap.anchor_bottom = 0.0
+	minimap.offset_left = -165.0
+	minimap.offset_right = -12.0
+	minimap.offset_top = 12.0
+	minimap.offset_bottom = 165.0
 	ui.add_child(minimap)
 
 	_set_game_state(GameState.State.MAIN_MENU)

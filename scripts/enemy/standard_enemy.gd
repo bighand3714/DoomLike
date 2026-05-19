@@ -84,18 +84,23 @@ func _on_damaged(amount: float, type: WeaponData.DamageType) -> void:
 		_damage_mark_timer = 0.0
 
 	if _state == EnemyState.ATTACK:
-		# Counter 触发！
-		GameBus.counter_triggered.emit(self, global_position)
-		# Windup 阶段可打断
+		# Counter：仅跳跃阶段（phase 1）触发，直接眩晕满
 		if _attack_phase == 0:
+			# Windup 可打断但不能 Counter
 			_set_windup_glow(false)
 			velocity = Vector3.ZERO
-		# Recovery 阶段额外眩晕
-		elif _attack_phase == 2:
-			apply_stun(amount * 1.5)
-		# 跳跃空中击退增强
 		elif _attack_phase == 1:
+			# 跳跃空中 = Counter 窗口
+			GameBus.counter_triggered.emit(self, global_position)
+			_stun = enemy_data.max_stun
+			if not _is_stun_full:
+				_is_stun_full = true
+				_stun_full_timer = enemy_data.stun_full_duration
+			_flash_pain(Color(0.3, 0.7, 1.0))
 			_knockback_velocity *= 1.5
+			_transition_to(EnemyState.STUNNED)
+			return
+		# Recovery 受击无特殊效果
 
 	if type == WeaponData.DamageType.MELEE:
 		_flash_pain(Color(0.5, 0.5, 0.5))
