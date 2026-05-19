@@ -63,6 +63,7 @@ var _snare_timer: float = 0.0
 
 ## 眩晕衰减延迟——受击后 1s 内不衰减，1s 后慢慢回落
 var _stun_decay_delay: float = 0.0
+var _stun_flash_toggle: bool = false  # 眩晕闪烁交替开关
 
 ## 每实例护甲值（从 enemy_data.armor 初始化，避免共享 Resource 变异）
 var _current_armor: float = 0.0
@@ -271,6 +272,9 @@ func _physics_process(delta: float) -> void:
 	if _snare_timer > 0.0 and _state not in [EnemyState.GRABBED, EnemyState.DEATH]:
 		velocity = Vector3.ZERO
 
+	if _state != EnemyState.DEATH:
+		move_and_slide()
+
 	_update_debug_bars()
 
 
@@ -342,7 +346,6 @@ func _state_chase(delta: float) -> void:
 		velocity.y = 0.0
 
 	_face_player_flat()
-	move_and_slide()
 
 
 # ==============================================================================
@@ -360,7 +363,6 @@ func _state_walking(delta: float) -> void:
 	_move_towards_player(delta, enemy_data.move_speed)
 	velocity.y = 0.0
 	_face_player_flat()
-	move_and_slide()
 
 
 # ==============================================================================
@@ -378,7 +380,6 @@ func _state_running(delta: float) -> void:
 	_move_towards_player(delta, enemy_data.move_speed * 1.5)
 	velocity.y = 0.0
 	_face_player_flat()
-	move_and_slide()
 
 
 # ==============================================================================
@@ -444,7 +445,6 @@ func _state_attack_recover(delta: float) -> void:
 # ==============================================================================
 func _state_defending(_delta: float) -> void:
 	_face_player_flat()
-	move_and_slide()
 
 
 # ==============================================================================
@@ -551,11 +551,24 @@ func _state_pain(delta: float) -> void:
 
 
 func _state_stunned(delta: float) -> void:
+	if _state_timer == 0.0:
+		# 开始眩晕脉冲（状态首次进入）
+		var t := get_tree().create_timer(0.15)
+		t.timeout.connect(_stun_pulse)
+	_state_timer += delta
 	_stun_full_timer -= delta
 	if _stun_full_timer <= 0.0:
 		_is_stun_full = false
 		_stun = enemy_data.max_stun * 0.8
 		_transition_to(EnemyState.CHASE)
+
+
+func _stun_pulse() -> void:
+	if _state == EnemyState.STUNNED:
+		_stun_flash_toggle = not _stun_flash_toggle
+		_flash_pain(Color.WHITE if _stun_flash_toggle else Color(0.3, 0.7, 1.0))
+		var t := get_tree().create_timer(0.4)
+		t.timeout.connect(_stun_pulse)
 
 
 func _state_grabbed(_delta: float) -> void:
@@ -619,7 +632,7 @@ func apply_stun(amount: float) -> void:
 		_is_stun_full = true
 		_stun_full_timer = enemy_data.stun_full_duration
 		stun_filled.emit(self)
-		_flash_pain(Color(0.3, 0.7, 1.0))
+		_flash_pain(Color.WHITE)
 		_transition_to(EnemyState.STUNNED)
 
 
@@ -718,18 +731,21 @@ func _get_player_distance_xz() -> float:
 func _move_towards_player(_delta: float, speed: float) -> void:
 	var dir := _get_player_flat_direction()
 	velocity.x = dir.x * speed
+	velocity.y = 0.0
 	velocity.z = dir.z * speed
 
 
 func _move_away_from_player(_delta: float, speed: float) -> void:
 	var dir := -_get_player_flat_direction()
 	velocity.x = dir.x * speed
+	velocity.y = 0.0
 	velocity.z = dir.z * speed
 
 
 func _strafe_around_player(_delta: float, speed: float) -> void:
 	var dir := _get_player_flat_direction()
 	velocity.x = -dir.z * speed
+	velocity.y = 0.0
 	velocity.z = dir.x * speed
 
 
@@ -766,9 +782,10 @@ func _on_damaged(amount: float, _type: WeaponData.DamageType) -> void:
 			_stun_full_timer = enemy_data.stun_full_duration
 			stun_filled.emit(self)
 			_transition_to(EnemyState.STUNNED)
-		# 青蓝色闪白
-		_flash_pain(Color(0.3, 0.7, 1.0))
-		# 发射 Counter 信号
+		# 白色闪烁
+		_flash_pain(Color.WHITE)
+		# 护甲清零 + 发射 Counter 信号
+		_current_armor = 0.0
 		GameBus.counter_triggered.emit(self, global_position)
 		return
 

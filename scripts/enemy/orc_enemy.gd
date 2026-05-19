@@ -60,6 +60,8 @@ func _state_exit(old_state: EnemyState) -> void:
 			_on_attack_prepare_exited()
 		EnemyState.ATTACK_ACTIVE:
 			_on_attack_active_exited()
+		EnemyState.ATTACK_RECOVER:
+			_on_attack_recover_exited()
 		EnemyState.DEFENDING:
 			_on_defending_exited()
 		EnemyState.KNOCKED_DOWN:
@@ -113,9 +115,15 @@ func _ai_tick() -> void:
 					_transition_to(EnemyState.WALKING)
 
 		DistanceBracket.CLOSE:  # 1~3m — 主战斗距离：举盾 + 概率攻击
-			if randf() < 0.4 and _attack_cooldown_timer <= 0.0:
-				_transition_to(EnemyState.ATTACK_PREPARE)
-				return
+			if _state not in [EnemyState.DEFENDING, EnemyState.ATTACK_PREPARE, EnemyState.ATTACK_ACTIVE, EnemyState.ATTACK_RECOVER]:
+				if randf() < 0.4 and _attack_cooldown_timer <= 0.0:
+					_transition_to(EnemyState.ATTACK_PREPARE)
+					return
+			else:
+				# 已在防御中：每 2s 试探一次攻击，避免永远站桩
+				if _state_timer > 2.0 and randf() < 0.3 and _attack_cooldown_timer <= 0.0:
+					_transition_to(EnemyState.ATTACK_PREPARE)
+					return
 			if _state != EnemyState.DEFENDING:
 				_transition_to(EnemyState.DEFENDING)
 
@@ -173,9 +181,11 @@ func _on_attack_prepare_entered() -> void:
 
 
 func _on_attack_prepare_exited() -> void:
-	# 关闭发光即可，旋转由 ACTIVE 阶段衔接
+	# 关闭发光 + 武器回正（无论被打断还是正常过渡）
 	if _axe_hand != null:
 		_set_node_glow(_axe_hand, false)
+		var tween := create_tween()
+		tween.tween_property(_axe_hand, "rotation_degrees:x", 0.0, 0.15)
 
 
 func _on_attack_active_entered() -> void:
@@ -204,21 +214,31 @@ func _on_attack_recover_entered() -> void:
 	pass
 
 
+func _on_attack_recover_exited() -> void:
+	# 攻击收刀完成：斧子回正到竖持位置
+	if _axe_hand != null:
+		var tween := create_tween()
+		tween.tween_property(_axe_hand, "rotation_degrees:x", 0.0, 0.15)
+
+
 func _on_stunned_entered() -> void:
-	# 眩晕：武器回正 + 蓝白闪
+	# 眩晕：武器回正 + 青白交替快速闪
 	if _axe_hand != null:
 		_axe_hand.rotation_degrees = Vector3(0, 0, 0)
-	# 确保蓝白闪一定触发（兜底）
-	_flash_pain(Color(0.3, 0.7, 1.0))
-	# 每 2s 重复一次闪烁，持续显示眩晕状态
-	var repeat_timer := get_tree().create_timer(2.0)
-	repeat_timer.timeout.connect(_stun_pulse)
+	# 先闪白，0.15s 后开始交替脉冲
+	_flash_pain(Color.WHITE)
+	_stun_flash_toggle = true
+	var t := get_tree().create_timer(0.15)
+	t.timeout.connect(_stun_pulse)
 
 
 func _stun_pulse() -> void:
 	if _state == EnemyState.STUNNED:
-		_flash_pain(Color(0.3, 0.7, 1.0))
-		var t := get_tree().create_timer(2.0)
+		# 交替青蓝色和白色，0.4s 间隔快速闪烁
+		var is_white := _stun_flash_toggle
+		_stun_flash_toggle = not _stun_flash_toggle
+		_flash_pain(Color.WHITE if is_white else Color(0.3, 0.7, 1.0))
+		var t := get_tree().create_timer(0.4)
 		t.timeout.connect(_stun_pulse)
 
 
@@ -226,17 +246,33 @@ func _stun_pulse() -> void:
 # 防御阶段 — 覆写基类，增加贴身自动后退
 # ==============================================================================
 
+# 覆写基类 CHASE：攻击完成后不进入旧版 ATTACK 循环，改为防御/后退
+func _state_chase(delta: float) -> void:
+	var to_player := _player.global_position - global_position
+	to_player.y = 0.0
+	var dist := to_player.length()
+	if dist > enemy_data.sight_range * 1.5:
+		_transition_to(EnemyState.IDLE)
+		return
+	if dist <= enemy_data.attack_range:
+		# 不进入 ATTACK，让 AI tick 决定下一步（DEFENDING 或 ATTACK_PREPARE）
+		_transition_to(EnemyState.DEFENDING)
+		return
+	_move_towards_player(delta, enemy_data.move_speed)
+	velocity.y = 0.0
+	_face_player_flat()
+
+
 func _state_defending(_delta: float) -> void:
+	velocity.y = 0.0
 	if _player != null:
 		var to_player := _player.global_position - global_position
 		to_player.y = 0.0
 		var dist := to_player.length()
 		if dist < 1.0:
-			# 贴身范围：自动后退（AI tick 设置的绕圈速度被覆盖）
+			# 贴身范围：自动后退
 			_move_away_from_player(0.0, enemy_data.move_speed * 0.6)
-		# 1m 之外：不干预 velocity，完全由 AI tick 的 _strafe_around_player 控制绕圈
 	_face_player_flat()
-	move_and_slide()
 
 
 func _on_defending_entered() -> void:
@@ -307,6 +343,7 @@ func _on_damaged(amount: float, type: WeaponData.DamageType) -> void:
 		if _axe_hand != null:
 			_axe_hand.rotation_degrees = Vector3(0, 0, 0)
 		GameBus.counter_triggered.emit(self, global_position)
+		_current_armor = 0.0
 		_stun = enemy_data.max_stun
 		if not _is_stun_full:
 			_is_stun_full = true

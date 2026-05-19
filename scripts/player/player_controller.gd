@@ -310,6 +310,10 @@ func start_dash(direction: Vector3, speed: float, distance: float) -> void:
 	_dash_distance = distance
 	_dash_travelled = 0.0
 
+func stop_dash() -> void:
+	_is_dashing = false
+	_dash_direction = Vector3.ZERO
+
 
 var _shake_tween: Tween = null
 var _camera_base_pos: Vector3

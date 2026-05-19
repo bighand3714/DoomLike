@@ -39,7 +39,7 @@ size = Vector3(0.04, 0.2, 0.04)
 [node name="AxeHandle" type="CSGBox3D" parent="RightHand" unique_id=314750195]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.3, 1.6, 0)
 material_override = ExtResource("3_axe_mat")
-size = Vector3(0.04, 1.2, 0.04)
+size = Vector3(0.04, 1.4, 0.04)
 
 [node name="AxeBlade" type="CSGBox3D" parent="RightHand" unique_id=1600614982]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.3, 1.2, 0)

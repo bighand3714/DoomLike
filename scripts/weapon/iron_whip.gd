@@ -24,6 +24,10 @@ var _whip_line_timer: float = 0.0
 var _secondary_held: bool = false
 var _was_shielding: bool = false
 
+# 冲刺过程中已命中的敌人（避免重复击退）
+var _dash_hit_enemies: Array = []
+var _dash_direction: Vector3 = Vector3.ZERO  # 冲刺方向（用于击退计算）
+
 
 func setup(data: WhipData, camera: Camera3D, player: CharacterBody3D) -> void:
 	_whip_data = data
@@ -403,10 +407,12 @@ func _start_dash() -> void:
 		_state = WhipState.IDLE
 		return
 
+	_dash_hit_enemies.clear()
 	# 通知玩家开始冲刺
 	if _player.has_method("start_dash"):
 		var dash_dir := (-_camera.global_transform.basis.z).normalized()
 		dash_dir.y = 0.0
+		_dash_direction = dash_dir
 		_player.start_dash(dash_dir, _whip_data.dash_speed, _whip_data.dash_distance)
 
 	# 等待冲刺完成
@@ -458,7 +464,47 @@ func _finish_dash() -> void:
 
 
 func _process_dash(_delta: float) -> void:
-	pass
+	# 冲刺路径上的敌人碰撞检测——命中即停
+	var space_state := get_world_3d().direct_space_state
+	var sphere := SphereShape3D.new()
+	sphere.radius = 1.5
+	var params := PhysicsShapeQueryParameters3D.new()
+	params.shape = sphere
+	params.transform = Transform3D(Basis(), _player.global_position)
+	params.collision_mask = 1
+	var results := space_state.intersect_shape(params, 16)
+	for result in results:
+		var body := result.get("collider") as Node3D
+		if body == null:
+			continue
+		var enemy: Enemy = body.get_parent() as Enemy
+		if enemy == null:
+			enemy = body as Enemy
+		if enemy == null or enemy == _grabbed_enemy:
+			continue
+		# 命中敌人：停止冲刺
+		_player.stop_dash()
+		# 伤害 + 击退（沿冲刺方向）
+		var dmg := enemy.get_node_or_null("Damageable") as Damageable
+		if dmg != null:
+			dmg.take_damage(_whip_data.dash_damage, WeaponData.DamageType.MELEE)
+		enemy.apply_knockback(_dash_direction, _whip_data.dash_knockback)
+		# 1m 范围 AOE
+		var all_enemies := get_tree().get_nodes_in_group("enemy")
+		for node in all_enemies:
+			if not is_instance_valid(node):
+				continue
+			var other: Enemy = node as Enemy
+			if other == null or other == enemy:
+				continue
+			if other.global_position.distance_to(enemy.global_position) <= 1.0:
+				var aoe_dmg := other.get_node_or_null("Damageable") as Damageable
+				if aoe_dmg != null:
+					aoe_dmg.take_damage(_whip_data.dash_damage, WeaponData.DamageType.MELEE)
+				other.apply_knockback(_dash_direction, _whip_data.dash_knockback)
+		# 结束冲刺
+		_finish_dash()
+		break
 
 
 # ==============================================================================
