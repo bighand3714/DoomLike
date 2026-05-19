@@ -23,7 +23,9 @@ func _setup_model() -> void:
 
 # 拳头覆写后坐力——前冲而非后座
 func _apply_recoil() -> void:
+	if _recoil_tween != null and _recoil_tween.is_valid():
+		_recoil_tween.kill()
 	var original_pos := position
-	var tween := create_tween()
-	tween.tween_property(self, "position", original_pos + Vector3(0.0, 0.0, -0.08), 0.04)
-	tween.tween_property(self, "position", original_pos, 0.12)
+	_recoil_tween = create_tween()
+	_recoil_tween.tween_property(self, "position", original_pos + Vector3(0.0, 0.0, -0.08), 0.04)
+	_recoil_tween.tween_property(self, "position", original_pos, 0.12)

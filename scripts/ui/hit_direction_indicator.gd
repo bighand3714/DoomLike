@@ -19,11 +19,13 @@ func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 ## 添加一个受击方向指示器
-func add_hit_indicator(direction_3d: Vector3, _camera_basis: Basis) -> void:
-	var flat_dir := Vector2(direction_3d.x, direction_3d.z).normalized()
-	if flat_dir.length_squared() < 0.01:
-		flat_dir = Vector2.DOWN
-	var angle: float = flat_dir.angle() + PI / 2.0
+func add_hit_indicator(direction_3d: Vector3, camera_basis: Basis) -> void:
+	# 将世界空间方向转换到相机局部空间，再映射为屏幕方向
+	var local_dir := camera_basis.inverse() * direction_3d
+	var screen_dir := Vector2(local_dir.x, -local_dir.z)
+	if screen_dir.length_squared() < 0.01:
+		screen_dir = Vector2.DOWN
+	var angle: float = screen_dir.angle()
 	_indicators.append({
 		"angle": angle,
 		"alpha": 1.0,

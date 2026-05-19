@@ -1,0 +1,6 @@
+[gd_resource type="ConeMesh" format=3 uid="uid://cqjlhb02u37jy"]
+
+[resource]
+bottom_radius = 0.06
+top_radius = 0.01
+height = 0.2

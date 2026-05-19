@@ -3,6 +3,8 @@
 # ==============================================================================
 # 继承 Enemy 基类，使用 ATTACK_PREPARE/ACTIVE/RECOVER 三段式攻击，
 # 具备 DEFENDING 举盾防御技能。
+# 战斗逻辑：在 CLOSE 距离(1~3m)举盾防守+概率攻击，不主动进入 MELEE(<1m)。
+# 玩家身边兽人 ≥3 时，远处兽人不再主动靠近，避免无限堆叠。
 # ==============================================================================
 
 class_name OrcEnemy extends Enemy
@@ -15,6 +17,8 @@ class_name OrcEnemy extends Enemy
 var _axe_hand: Node3D = null       # 右手斧子父节点（用于攻击动画）
 var _shield_node: Node3D = null    # 左手臂盾节点（用于防御动画）
 var _attack_hitbox: Area3D = null  # 攻击判定框
+var _axe_glow_mat: StandardMaterial3D = null  # 缓存斧头发光材质
+var _axe_original_materials: Dictionary = {}  # 斧头原始 material_override 备份（用于恢复）
 
 
 # ==============================================================================
@@ -22,9 +26,11 @@ var _attack_hitbox: Area3D = null  # 攻击判定框
 # ==============================================================================
 
 func _ready() -> void:
+	if enemy_data == null:
+		enemy_data = load("res://assets/enemies/orc_melee.tres")
 	super._ready()
 	_axe_hand = get_node_or_null("RightHand")
-	_shield_node = get_node_or_null("Shield")
+	_shield_node = get_node_or_null("Shield/ShieldDisc")
 	_create_attack_hitbox()
 
 
@@ -54,57 +60,67 @@ func _state_exit(old_state: EnemyState) -> void:
 			_on_attack_active_exited()
 		EnemyState.DEFENDING:
 			_on_defending_exited()
+		EnemyState.KNOCKED_DOWN:
+			_on_knocked_down_exited()
 
 
 # ==============================================================================
-# AI 决策（覆写 _ai_tick）
+# AI 决策（覆写 _ai_tick）—— 每 0.1s 执行一次
+# ==============================================================================
+# 玩家身边兽人 ≥3 时，远处兽人不再靠近；只有近身兽人被杀后才会有新兽人替补
 # ==============================================================================
 
 func _ai_tick() -> void:
 	if _player == null or enemy_data == null:
 		return
 
+	# 已在攻击流程中，不打断
+	if _is_in_attack_state():
+		return
+
 	var bracket: int = get_player_distance_bracket()
+	# 玩家身边已有多少兽人（3m 内）——防止无限堆叠
+	var near_player: int = _count_enemies_near_player(3.0)
 
 	match bracket:
-		DistanceBracket.SUPER_FAR:  # >5m
-			if _state != EnemyState.RUNNING and _state != EnemyState.CHASE:
+		DistanceBracket.SUPER_FAR:  # >25m — 玩家身边人少时跑步接近
+			if near_player >= 3:
+				if _state != EnemyState.WALKING:
+					_transition_to(EnemyState.WALKING)
+			elif _state != EnemyState.RUNNING:
 				_transition_to(EnemyState.RUNNING)
 
-		DistanceBracket.FAR:  # 2~5m
-			if enemy_data.can_defend:
+		DistanceBracket.FAR:  # 8~25m — 玩家身边满人则原地防御
+			if near_player >= 3:
 				if _state != EnemyState.DEFENDING:
 					_transition_to(EnemyState.DEFENDING)
 			elif _state != EnemyState.WALKING:
 				_transition_to(EnemyState.WALKING)
 
-		DistanceBracket.MEDIUM:  # 1~2m
-			# 检查周围近战敌人数量
+		DistanceBracket.MEDIUM:  # 3~8m — 多敌包抄 / 单敌接近
 			var nearby_count: int = _count_nearby_melee_enemies(2.0)
-			if nearby_count > 2:
-				# 侧翼包抄：防御 + 横向移动
+			if nearby_count > 2 or near_player >= 2:
+				# 多敌：侧翼包抄 — 防御 + 横向移动
 				if _state != EnemyState.DEFENDING:
 					_transition_to(EnemyState.DEFENDING)
 				_strafe_around_player(0.0, enemy_data.move_speed * 0.5)
 			else:
-				if _state != EnemyState.DEFENDING:
-					_transition_to(EnemyState.DEFENDING)
+				if _state != EnemyState.WALKING:
+					_transition_to(EnemyState.WALKING)
 
-		DistanceBracket.CLOSE:  # 0.5~1m
-			# 中等概率攻击
-			if randf() < 0.4:
-				if _attack_cooldown_timer <= 0.0:
-					_transition_to(EnemyState.ATTACK_PREPARE)
-					return
+		DistanceBracket.CLOSE:  # 1~3m — 主战斗距离：举盾 + 概率攻击
+			if randf() < 0.4 and _attack_cooldown_timer <= 0.0:
+				_transition_to(EnemyState.ATTACK_PREPARE)
+				return
 			if _state != EnemyState.DEFENDING:
 				_transition_to(EnemyState.DEFENDING)
 
-		DistanceBracket.MELEE:  # <0.5m
-			if _attack_cooldown_timer <= 0.0:
-				_transition_to(EnemyState.ATTACK_PREPARE)
+		DistanceBracket.MELEE:  # <1m — 不进入贴身：后退到近距离
+			if _state != EnemyState.DEFENDING:
+				_transition_to(EnemyState.DEFENDING)
 
 
-## 统计周围指定范围内的近战敌人数量
+## 统计自己周围指定范围内的近战敌人数量
 func _count_nearby_melee_enemies(radius: float) -> int:
 	var count: int = 0
 	for node in get_tree().get_nodes_in_group("enemy"):
@@ -117,19 +133,34 @@ func _count_nearby_melee_enemies(radius: float) -> int:
 	return count
 
 
+## 统计玩家身边指定范围内的敌人数量（决定远处兽人是否进场）
+func _count_enemies_near_player(radius: float) -> int:
+	if _player == null:
+		return 0
+	var count: int = 0
+	for node in get_tree().get_nodes_in_group("enemy"):
+		if node == self:
+			continue
+		if not is_instance_valid(node):
+			continue
+		if _player.global_position.distance_to(node.global_position) <= radius:
+			count += 1
+	return count
+
+
 # ==============================================================================
 # 攻击阶段处理
 # ==============================================================================
 
 func _on_attack_prepare_entered() -> void:
-	# 快速跑至距玩家 0.5m 处
+	# 瞬移靠近玩家至 ~1m（近战范围边界），而非贴身
 	if _player != null:
 		var to_player := _player.global_position - global_position
 		to_player.y = 0.0
 		var dist := to_player.length()
-		if dist > 0.5:
+		if dist > 1.0:
 			var dir := to_player.normalized()
-			global_position += dir * (dist - 0.5) * 0.3
+			global_position += dir * (dist - 1.0) * 0.3
 	# 举斧发光提示
 	if _axe_hand != null:
 		_set_node_glow(_axe_hand, true)
@@ -141,9 +172,19 @@ func _on_attack_prepare_exited() -> void:
 
 
 func _on_attack_active_entered() -> void:
+	# 左手斧旋转360° 攻击动画
+	if _axe_hand != null:
+		_axe_hand.rotation_degrees = Vector3(0, 0, 0)
+		var tween := create_tween()
+		tween.tween_property(_axe_hand, "rotation_degrees", Vector3(-360, 0, 0), 0.3)
 	# 激活攻击判定框
 	if _attack_hitbox != null:
 		_attack_hitbox.monitoring = true
+		# 处理已重叠的玩家（body_entered 不会对已重叠身体触发）
+		for body in _attack_hitbox.get_overlapping_bodies():
+			if body == _player:
+				_damage_player(enemy_data.attack_damage, WeaponData.DamageType.MELEE)
+				break
 
 
 func _on_attack_active_exited() -> void:
@@ -157,21 +198,38 @@ func _on_attack_recover_entered() -> void:
 
 
 # ==============================================================================
-# 防御阶段处理
+# 防御阶段 — 覆写基类，增加贴身自动后退
 # ==============================================================================
 
+func _state_defending(_delta: float) -> void:
+	if _player != null:
+		var to_player := _player.global_position - global_position
+		to_player.y = 0.0
+		var dist := to_player.length()
+		if dist < 1.0:
+			# 贴身范围：自动后退（AI tick 设置的绕圈速度被覆盖）
+			_move_away_from_player(0.0, enemy_data.move_speed * 0.6)
+		# 1m 之外：不干预 velocity，完全由 AI tick 的 _strafe_around_player 控制绕圈
+	_face_player_flat()
+	move_and_slide()
+
+
 func _on_defending_entered() -> void:
-	# 举盾视觉
+	# 举盾：盾牌移至身前 + 沿Y轴旋转
 	if _shield_node != null:
 		var tween := create_tween()
-		tween.tween_property(_shield_node, "position", Vector3(0.1, 0.6, 0.4), 0.2)
+		tween.set_parallel(true)
+		tween.tween_property(_shield_node, "position", Vector3(0.0, 1.0, -0.4), 0.2)
+		tween.tween_property(_shield_node, "rotation_degrees:y", -90.0, 0.2)
 
 
 func _on_defending_exited() -> void:
-	# 收盾
+	# 收盾：盾牌回左侧 + 恢复旋转
 	if _shield_node != null:
 		var tween := create_tween()
-		tween.tween_property(_shield_node, "position", Vector3(-0.3, 1.0, 0.1), 0.2)
+		tween.set_parallel(true)
+		tween.tween_property(_shield_node, "position", Vector3(-0.4, 1.2, -0.1), 0.2)
+		tween.tween_property(_shield_node, "rotation_degrees:y", 0.0, 0.2)
 
 
 # ==============================================================================
@@ -184,6 +242,19 @@ func _on_knocked_down_entered() -> void:
 	tween.tween_property(self, "scale", Vector3(1.0, 0.4, 1.0), 0.15)
 
 
+func _on_knocked_down_exited() -> void:
+	# 恢复站立
+	var tween := create_tween()
+	tween.tween_property(self, "scale", Vector3(1.0, 1.0, 1.0), 0.15)
+
+
+# ==============================================================================
+# 覆写 _execute_attack — 伤害由攻击判定框(Area3D)处理，基类版本不执行
+# ==============================================================================
+func _execute_attack() -> void:
+	pass  # 攻击判定由 hitbox 的 body_entered 信号处理
+
+
 # ==============================================================================
 # 覆写受伤：防御状态下扣护甲 + Counter 检测
 # ==============================================================================
@@ -192,18 +263,25 @@ func _on_damaged(amount: float, type: WeaponData.DamageType) -> void:
 	if _state == EnemyState.DEATH:
 		return
 
+	# 增伤标记加成（继承自基类）
+	if _damage_mark_timer > 0.0:
+		amount *= _damage_mark_multiplier
+		_damage_mark_multiplier = 1.0
+		_damage_mark_timer = 0.0
+
 	# Counter 检测
 	if _is_in_attack_state():
 		GameBus.counter_triggered.emit(self, global_position)
 		apply_stun(amount * 2.0)
 		_flash_pain(Color(0.3, 0.7, 1.0))
-		_transition_to(EnemyState.PAIN)
+		# 如果 stun 满 → apply_stun 已置为 STUNNED，不再覆盖为 PAIN
+		if _state != EnemyState.STUNNED:
+			_transition_to(EnemyState.PAIN)
 		return
 
-	# 防御状态：扣护甲
-	if _state == EnemyState.DEFENDING and enemy_data != null and enemy_data.armor > 0.0:
-		var absorbed: float = mini(amount, enemy_data.armor)
-		enemy_data.armor -= absorbed
+	# 防御状态：扣护甲（使用每实例变量，避免共享 Resource 变异）
+	if _state == EnemyState.DEFENDING and _current_armor > 0.0:
+		var absorbed: float = deplete_armor(amount)
 		amount -= absorbed
 		if amount <= 0.0:
 			_flash_pain(Color(0.6, 0.6, 0.7))  # 护甲格挡闪白
@@ -230,9 +308,11 @@ func _create_attack_hitbox() -> void:
 
 	var collision := CollisionShape3D.new()
 	var box := BoxShape3D.new()
-	box.size = Vector3(0.5, 0.5, 0.5)
+	# 判定框在兽人前方 1m，1.2×1.2×1.2 覆盖正面近战范围
+	box.size = Vector3(1.2, 1.2, 1.2)
 	collision.shape = box
-	collision.position = Vector3(0.3, 0.0, 0.6)  # 右手前方
+	# Godot 坐标系中 -Z 是前方（look_at 朝向玩家）
+	collision.position = Vector3(0.3, 0.8, -1.2)
 	_attack_hitbox.add_child(collision)
 
 	_attack_hitbox.body_entered.connect(_on_attack_hitbox_body_entered)
@@ -249,26 +329,21 @@ func _on_attack_hitbox_body_entered(body: Node3D) -> void:
 # ==============================================================================
 
 func _set_node_glow(node: Node3D, glow: bool) -> void:
+	if glow and _axe_glow_mat == null:
+		_axe_glow_mat = StandardMaterial3D.new()
+		_axe_glow_mat.albedo_color = Color(1.0, 0.5, 0.0)
+		_axe_glow_mat.emission_enabled = true
+		_axe_glow_mat.emission = Color(1.0, 0.5, 0.0)
+		_axe_glow_mat.emission_energy_multiplier = 1.0
+
 	for child in node.get_children():
-		if child is MeshInstance3D:
-			var mesh: MeshInstance3D = child
+		if child is MeshInstance3D or child is CSGShape3D:
+			var geo: Node3D = child
 			if glow:
-				var mat := StandardMaterial3D.new()
-				mat.albedo_color = Color(1.0, 0.5, 0.0)
-				mat.emission_enabled = true
-				mat.emission = Color(1.0, 0.5, 0.0)
-				mat.emission_energy_multiplier = 1.0
-				mesh.material_override = mat
+				# 备份原始材质，再覆盖发光材质
+				_axe_original_materials[geo.get_instance_id()] = geo.material_override
+				geo.material_override = _axe_glow_mat
 			else:
-				mesh.material_override = null
-		elif child is CSGShape3D:
-			var csg: CSGShape3D = child
-			if glow:
-				var mat := StandardMaterial3D.new()
-				mat.albedo_color = Color(1.0, 0.5, 0.0)
-				mat.emission_enabled = true
-				mat.emission = Color(1.0, 0.5, 0.0)
-				mat.emission_energy_multiplier = 1.0
-				csg.material_override = mat
-			else:
-				csg.material_override = null
+				# 恢复原始材质（.tscn 中的白银色）而非置 null
+				var original: Material = _axe_original_materials.get(geo.get_instance_id())
+				geo.material_override = original if original != null else null

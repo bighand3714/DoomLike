@@ -266,21 +266,21 @@ func _physics_process(delta: float) -> void:
 
 
 # ==============================================================================
-# _on_player_damaged() — 玩家受伤时触发屏幕闪红
+# 脚下距离环 — 3m(绿) / 8m(黄) / 25m(红)，平贴地面
 # ==============================================================================
 
 func _create_distance_rings() -> void:
 	var ring_specs := [
-		{ "radius": 0.5, "color": Color(1.0, 0.2, 0.1, 0.3), "name": "RingRed" },
-		{ "radius": 1.0, "color": Color(1.0, 0.85, 0.1, 0.2), "name": "RingYellow" },
-		{ "radius": 2.0, "color": Color(0.1, 1.0, 0.2, 0.15), "name": "RingGreen" },
+		{ "radius": 3.0, "color": Color(0.1, 1.0, 0.2, 0.18), "name": "RingGreen" },
+		{ "radius": 8.0, "color": Color(1.0, 0.85, 0.1, 0.20), "name": "RingYellow" },
+		{ "radius": 25.0, "color": Color(1.0, 0.2, 0.1, 0.22), "name": "RingRed" },
 	]
 	for spec in ring_specs:
 		var ring := MeshInstance3D.new()
 		ring.name = spec.name
 		var torus := TorusMesh.new()
-		torus.inner_radius = spec.radius - 0.02
-		torus.outer_radius = spec.radius + 0.02
+		torus.inner_radius = spec.radius - 0.015
+		torus.outer_radius = spec.radius + 0.015
 		ring.mesh = torus
 		var mat := StandardMaterial3D.new()
 		mat.albedo_color = spec.color
@@ -288,8 +288,8 @@ func _create_distance_rings() -> void:
 		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 		mat.cull_mode = BaseMaterial3D.CULL_DISABLED
 		ring.material_override = mat
-		ring.position = Vector3(0, 0.05, 0)
-		ring.rotation_degrees = Vector3(90, 0, 0)
+		ring.position = Vector3(0, 0.12, 0)
+		ring.rotation_degrees = Vector3(0, 0, 0)
 		add_child(ring)
 
 func _on_player_damaged(amount: float, _type: WeaponData.DamageType) -> void:

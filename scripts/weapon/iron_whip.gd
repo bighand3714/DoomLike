@@ -209,10 +209,10 @@ func _execute_whip_hit(target: Node) -> void:
 		return
 
 	# 护甲检查：有护甲的敌人免疫铁链伤害和眩晕（但铁链可削减护甲）
-	if enemy.enemy_data != null and enemy.enemy_data.armor > 0.0:
-		enemy.enemy_data.armor = maxf(0.0, enemy.enemy_data.armor - _whip_data.damage * 0.5)
-		_spawn_whip_effect(global_position, enemy.global_position)
-		return
+	if enemy.has_method("deplete_armor"):
+		var absorbed: float = enemy.deplete_armor(_whip_data.damage * 0.5)
+		if absorbed > 0.0:
+			return
 
 	var dmg := enemy.get_node_or_null("Damageable") as Damageable
 	if dmg != null:
@@ -470,7 +470,8 @@ func _execute_grabbed() -> void:
 		GameBus.run_stats.add_kill(_whip_data.execution_score_bonus)
 	GameBus.pickup_notification.emit("处决 +" + str(_whip_data.execution_score_bonus), Color(1.0, 0.3, 0.1))
 
-	if enemy.has_method("trigger_on_damaged"):
+	# execute() 可能触发 died→queue_free，需检查实例仍有效
+	if is_instance_valid(enemy) and enemy.has_method("trigger_on_damaged"):
 		enemy.trigger_on_damaged(_whip_data.execution_damage, WeaponData.DamageType.MELEE)
 
 	_release_grab_internal()

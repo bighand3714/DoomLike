@@ -54,3 +54,4 @@ signal wave_started(wave_number: int)
 
 var run_stats = null  # RunStats
 var save_data = null  # SaveData
+var last_attacker_position: Vector3 = Vector3.ZERO  # 最近一次攻击者的世界位置（用于受击方向指示器）

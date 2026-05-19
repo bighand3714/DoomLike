@@ -18,11 +18,11 @@ enum EnemyState {
 
 ## 距离档位枚举——全系统统一的五档距离判定
 enum DistanceBracket {
-	MELEE,        # < 0.5m  贴身
-	CLOSE,        # 0.5~1m  近距离
-	MEDIUM,       # 1~2m    中距离
-	FAR,          # 2~5m    远距离
-	SUPER_FAR     # > 5m    超远距离
+	MELEE,        # < 1m     贴身
+	CLOSE,        # 1~3m    近距离
+	MEDIUM,       # 3~8m    中距离
+	FAR,          # 8~25m   远距离
+	SUPER_FAR     # > 25m   超远距离
 }
 
 
@@ -61,6 +61,9 @@ var _damage_mark_timer: float = 0.0
 ## 定身剩余时间
 var _snare_timer: float = 0.0
 
+## 每实例护甲值（从 enemy_data.armor 初始化，避免共享 Resource 变异）
+var _current_armor: float = 0.0
+
 var _debug_stun_bar: MeshInstance3D = null
 var _debug_hp_bar: MeshInstance3D = null
 const DEBUG_BAR_FULL := 0.5
@@ -74,13 +77,13 @@ const DEBUG_BAR_Y := 2.2
 ## 根据目标位置返回距离档位
 func _get_distance_bracket(to_target: Vector3) -> int:
 	var dist_xz: float = Vector2(to_target.x, to_target.z).length()
-	if dist_xz < 0.5:
+	if dist_xz < 1.0:
 		return DistanceBracket.MELEE
-	elif dist_xz < 1.0:
+	elif dist_xz < 3.0:
 		return DistanceBracket.CLOSE
-	elif dist_xz < 2.0:
+	elif dist_xz < 8.0:
 		return DistanceBracket.MEDIUM
-	elif dist_xz < 5.0:
+	elif dist_xz < 25.0:
 		return DistanceBracket.FAR
 	return DistanceBracket.SUPER_FAR
 
@@ -95,6 +98,15 @@ func _is_in_attack_state() -> bool:
 	return _state == EnemyState.ATTACK_PREPARE or _state == EnemyState.ATTACK_ACTIVE or _state == EnemyState.ATTACK_RECOVER or _state == EnemyState.ATTACK
 
 
+## 消耗护甲值，返回吸收的伤害量（每实例数据，不会影响其他同类型敌人）
+func deplete_armor(amount: float) -> float:
+	if _current_armor <= 0.0:
+		return 0.0
+	var absorbed: float = mini(amount, _current_armor)
+	_current_armor -= absorbed
+	return absorbed
+
+
 # ==============================================================================
 # _ready() — 初始化
 # ==============================================================================
@@ -102,6 +114,8 @@ func _ready() -> void:
 	_stun = 0.0
 	_is_stun_full = false
 	_stun_full_timer = 0.0
+	if enemy_data != null:
+		_current_armor = enemy_data.armor
 
 	_player = get_tree().get_first_node_in_group("player")
 	if _player == null:
@@ -416,6 +430,7 @@ func _state_attack_recover(delta: float) -> void:
 # ==============================================================================
 func _state_defending(_delta: float) -> void:
 	_face_player_flat()
+	move_and_slide()
 
 
 # ==============================================================================
@@ -440,11 +455,16 @@ func _execute_attack() -> void:
 
 
 func _damage_player(amount: float, dtype: WeaponData.DamageType) -> void:
+	# 记录攻击者位置（供受击方向指示器使用）
+	GameBus.last_attacker_position = global_position
+
 	# 盾牌阻挡检测
 	var grabbed: Node = null
-	if _player.has_method("get_grabbed_enemy"):
-		grabbed = _player.get_grabbed_enemy()
-	if grabbed != null and is_instance_valid(grabbed):
+	if is_instance_valid(_player) and _player.has_method("get_grabbed_enemy"):
+		var candidate: Node = _player.get_grabbed_enemy()
+		if is_instance_valid(candidate):
+			grabbed = candidate
+	if grabbed != null:
 		var to_enemy: Vector3 = _player.global_position.direction_to(global_position)
 		var player_forward: Vector3 = -_player.global_transform.basis.z
 		if to_enemy.dot(player_forward) > 0.35:
@@ -733,10 +753,9 @@ func _on_damaged(amount: float, _type: WeaponData.DamageType) -> void:
 		_transition_to(EnemyState.PAIN)
 		return
 
-	# 护甲减伤（敌人护甲系统）
-	if enemy_data != null and enemy_data.armor > 0.0:
-		var absorbed: float = mini(amount, enemy_data.armor)
-		enemy_data.armor -= absorbed
+	# 护甲减伤（敌人护甲系统——使用每实例变量，避免共享 Resource 变异）
+	if _current_armor > 0.0:
+		var absorbed: float = deplete_armor(amount)
 		amount -= absorbed
 
 	# 正常受击闪白

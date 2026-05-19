@@ -4,6 +4,7 @@
 class_name StandardEnemy extends Enemy
 
 var _jump_velocity: Vector3 = Vector3.ZERO
+var _has_hit_player: bool = false  # 防止跳跃攻击多帧重复伤害
 
 
 
@@ -21,6 +22,7 @@ func _state_attack(delta: float) -> void:
 				_attack_phase = 1
 				_state_timer = 0.0
 				# 跳跃：快速冲向玩家前方（不跳到身后），低高度
+				_has_hit_player = false  # 每跳只伤害一次
 				var to_player: Vector3 = _player.global_position - global_position
 				to_player.y = 0.0
 				# 目标落点：玩家前方 2m 处
@@ -37,7 +39,8 @@ func _state_attack(delta: float) -> void:
 			velocity = _jump_velocity
 			move_and_slide()
 			_state_timer += delta
-			if global_position.distance_to(_player.global_position) < 1.5:
+			if not _has_hit_player and global_position.distance_to(_player.global_position) < 1.5:
+				_has_hit_player = true
 				_damage_player(enemy_data.attack_damage, WeaponData.DamageType.MELEE)
 			if is_on_floor() and _state_timer > 0.3:
 				_attack_phase = 2
@@ -73,6 +76,12 @@ func _set_windup_glow(glow: bool) -> void:
 func _on_damaged(amount: float, type: WeaponData.DamageType) -> void:
 	if _state == EnemyState.DEATH:
 		return
+
+	# 增伤标记加成（继承自基类）
+	if _damage_mark_timer > 0.0:
+		amount *= _damage_mark_multiplier
+		_damage_mark_multiplier = 1.0
+		_damage_mark_timer = 0.0
 
 	if _state == EnemyState.ATTACK:
 		# Counter 触发！

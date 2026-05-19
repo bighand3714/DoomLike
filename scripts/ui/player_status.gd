@@ -284,7 +284,7 @@ func _connect_enemy_manager() -> void:
 func _process(delta: float) -> void:
 	_update_timer += delta
 	if _update_timer < update_interval:
-		# 但仍需处理两个独立倒计时（不受 0.1s 刷新间隔限制）
+		# 快速通道：每帧处理独立倒计时（不受 0.1s 刷新间隔限制）
 		if _notify_timer > 0.0:
 			_notify_timer -= delta
 			if _notify_timer <= 0.0:
@@ -293,18 +293,18 @@ func _process(delta: float) -> void:
 			_boundary_warning_timer -= delta
 			if _boundary_warning_timer <= 0.0:
 				_boundary_warning.hide()
-			if _wave_notify_timer > 0.0:
-				_wave_notify_timer -= delta
-				if _wave_notify_timer <= 0.0:
-					_wave_notify_label.hide()
-				elif _wave_notify_timer < 0.5:
-					_wave_notify_label.modulate.a = _wave_notify_timer / 0.5
-			if _shield_block_timer > 0.0:
-				_shield_block_timer -= delta
-				if _shield_block_timer <= 0.0:
-					_shield_block_label.hide()
-			return
-		_update_timer = 0.0
+		if _wave_notify_timer > 0.0:
+			_wave_notify_timer -= delta
+			if _wave_notify_timer <= 0.0:
+				_wave_notify_label.hide()
+			elif _wave_notify_timer < 0.5:
+				_wave_notify_label.modulate.a = _wave_notify_timer / 0.5
+		if _shield_block_timer > 0.0:
+			_shield_block_timer -= delta
+			if _shield_block_timer <= 0.0:
+				_shield_block_label.hide()
+		return
+	_update_timer = 0.0
 
 	var pos := _player.global_position
 	_position_label.text = "位置: %.1f  %.1f  %.1f" % [pos.x, pos.y, pos.z]

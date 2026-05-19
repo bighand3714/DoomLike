@@ -126,7 +126,7 @@ func _do_shoot() -> void:
 	# 0.4：有效性检查——敌人死亡、玩家为空、状态不允许时不再造成伤害
 	if _player == null:
 		return
-	if _state == EnemyState.DEATH or _state == EnemyState.PAIN:
+	if _state in [EnemyState.DEATH, EnemyState.PAIN, EnemyState.STUNNED, EnemyState.GRABBED]:
 		return
 
 	# 从敌人"眼睛"位置向玩家发射瞬时射线
@@ -145,8 +145,8 @@ func _do_shoot() -> void:
 
 	var target: Node = result.collider
 
-	# 命中玩家？
-	if target == _player or target.get_parent() == _player:
+	# 命中玩家？（使用递归 parent 链检查，与基类 _is_player_target 一致）
+	if _is_player_target(target):
 		var dmg := _player.get_node_or_null("Damageable")
 		if dmg != null and dmg is Damageable:
 			dmg.take_damage(enemy_data.attack_damage, WeaponData.DamageType.HITSCAN)

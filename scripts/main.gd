@@ -441,9 +441,14 @@ func _on_weapon_changed_for_hitmarker(_name: String, _index: int) -> void:
 func _on_hit_something(_hit_point: Vector3, _hit_normal: Vector3, target: Node) -> void:
 	var check: Node = target
 	while check != null:
-		if check is CharacterBody3D and check.has_method("take_damage"):
+		if check is CharacterBody3D and (check.is_in_group("enemy") or check.is_in_group("player")):
 			_show_x_crosshair()
 			return
+		# 也检查 Damageable 子节点（目标可能是 CSG 或其他非 CharacterBody 节点）
+		for child in check.get_children():
+			if child is Damageable:
+				_show_x_crosshair()
+				return
 		check = check.get_parent()
 	_flash_crosshair()
 
@@ -477,6 +482,14 @@ func player_hit(_amount: float) -> void:
 	_damage_flash.color = Color(1.0, 0.0, 0.0, 0.4)
 	var tween := create_tween()
 	tween.tween_property(_damage_flash, "color", Color(1.0, 0.0, 0.0, 0.0), 0.3)
+
+	# 受击方向指示器
+	if _player != null and GameBus.last_attacker_position != Vector3.ZERO:
+		var hit_dir := _player.global_position.direction_to(GameBus.last_attacker_position)
+		var cam := _player.get_node_or_null("%Camera3D") as Camera3D
+		var indicator := get_node_or_null("UI/HitDirectionIndicator")
+		if indicator != null and indicator.has_method("add_hit_indicator") and cam != null:
+			indicator.add_hit_indicator(hit_dir, cam.global_transform.basis)
 
 
 func show_pickup_notification(text: String, color: Color) -> void:
