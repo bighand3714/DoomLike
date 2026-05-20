@@ -114,3 +114,8 @@ func reset() -> void:
 			enemy.enemy_died.disconnect(_on_enemy_died)
 	active_enemies.clear()
 	total_kills = 0
+
+
+func clear_enemies() -> void:
+	active_enemies.clear()
+	total_kills = 0

@@ -51,6 +51,8 @@ var _stun_full_timer: float = 0.0
 var _knockback_velocity: Vector3 = Vector3.ZERO
 var _grab_owner: Node3D = null
 
+var _cached_camera: Camera3D = null
+
 ## AI 检测计时器——每 detection_interval 秒执行一次决策
 var _detection_timer: float = 0.0
 
@@ -113,7 +115,16 @@ func _is_in_attack_state() -> bool:
 	return _state == EnemyState.ATTACK_PREPARE or _state == EnemyState.ATTACK_ACTIVE or _state == EnemyState.ATTACK_RECOVER or _state == EnemyState.ATTACK
 
 
-## 获取当前护甲值（供外部查询，如 whip 计算眩晕倍率）
+func _is_off_screen() -> bool:
+	if _cached_camera == null:
+		return false
+	return _cached_camera.is_position_behind(global_position + Vector3(0, 1.0, 0))
+
+
+func _get_off_screen_factor() -> float:
+	return 3.0 if _is_off_screen() else 1.0
+
+
 func get_current_armor() -> float:
 	return _current_armor
 
@@ -141,6 +152,8 @@ func _ready() -> void:
 	_player = get_tree().get_first_node_in_group("player")
 	if _player == null:
 		_player = get_node_or_null("/root/Main/Player") as CharacterBody3D
+
+	_cached_camera = _player.get_node_or_null("Camera3D") as Camera3D
 
 	add_to_group("enemy")
 
@@ -213,8 +226,9 @@ func _physics_process(delta: float) -> void:
 	if enemy_data == null or _player == null:
 		return
 
+	var off_factor: float = _get_off_screen_factor()
 	if _attack_cooldown_timer > 0.0:
-		_attack_cooldown_timer -= delta
+		_attack_cooldown_timer -= delta / off_factor
 
 	# 定身计时器
 	if _snare_timer > 0.0:
@@ -240,7 +254,7 @@ func _physics_process(delta: float) -> void:
 
 	# --- AI 检测计时器：每 detection_interval 秒执行一次 AI 决策 ---
 	if _detection_timer > 0.0:
-		_detection_timer -= delta
+		_detection_timer -= delta / off_factor
 	if _detection_timer <= 0.0:
 		_detection_timer = enemy_data.detection_interval
 		_ai_tick()

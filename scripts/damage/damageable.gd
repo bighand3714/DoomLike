@@ -49,15 +49,14 @@ func take_damage(amount: float, damage_type: WeaponData.DamageType = WeaponData.
 		return
 
 	var health_dmg := amount
-	var armor_dmg := 0.0
 
-	# 护甲减伤：吸收 50%
 	if armor > 0.0:
-		armor_dmg = amount * 0.5
-		if armor_dmg > armor:
-			armor_dmg = armor  # 护甲不够，全部耗尽
-		armor -= armor_dmg
-		health_dmg = amount - armor_dmg
+		if armor >= amount:
+			armor -= amount
+			health_dmg = 0.0
+		else:
+			health_dmg = amount - armor
+			armor = 0.0
 		armor_changed.emit(armor, max_armor)
 
 	health -= health_dmg
@@ -108,7 +107,7 @@ func add_armor(amount: float) -> void:
 #   - 即使之前已经死亡（health <= 0），调用后也能恢复
 func reset() -> void:
 	health = max_health
-	armor = max_armor
+	armor = 50.0
 	armor_changed.emit(armor, max_armor)
 
 

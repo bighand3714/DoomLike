@@ -1,4 +1,4 @@
-# ==============================================================================
+﻿# ==============================================================================
 # Main — 游戏主控制器
 # ==============================================================================
 extends Node3D
@@ -140,6 +140,7 @@ func _set_game_state(next_state: GameState.State) -> void:
 			Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 			_hide_hud()
 			_end_run()
+			_unload_current_level()
 
 
 func _on_start_requested() -> void:
@@ -169,7 +170,8 @@ func _on_game_over_main_menu() -> void:
 	_set_game_state(GameState.State.MAIN_MENU)
 
 func _on_back_to_menu() -> void:
-	_set_game_state(GameState.State.MAIN_MENU)
+	_run_stats.stop()
+	_set_game_state(GameState.State.GAME_OVER)
 
 
 func _start_level(level_id: String) -> void:
@@ -185,6 +187,7 @@ func _unload_current_level() -> void:
 		_spawn_manager.stop()
 		_spawn_manager = null
 	if _drop_manager != null:
+		remove_child(_drop_manager)
 		_drop_manager.queue_free()
 		_drop_manager = null
 	if _iron_whip != null and _iron_whip.has_method("release_grab"):
@@ -196,8 +199,20 @@ func _unload_current_level() -> void:
 			_current_arena.boundary_warning_requested.disconnect(_on_boundary_warning)
 		_current_arena = null
 	if _current_level != null:
+		_level_root.remove_child(_current_level)
 		_current_level.queue_free()
 		_current_level = null
+
+	# 清理运行时节点（敌人/刷怪器），保留持久 EnemyManager
+	# 先清空 EnemyManager 的活跃敌人列表（节点即将被释放）
+	var em := _level_root.get_node_or_null("EnemyManager")
+	if em != null and em.has_method("clear_enemies"):
+		em.clear_enemies()
+	for child in _level_root.get_children():
+		if child.name == "EnemyManager":
+			continue
+		_level_root.remove_child(child)
+		child.queue_free()
 
 	for child in get_tree().root.get_children():
 		if child is Area3D and child.has_method("_on_body_entered"):
@@ -353,7 +368,7 @@ func _on_player_died() -> void:
 		_run_stats.stop()
 		_set_game_state(GameState.State.GAME_OVER)
 
-func _end_run() -> void:
+func _end_run(show_screen: bool = true) -> void:
 	var record := _save_data.submit_run(_run_stats.level_id, _run_stats.score, _run_stats.survival_time)
 	var results := {
 		level_id = _run_stats.level_id,
@@ -364,8 +379,9 @@ func _end_run() -> void:
 		best_time = record.best_time,
 		is_new_record = record.is_new_record,
 	}
-	_game_over_screen.show()
-	_game_over_screen.show_results(results)
+	if show_screen:
+		_game_over_screen.show()
+		_game_over_screen.show_results(results)
 
 func get_run_stats() -> RefCounted:
 	return _run_stats
