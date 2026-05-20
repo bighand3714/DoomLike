@@ -298,7 +298,7 @@ func _physics_process(delta: float) -> void:
 	if _snare_timer > 0.0 and _state not in [EnemyState.GRABBED, EnemyState.DEATH]:
 		velocity = Vector3.ZERO
 
-	if _state != EnemyState.DEATH and _state != EnemyState.SPAWNING:
+	if _state != EnemyState.DEATH:
 		move_and_slide()
 
 	_update_debug_bars()
