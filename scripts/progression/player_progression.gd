@@ -223,3 +223,4 @@ func _load_mvp_upgrades() -> void:
 				upgrades.append(upg)
 	_upgrade_catalog = UpgradeCatalog.new()
 	_upgrade_catalog.setup(upgrades)
+	print("[Progression] 加载了 %d 个升级资源" % upgrades.size())
