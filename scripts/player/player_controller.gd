@@ -363,7 +363,7 @@ func apply_survival_upgrade(stat_key: String, value: float, operation: int) -> v
 				1: dmg.max_health *= value
 				2: dmg.max_health = value
 			if operation == 0:
-				dmg.health = mini(dmg.health + value, dmg.max_health)
+				dmg.health = minf(dmg.health + value, dmg.max_health)
 			else:
 				dmg.health = dmg.max_health
 		"max_armor":
@@ -372,7 +372,7 @@ func apply_survival_upgrade(stat_key: String, value: float, operation: int) -> v
 				1: dmg.max_armor *= value
 				2: dmg.max_armor = value
 			if operation == 0:
-				dmg.armor = mini(dmg.armor + value, dmg.max_armor)
+				dmg.armor = minf(dmg.armor + value, dmg.max_armor)
 			else:
 				dmg.armor = dmg.max_armor
 		"move_speed_mult":

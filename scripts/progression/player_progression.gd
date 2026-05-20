@@ -197,38 +197,16 @@ func _generate_options() -> void:
 		level_up.emit(level, current_options)
 		return
 	current_options = _upgrade_catalog.get_choices(selected_levels, 3)
+	print("[Progression] 生成 %d 个升级选项" % current_options.size())
 	level_up.emit(level, current_options)
 
 
 func _load_mvp_upgrades() -> void:
 	var upgrades: Array[UpgradeData] = []
-	# 先用文件加载，失败则用内置数据兜底
-	var paths := [
-		"res://assets/upgrades/rifle_damage.tres",
-		"res://assets/upgrades/shotgun_damage.tres",
-		"res://assets/upgrades/reload_speed.tres",
-		"res://assets/upgrades/whip_range.tres",
-		"res://assets/upgrades/whip_cooldown.tres",
-		"res://assets/upgrades/whip_stun.tres",
-		"res://assets/upgrades/max_health.tres",
-		"res://assets/upgrades/max_armor.tres",
-		"res://assets/upgrades/move_speed.tres",
-		"res://assets/upgrades/ammo_loot.tres",
-		"res://assets/upgrades/health_loot.tres",
-		"res://assets/upgrades/drop_abundance.tres",
-	]
-	for p in paths:
-		if ResourceLoader.exists(p):
-			var upg := load(p) as UpgradeData
-			if upg != null:
-				upgrades.append(upg)
-
-	if upgrades.is_empty():
-		_build_builtin_upgrades(upgrades)
-
+	_build_builtin_upgrades(upgrades)
 	_upgrade_catalog = UpgradeCatalog.new()
 	_upgrade_catalog.setup(upgrades)
-	print("[Progression] 加载了 %d 个升级资源" % upgrades.size())
+	print("[Progression] 已加载 %d 个内置升级" % upgrades.size())
 
 
 func _build_builtin_upgrades(list: Array[UpgradeData]) -> void:
