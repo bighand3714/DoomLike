@@ -1,24 +1,17 @@
-[gd_resource type="Resource" script_class="WeaponData" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="WeaponData" format=3 uid="uid://bcgdmdtcuo7w5"]
 
-[ext_resource type="Script" path="res://scripts/weapon/weapon_data.gd" id="1_data"]
+[ext_resource type="Script" uid="uid://cdauxw7dosliu" path="res://scripts/weapon/weapon_data.gd" id="1_data"]
 
 [resource]
 script = ExtResource("1_data")
 weapon_name = "手枪"
 slot_index = 2
-damage = 18.0
+damage = 20.0
 max_range = 60.0
-damage_type = 0
-fire_rate = 1.8
-fire_mode = 0
-mag_size = 8
-reserve_ammo = 50
-reload_time = 1.2
+fire_rate = 2.5
+reload_time = 0.6
 spread_angle = 2.0
-pellet_count = 1
-move_spread_mult = 1.5
 stun_damage = 6.0
 knockback_force = 4.0
 infinite_ammo = true
-is_melee = false
 melee_range = 0.0

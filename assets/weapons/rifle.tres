@@ -1,24 +1,19 @@
-[gd_resource type="Resource" script_class="WeaponData" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="WeaponData" format=3 uid="uid://cx4hshqmwyy33"]
 
-[ext_resource type="Script" path="res://scripts/weapon/weapon_data.gd" id="1_data"]
+[ext_resource type="Script" uid="uid://cdauxw7dosliu" path="res://scripts/weapon/weapon_data.gd" id="1_data"]
 
 [resource]
 script = ExtResource("1_data")
 weapon_name = "步枪"
-slot_index = 0
-damage = 10.0
+damage = 8.0
 max_range = 80.0
-damage_type = 0
 fire_rate = 8.0
 fire_mode = 1
 mag_size = 25
 reserve_ammo = 100
-reload_time = 2.0
+reload_time = 1.0
 spread_angle = 2.5
-pellet_count = 1
-move_spread_mult = 1.8
 stun_damage = 3.0
+move_spread_mult = 1.8
 knockback_force = 2.0
-infinite_ammo = false
-is_melee = false
 melee_range = 0.0
