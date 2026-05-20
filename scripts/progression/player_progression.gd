@@ -60,6 +60,8 @@ var _upgrade_catalog: UpgradeCatalog = null
 func reset(p_catalog: UpgradeCatalog = null) -> void:
 	if p_catalog != null:
 		_upgrade_catalog = p_catalog
+	elif _upgrade_catalog == null:
+		_load_mvp_upgrades()
 	level = 1
 	xp = 0
 	xp_to_next = _calc_xp_to_next(1)
@@ -154,6 +156,30 @@ func _generate_options() -> void:
 		# 暂无目录：发空选项，不卡死
 		current_options = []
 		level_up.emit(level, current_options)
+func _load_mvp_upgrades() -> void:
+	var upgrades: Array[UpgradeData] = []
+	var paths := [
+		"res://assets/upgrades/rifle_damage.tres",
+		"res://assets/upgrades/shotgun_damage.tres",
+		"res://assets/upgrades/reload_speed.tres",
+		"res://assets/upgrades/whip_range.tres",
+		"res://assets/upgrades/whip_cooldown.tres",
+		"res://assets/upgrades/whip_stun.tres",
+		"res://assets/upgrades/max_health.tres",
+		"res://assets/upgrades/max_armor.tres",
+		"res://assets/upgrades/move_speed.tres",
+		"res://assets/upgrades/ammo_loot.tres",
+		"res://assets/upgrades/health_loot.tres",
+		"res://assets/upgrades/drop_abundance.tres",
+	]
+	for p in paths:
+		if ResourceLoader.exists(p):
+			var upg := load(p) as UpgradeData
+			if upg != null:
+				upgrades.append(upg)
+	_upgrade_catalog = UpgradeCatalog.new()
+	_upgrade_catalog.setup(upgrades)
+
 		return
 
 	current_options = _upgrade_catalog.get_choices(selected_levels, 3)
