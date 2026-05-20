@@ -5,7 +5,7 @@
 #   左上角：分数  击杀  时间（一行）
 #   正上方居中：血量条（加粗）+ 生命值数字在条下方
 #   右上角：小地图（由 main.gd 独立放置）
-#   小地图下方：位置 → 状态 → 护甲 → 武器 → 弹药 → 换弹 → 武器槽
+#   小地图下方：位置 → 状态 → 护甲 → 武器 → 弹药 → 换弹 → 换弹进度条 → 武器槽
 #   屏幕中央：拾取通知 / 边界警告 / 抓取状态 / 盾牌 / 波次
 # ==============================================================================
 
@@ -40,6 +40,10 @@ var _armor_label: Label
 var _weapon_label: Label
 var _ammo_label: Label
 var _reload_label: Label
+var _reload_bar_bg: ColorRect
+var _reload_bar_fill: ColorRect
+var _reload_elapsed: float = 0.0
+var _reload_duration: float = 0.0
 var _weapon_slots_label: Label
 
 # 中央
@@ -63,6 +67,8 @@ const RIGHT_MARGIN := 12.0
 const LABEL_W := 260.0
 # 小地图在右上角约 153px 高（150 + 3 margin），下面 UI 从这里开始
 const RIGHT_TOP_OFFSET := 170.0
+const RELOAD_BAR_W := 120.0
+const RELOAD_BAR_H := 6.0
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -148,6 +154,36 @@ func _create_labels() -> void:
 	_reload_label = _make_label(y, 14, Color(1.0, 0.7, 0.0), 1.0)
 	_reload_label.hide()
 	y += 22
+
+	# 换弹进度条（小横条，在"换弹中…"下方）
+	_reload_bar_bg = ColorRect.new()
+	_reload_bar_bg.color = Color(0.1, 0.1, 0.1, 0.8)
+	_reload_bar_bg.anchor_left = 1.0
+	_reload_bar_bg.anchor_right = 1.0
+	_reload_bar_bg.anchor_top = 0.0
+	_reload_bar_bg.anchor_bottom = 0.0
+	_reload_bar_bg.offset_left = -(RELOAD_BAR_W + RIGHT_MARGIN)
+	_reload_bar_bg.offset_right = -RIGHT_MARGIN
+	_reload_bar_bg.offset_top = y
+	_reload_bar_bg.offset_bottom = y + RELOAD_BAR_H
+	_reload_bar_bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_reload_bar_bg.hide()
+	add_child(_reload_bar_bg)
+
+	_reload_bar_fill = ColorRect.new()
+	_reload_bar_fill.color = Color(1.0, 0.7, 0.0, 0.9)
+	_reload_bar_fill.anchor_left = 1.0
+	_reload_bar_fill.anchor_right = 1.0
+	_reload_bar_fill.anchor_top = 0.0
+	_reload_bar_fill.anchor_bottom = 0.0
+	_reload_bar_fill.offset_left = -(RELOAD_BAR_W + RIGHT_MARGIN)
+	_reload_bar_fill.offset_right = -RIGHT_MARGIN
+	_reload_bar_fill.offset_top = y
+	_reload_bar_fill.offset_bottom = y + RELOAD_BAR_H
+	_reload_bar_fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_reload_bar_fill.hide()
+	add_child(_reload_bar_fill)
+	y += RELOAD_BAR_H + 6
 
 	_weapon_slots_label = _make_label(y, 13, Color(0.6, 0.6, 0.6), 0.8)
 
@@ -313,6 +349,12 @@ func _process(delta: float) -> void:
 			_shield_block_timer -= delta
 			if _shield_block_timer <= 0.0:
 				_shield_block_label.hide()
+		# 换弹进度条
+		if _reload_duration > 0.0:
+			_reload_elapsed += delta
+			var ratio: float = clampf(_reload_elapsed / _reload_duration, 0.0, 1.0)
+			var fill_right: float = -RIGHT_MARGIN - RELOAD_BAR_W * (1.0 - ratio)
+			_reload_bar_fill.offset_right = fill_right
 		return
 	_update_timer = 0.0
 
@@ -473,6 +515,8 @@ func _on_weapon_changed(weapon_name: String, _slot_index: int) -> void:
 		_current_weapon.reload_finished.connect(_on_reload_finished)
 
 	_weapon_label.text = weapon_name
+	# 切武器时重置换弹进度条
+	_hide_reload_bar()
 	if _current_weapon != null:
 		_on_ammo_changed(_current_weapon.get_current_mag(), _current_weapon.get_current_reserve())
 
@@ -484,10 +528,24 @@ func _on_ammo_changed(current_mag: int, reserve: int) -> void:
 		_ammo_label.text = "%d / %d" % [current_mag, reserve]
 
 
-func _on_reload_started(_reload_time: float) -> void:
+func _on_reload_started(reload_time: float) -> void:
 	_reload_label.text = "换弹中..."
 	_reload_label.show()
+	_reload_elapsed = 0.0
+	_reload_duration = reload_time
+	_reload_bar_bg.show()
+	_reload_bar_fill.show()
+	# 重置 fill 为满宽
+	_reload_bar_fill.offset_right = -RIGHT_MARGIN
 
 
 func _on_reload_finished() -> void:
 	_reload_label.hide()
+	_hide_reload_bar()
+
+
+func _hide_reload_bar() -> void:
+	_reload_duration = 0.0
+	_reload_elapsed = 0.0
+	_reload_bar_bg.hide()
+	_reload_bar_fill.hide()

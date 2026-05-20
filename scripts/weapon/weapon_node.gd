@@ -85,9 +85,15 @@ var _pump_token: int = 0
 ## 后坐力 tween 引用——连发时 kill 旧 tween 防止堆积
 var _recoil_tween: Tween = null
 
+## 换弹动画 tween
+var _reload_tween: Tween = null
+
 ## 后坐力基准位置——武器初始位置，防止累积上移
 var _recoil_base_pos: Vector3 = Vector3.ZERO
 var _recoil_base_set: bool = false
+var _reload_base_rot: Vector3 = Vector3.ZERO
+var _reload_base_pos: Vector3 = Vector3.ZERO
+var _reload_base_pos_set: bool = false
 
 
 # ==============================================================================
@@ -539,6 +545,18 @@ func _start_reload() -> void:
 	var token := _reload_token
 	reload_started.emit(weapon_data.reload_time)
 
+	# 换弹动画：沿近玩家端（后端 +Z）向上旋转 90°
+	var back_z := 0.25
+	_reload_base_rot = rotation
+	_reload_base_pos = position
+	_reload_base_pos_set = true
+	_reload_tween = create_tween()
+	_reload_tween.set_parallel(true)
+	var anim_time := weapon_data.reload_time * 0.12
+	_reload_tween.tween_property(self, "rotation:x", deg_to_rad(90.0), anim_time)
+	_reload_tween.tween_property(self, "position:y", position.y - back_z, anim_time)
+	_reload_tween.tween_property(self, "position:z", position.z + back_z, anim_time)
+
 	# 0.4：绑定 token，timer 触发时检查是否仍有效
 	var timer := get_tree().create_timer(weapon_data.reload_time)
 	timer.timeout.connect(_finish_reload.bind(token))
@@ -558,6 +576,16 @@ func _finish_reload(token: int) -> void:
 	_current_mag += available
 	_current_reserve -= available
 	_is_reloading = false
+
+	# 恢复武器姿态
+	if _reload_tween != null and _reload_tween.is_valid():
+		_reload_tween.kill()
+	var restore_tween := create_tween()
+	restore_tween.set_parallel(true)
+	restore_tween.tween_property(self, "rotation:x", _reload_base_rot.x, 0.2)
+	if _reload_base_pos_set:
+		restore_tween.tween_property(self, "position", _reload_base_pos, 0.2)
+		_reload_base_pos_set = false
 
 	ammo_changed.emit(_current_mag, _current_reserve)
 	reload_finished.emit()
@@ -629,6 +657,13 @@ func _on_unequip() -> void:
 	# 切换武器时中断换弹（否则新武器也显示"换弹中"）
 	if _is_reloading:
 		_is_reloading = false
+	# 终止换弹动画，恢复姿态
+	if _reload_tween != null and _reload_tween.is_valid():
+		_reload_tween.kill()
+		rotation.x = _reload_base_rot.x
+		if _reload_base_pos_set:
+			position = _reload_base_pos
+			_reload_base_pos_set = false
 	# 0.4：递增 token 使旧 timer 失效
 	_reload_token += 1
 	_pump_token += 1

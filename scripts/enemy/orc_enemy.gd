@@ -222,14 +222,11 @@ func _on_attack_recover_exited() -> void:
 
 
 func _on_stunned_entered() -> void:
-	# 眩晕：武器回正 + 青白交替快速闪
+	# 眩晕：武器回正 + 先闪白（脉冲由基类 _state_stunned 统一驱动）
 	if _axe_hand != null:
 		_axe_hand.rotation_degrees = Vector3(0, 0, 0)
-	# 先闪白，0.15s 后开始交替脉冲
 	_flash_pain(Color.WHITE)
 	_stun_flash_toggle = true
-	var t := get_tree().create_timer(0.15)
-	t.timeout.connect(_stun_pulse)
 
 
 func _stun_pulse() -> void:
@@ -330,6 +327,16 @@ func _on_damaged(amount: float, type: WeaponData.DamageType) -> void:
 		_damage_mark_multiplier = 1.0
 		_damage_mark_timer = 0.0
 
+	# 护甲吸收（所有状态通用，先于 ATTACK_PREPARE/ATTACK_ACTIVE 特殊处理）
+	if _current_armor > 0.0:
+		var absorbed: float = deplete_armor(amount)
+		amount -= absorbed
+		if absorbed > 0.0 and _damageable != null:
+			_damageable.health = minf(_damageable.health + absorbed, _damageable.max_health)
+		if amount <= 0.0:
+			_flash_pain(Color(0.6, 0.6, 0.7))
+			return
+
 	# ATTACK_PREPARE 受击：3倍眩晕但不触发 Counter
 	if _state == EnemyState.ATTACK_PREPARE:
 		apply_stun(amount * 3.0)
@@ -348,20 +355,10 @@ func _on_damaged(amount: float, type: WeaponData.DamageType) -> void:
 		if not _is_stun_full:
 			_is_stun_full = true
 			_stun_full_timer = enemy_data.stun_full_duration
+			stun_filled.emit(self)
 		_flash_pain(Color(0.3, 0.7, 1.0))
 		_transition_to(EnemyState.STUNNED)
 		return
-
-	# 护甲吸收（所有状态通用，不仅是 DEFENDING）
-	# Damageable.take_damage() 已预先扣除全额 HP，护甲吸收的部分需退回
-	if _current_armor > 0.0:
-		var absorbed: float = deplete_armor(amount)
-		amount -= absorbed
-		if absorbed > 0.0 and _damageable != null:
-			_damageable.health = minf(_damageable.health + absorbed, _damageable.max_health)
-		if amount <= 0.0:
-			_flash_pain(Color(0.6, 0.6, 0.7))  # 护甲格挡闪白
-			return
 
 	if type == WeaponData.DamageType.MELEE:
 		_flash_pain(Color(0.5, 0.5, 0.5))

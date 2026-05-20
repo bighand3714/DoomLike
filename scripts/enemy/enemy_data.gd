@@ -95,6 +95,12 @@ class_name EnemyData extends Resource
 ## 最小距离——远程敌人被逼近到此距离开始后退
 @export var min_range: float = 4.0
 
+## 五档距离阈值（米，XZ平面）
+@export var bracket_melee_max: float = 1.0
+@export var bracket_close_max: float = 3.0
+@export var bracket_medium_max: float = 8.0
+@export var bracket_far_max: float = 25.0
+
 ## 攻击前摇（秒）——举刀/举枪动作时间
 @export var attack_windup: float = 0.2
 

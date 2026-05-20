@@ -376,6 +376,9 @@ func _on_warning_expired(pillar: CSGBox3D, entry: SpawnEntry, pos: Vector3) -> v
 	if enemy_manager != null and enemy_manager.has_method("register_enemy"):
 		enemy_manager.register_enemy(enemy)
 
+	if enemy.has_method("begin_spawning"):
+		enemy.begin_spawning()
+
 
 func _clear_all_warnings() -> void:
 	for item in _pending_warnings:

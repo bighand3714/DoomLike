@@ -79,17 +79,27 @@ const DEBUG_BAR_Y := 2.2
 # 距离档位工具方法
 # ==============================================================================
 
-## 根据目标位置返回距离档位
+## 根据目标位置返回距离档位（阈值从 EnemyData 读取）
 func _get_distance_bracket(to_target: Vector3) -> int:
 	var dist_xz: float = Vector2(to_target.x, to_target.z).length()
-	if dist_xz < 1.0:
-		return DistanceBracket.MELEE
-	elif dist_xz < 3.0:
-		return DistanceBracket.CLOSE
-	elif dist_xz < 8.0:
-		return DistanceBracket.MEDIUM
-	elif dist_xz < 25.0:
-		return DistanceBracket.FAR
+	if enemy_data != null:
+		if dist_xz < enemy_data.bracket_melee_max:
+			return DistanceBracket.MELEE
+		elif dist_xz < enemy_data.bracket_close_max:
+			return DistanceBracket.CLOSE
+		elif dist_xz < enemy_data.bracket_medium_max:
+			return DistanceBracket.MEDIUM
+		elif dist_xz < enemy_data.bracket_far_max:
+			return DistanceBracket.FAR
+	else:
+		if dist_xz < 1.0:
+			return DistanceBracket.MELEE
+		elif dist_xz < 3.0:
+			return DistanceBracket.CLOSE
+		elif dist_xz < 8.0:
+			return DistanceBracket.MEDIUM
+		elif dist_xz < 25.0:
+			return DistanceBracket.FAR
 	return DistanceBracket.SUPER_FAR
 
 ## 获取当前敌人与玩家的距离档位
@@ -236,6 +246,8 @@ func _physics_process(delta: float) -> void:
 		_ai_tick()
 
 	match _state:
+		EnemyState.SPAWNING:
+			_state_spawning(delta)
 		EnemyState.IDLE:
 			_state_idle(delta)
 		EnemyState.CHASE:
@@ -283,6 +295,24 @@ func _physics_process(delta: float) -> void:
 # ==============================================================================
 func _ai_tick() -> void:
 	pass  # 默认什么都不做——子类（如 OrcEnemy）会覆写此方法
+
+
+# ==============================================================================
+# SPAWNING — 出生动画
+# ==============================================================================
+func begin_spawning() -> void:
+	scale = Vector3(0.1, 0.1, 0.1)
+	_transition_to(EnemyState.SPAWNING)
+
+
+func _state_spawning(delta: float) -> void:
+	const DURATION := 0.5
+	_state_timer += delta
+	var t: float = clampf(_state_timer / DURATION, 0.0, 1.0)
+	scale = Vector3.ONE * lerpf(0.1, 1.0, t)
+	if t >= 1.0:
+		scale = Vector3.ONE
+		_transition_to(EnemyState.IDLE)
 
 
 # ==============================================================================
