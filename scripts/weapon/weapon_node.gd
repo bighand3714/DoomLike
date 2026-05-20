@@ -52,10 +52,20 @@ signal reload_finished()
 
 
 # ==============================================================================
+# 运行时升级倍率（不修改原始 weapon_data 资源）
+# ==============================================================================
+
+var damage_mult: float = 1.0
+var fire_rate_mult: float = 1.0
+var reload_time_mult: float = 1.0
+var spread_mult: float = 1.0
+var pellet_bonus: int = 0
+
+
+# ==============================================================================
 # 运行时状态变量（不带 @export，因为不是配置，是"当前状态"）
 # ==============================================================================
 
-## 对摄像机节点的引用——射击射线从摄像机中心发出
 var _camera: Camera3D
 
 ## 当前弹匣里还剩多少发子弹
@@ -245,7 +255,7 @@ func _fire() -> void:
 		return
 
 	# 为每颗弹丸分别发射一根射线
-	for i in range(weapon_data.pellet_count):
+	for i in range(weapon_data.pellet_count + pellet_bonus):
 		# 计算这颗弹丸的随机散布方向
 		var spread_dir := _get_spread_direction(i)
 		_fire_single_pellet(spread_dir)
@@ -255,7 +265,7 @@ func _fire() -> void:
 		_current_mag -= 1
 
 	# --- 射速冷却 ---
-	_fire_cooldown = 1.0 / weapon_data.fire_rate
+	_fire_cooldown = 1.0 / (weapon_data.fire_rate * fire_rate_mult)
 
 	# --- 视觉反馈 ---
 	_apply_recoil()
@@ -293,7 +303,7 @@ func _fire_melee() -> void:
 		var target: Node = result.collider
 		_spawn_tracer(_muzzle.global_position, hit_point)
 		if target.has_method("take_damage"):
-			target.take_damage(weapon_data.damage, weapon_data.damage_type)
+			target.take_damage(weapon_data.damage * damage_mult, weapon_data.damage_type)
 			_try_apply_stun(target)
 			_try_apply_knockback(target, dir)
 			_spawn_damage_number(hit_point, weapon_data.damage, false)
@@ -305,7 +315,7 @@ func _fire_melee() -> void:
 	if not weapon_data.infinite_ammo:
 		_current_mag -= 1
 
-	_fire_cooldown = 1.0 / weapon_data.fire_rate
+	_fire_cooldown = 1.0 / (weapon_data.fire_rate * fire_rate_mult)
 	_apply_recoil()
 	fired.emit()
 	ammo_changed.emit(_current_mag, _current_reserve)
@@ -357,7 +367,7 @@ func _fire_single_pellet(direction: Vector3) -> void:
 	var target: Node = result.collider
 	_spawn_tracer(_muzzle.global_position, hit_point)
 	if target.has_method("take_damage"):
-		target.take_damage(weapon_data.damage, weapon_data.damage_type)
+		target.take_damage(weapon_data.damage * damage_mult, weapon_data.damage_type)
 		_try_apply_stun(target)
 		_try_apply_knockback(target, direction)
 		_spawn_damage_number(hit_point, weapon_data.damage, false)
@@ -382,7 +392,7 @@ func _try_damage_child(node: Node) -> void:
 	# 在子节点中找 Damageable
 	for child in node.get_children():
 		if child is Damageable:
-			child.take_damage(weapon_data.damage, weapon_data.damage_type)
+			child.take_damage(weapon_data.damage * damage_mult, weapon_data.damage_type)
 			_try_apply_stun(node)
 			return
 
@@ -486,7 +496,7 @@ func _get_spread_direction(_pellet_index: int) -> Vector3:
 	var forward := -_camera.global_transform.basis.z.normalized()
 
 	# 无散布 → 直接返回基础方向
-	var spread_rad := deg_to_rad(weapon_data.spread_angle)
+	var spread_rad := deg_to_rad(weapon_data.spread_angle * spread_mult)
 	if spread_rad < 0.0001:
 		return forward
 
@@ -543,7 +553,7 @@ func _start_reload() -> void:
 	_is_reloading = true
 	_reload_token += 1
 	var token := _reload_token
-	reload_started.emit(weapon_data.reload_time)
+	reload_started.emit(weapon_data.reload_time * reload_time_mult)
 
 	# 换弹动画：沿近玩家端（后端 +Z）向上旋转 90°
 	var back_z := 0.25
@@ -552,13 +562,13 @@ func _start_reload() -> void:
 	_reload_base_pos_set = true
 	_reload_tween = create_tween()
 	_reload_tween.set_parallel(true)
-	var anim_time := weapon_data.reload_time * 0.12
+	var anim_time := weapon_data.reload_time * reload_time_mult * 0.12
 	_reload_tween.tween_property(self, "rotation:x", deg_to_rad(90.0), anim_time)
 	_reload_tween.tween_property(self, "position:y", position.y - back_z, anim_time)
 	_reload_tween.tween_property(self, "position:z", position.z + back_z, anim_time)
 
 	# 0.4：绑定 token，timer 触发时检查是否仍有效
-	var timer := get_tree().create_timer(weapon_data.reload_time)
+	var timer := get_tree().create_timer(weapon_data.reload_time * reload_time_mult)
 	timer.timeout.connect(_finish_reload.bind(token))
 
 
@@ -698,6 +708,14 @@ func reset_ammo() -> void:
 	_current_mag = weapon_data.mag_size
 	_current_reserve = weapon_data.reserve_ammo
 	ammo_changed.emit(_current_mag, _current_reserve)
+
+
+func reset_runtime_modifiers() -> void:
+	damage_mult = 1.0
+	fire_rate_mult = 1.0
+	reload_time_mult = 1.0
+	spread_mult = 1.0
+	pellet_bonus = 0
 
 
 # ==============================================================================
