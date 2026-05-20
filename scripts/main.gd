@@ -241,12 +241,12 @@ func _load_arena_level(level_id: String) -> void:
 func _reset_player_for_level() -> void:
 	if _current_arena != null:
 		var spawn := _current_arena.get_player_spawn_transform()
-		print("[Main] 玩家出生点: ", spawn.origin)
 		_player.global_position = spawn.origin
 		_player.rotation.y = spawn.basis.get_euler().y
 
 	_player.velocity = Vector3.ZERO
-	print("[Main] 玩家位置已重置: ", _player.global_position, " velocity=", _player.velocity)
+	if _player.has_method("reset_view"):
+		_player.reset_view()
 
 	var dmg := _player.get_node_or_null("Damageable") as Damageable
 	if dmg != null:

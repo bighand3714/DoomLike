@@ -1,4 +1,4 @@
-# ==============================================================================
+﻿# ==============================================================================
 # PlayerController — 第一人称玩家控制器
 # ==============================================================================
 # 挂在 Player 节点（CharacterBody3D）上。
@@ -344,6 +344,12 @@ func get_grabbed_enemy() -> Node:
 
 
 # 切换角色模型可见性（调试/第三人称/多人模式用）
+func reset_view() -> void:
+	_yaw = 0.0
+	_pitch = 0.0
+	transform.basis = Basis()
+	_camera.transform.basis = Basis()
+
 func set_player_model_visible(v: bool) -> void:
 	if _player_model:
 		_player_model.visible = v
