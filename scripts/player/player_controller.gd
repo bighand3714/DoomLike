@@ -90,6 +90,9 @@ var _pitch := 0.0
 ## 外部速度倍率（铁鞭抓取时降低速度），1.0 = 正常
 var _speed_multiplier: float = 1.0
 
+## 升级移速倍率
+var move_speed_mult: float = 1.0
+
 # 冲刺状态
 var _is_dashing: bool = false
 var _dash_direction: Vector3 = Vector3.ZERO
@@ -243,7 +246,7 @@ func _physics_process(delta: float) -> void:
 	var direction := (transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
 
 	# 应用外部速度倍率（铁鞭抓取时降低速度）
-	var effective_speed := move_speed * _speed_multiplier
+	var effective_speed := move_speed * move_speed_mult * _speed_multiplier
 
 	# 如果有按键输入
 	if direction.length_squared() > 0.0:
@@ -350,6 +353,32 @@ func reset_view() -> void:
 	_pitch = 0.0
 	transform.basis = Basis()
 	_camera.transform.basis = Basis()
+
+func apply_survival_upgrade(stat_key: String, value: float, operation: int) -> void:
+	var dmg := get_node_or_null("Damageable") as Damageable
+	match stat_key:
+		"max_health":
+			match operation:
+				0: dmg.max_health += value
+				1: dmg.max_health *= value
+				2: dmg.max_health = value
+			dmg.health = mini(dmg.health + value, dmg.max_health) if operation == 0 else dmg.max_health
+		"max_armor":
+			match operation:
+				0: dmg.max_armor += value
+				1: dmg.max_armor *= value
+				2: dmg.max_armor = value
+			dmg.armor = mini(dmg.armor + value, dmg.max_armor) if operation == 0 else dmg.max_armor
+		"move_speed_mult":
+			match operation:
+				0: move_speed_mult += value
+				1: move_speed_mult *= value
+				2: move_speed_mult = value
+
+
+func reset_runtime_modifiers() -> void:
+	move_speed_mult = 1.0
+
 
 func set_player_model_visible(v: bool) -> void:
 	if _player_model:

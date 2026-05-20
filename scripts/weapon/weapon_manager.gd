@@ -205,6 +205,7 @@ func _prev_weapon() -> void:
 func reset_all_weapons() -> void:
 	for weapon in _weapons:
 		weapon.reset_ammo()
+		weapon.reset_runtime_modifiers()
 	_equip(0)
 
 
@@ -232,3 +233,55 @@ func get_weapon_at(index: int) -> WeaponNode:
 ## 返回当前装备武器的栏位索引（HUD 显示用）
 func get_current_index() -> int:
 	return _current_index
+
+
+func apply_weapon_upgrade(target_id: String, stat_key: String, value: float, operation: int) -> void:
+	for weapon in _weapons:
+		var matches := false
+		if target_id == "all_weapons":
+			matches = true
+		elif target_id == "rifle" and weapon is Rifle:
+			matches = true
+		elif target_id == "shotgun" and weapon is Shotgun:
+			matches = true
+		elif target_id == "pistol" and weapon is Pistol:
+			matches = true
+		elif target_id == "fist" and weapon is Fist:
+			matches = true
+		if not matches:
+			continue
+		_apply_stat(weapon, stat_key, value, operation)
+
+
+func _apply_stat(weapon: WeaponNode, stat_key: String, value: float, operation: int) -> void:
+	match stat_key:
+		"damage_mult":
+			match operation:
+				0: weapon.damage_mult += value
+				1: weapon.damage_mult *= value
+				2: weapon.damage_mult = value
+		"fire_rate_mult":
+			match operation:
+				0: weapon.fire_rate_mult += value
+				1: weapon.fire_rate_mult *= value
+				2: weapon.fire_rate_mult = value
+		"reload_time_mult":
+			match operation:
+				0: weapon.reload_time_mult += value
+				1: weapon.reload_time_mult *= value
+				2: weapon.reload_time_mult = value
+		"spread_mult":
+			match operation:
+				0: weapon.spread_mult += value
+				1: weapon.spread_mult *= value
+				2: weapon.spread_mult = value
+		"pellet_bonus":
+			match operation:
+				0: weapon.pellet_bonus += int(value)
+				1: weapon.pellet_bonus = int(float(weapon.pellet_bonus) * value)
+				2: weapon.pellet_bonus = int(value)
+
+
+func reset_runtime_modifiers() -> void:
+	for weapon in _weapons:
+		weapon.reset_runtime_modifiers()
