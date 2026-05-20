@@ -47,6 +47,18 @@ signal counter_triggered(enemy: Enemy, position: Vector3)
 @warning_ignore("unused_signal")
 signal wave_started(wave_number: int)
 
+@warning_ignore("unused_signal")
+signal xp_changed(level: int, xp: int, xp_to_next: int)
+
+@warning_ignore("unused_signal")
+signal level_up(new_level: int, options: Array)
+
+@warning_ignore("unused_signal")
+signal upgrade_applied(upgrade_id: String, upgrade_level: int)
+
+@warning_ignore("unused_signal")
+signal player_power_changed(power_score: float)
+
 
 # ==============================================================================
 # 共享数据引用 — 由 main.gd 在关卡生命周期中设置
@@ -54,4 +66,5 @@ signal wave_started(wave_number: int)
 
 var run_stats = null  # RunStats
 var save_data = null  # SaveData
-var last_attacker_position: Vector3 = Vector3.ZERO  # 最近一次攻击者的世界位置（用于受击方向指示器）
+var last_attacker_position: Vector3 = Vector3.ZERO
+var player_progression = null  # PlayerProgression
