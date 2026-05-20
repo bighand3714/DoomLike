@@ -77,8 +77,7 @@ func _create_ui() -> void:
 		card.add_theme_color_override("font_hover_color", Color(1.0, 0.85, 0.3))
 		card.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
 		card.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		card.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		card.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		card.alignment = HORIZONTAL_ALIGNMENT_CENTER
 
 		var card_bg := StyleBoxFlat.new()
 		card_bg.bg_color = Color(0.15, 0.15, 0.2, 0.9)

@@ -167,8 +167,8 @@ func setup_targets(player, weapon_manager, iron_whip, drop_manager) -> void:
 	_drop_manager = drop_manager
 
 
-func _dispatch_upgrade(upg: UpgradeData, level: int) -> void:
-	var val := upg.get_value_for_level(level)
+func _dispatch_upgrade(upg: UpgradeData, upg_level: int) -> void:
+	var val := upg.get_value_for_level(upg_level)
 	var op := upg.operation
 	match upg.category:
 		UpgradeData.Category.WEAPON:
@@ -246,17 +246,17 @@ func _build_builtin_upgrades(list: Array[UpgradeData]) -> void:
 	list.append(_make_upg("drop_abundance", "寻宝猎人", "总掉落概率增加", UpgradeData.Category.ECONOMY, 4, 0.8, "drop_manager", "drop_chance_bonus", UpgradeData.Operation.ADD, [0.05, 0.1, 0.15, 0.2]))
 
 
-func _make_upg(id: String, name: String, desc: String, cat: int, max_lv: int, weight: float, target: String, key: String, op: int, vals: Array) -> UpgradeData:
+func _make_upg(id: String, p_name: String, desc: String, cat: int, max_lv: int, weight: float, target: String, key: String, op: int, vals: Array) -> UpgradeData:
 	var upg := UpgradeData.new()
 	upg.upgrade_id = id
-	upg.display_name = name
+	upg.display_name = p_name
 	upg.description = desc
-	upg.category = cat
+	upg.category = cat as UpgradeData.Category
 	upg.max_level = max_lv
 	upg.rarity_weight = weight
 	upg.target_id = target
 	upg.stat_key = key
-	upg.operation = op
+	upg.operation = op as UpgradeData.Operation
 	upg.values_by_level = vals
 	upg.power_value_by_level = vals  # 简化：power 同 value
 	return upg
