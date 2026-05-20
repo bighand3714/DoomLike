@@ -224,7 +224,7 @@ func _build_builtin_upgrades(list: Array[UpgradeData]) -> void:
 	list.append(_make_upg("drop_abundance", "寻宝猎人", "总掉落概率增加", UpgradeData.Category.ECONOMY, 4, 0.8, "drop_manager", "drop_chance_bonus", UpgradeData.Operation.ADD, [0.05, 0.1, 0.15, 0.2]))
 
 
-func _make_upg(id: String, p_name: String, desc: String, cat: int, max_lv: int, weight: float, target: String, key: String, op: int, vals: Array) -> UpgradeData:
+func _make_upg(id: String, p_name: String, desc: String, cat: int, max_lv: int, weight: float, target: String, key: String, op: int, vals: Array[float]) -> UpgradeData:
 	var upg := UpgradeData.new()
 	upg.upgrade_id = id
 	upg.display_name = p_name

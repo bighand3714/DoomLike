@@ -291,7 +291,9 @@ func _setup_progression() -> void:
 		_player_progression = PlayerProgressionClass.new()
 		_player_progression.name = "PlayerProgression"
 		add_child(_player_progression)
-	_player_progression.level_up.connect(_on_player_level_up)
+	_player_progression.reset()  # 确保升级目录已加载，经验/等级归零
+	if not _player_progression.level_up.is_connected(_on_player_level_up):
+		_player_progression.level_up.connect(_on_player_level_up)
 	if not _player_progression.xp_changed.is_connected(_on_progression_xp_changed):
 		_player_progression.xp_changed.connect(_on_progression_xp_changed)
 	GameBus.player_progression = _player_progression
