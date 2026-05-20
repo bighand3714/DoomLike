@@ -15,6 +15,7 @@ const SpawnManagerClass = preload("res://scripts/enemy/spawn_manager.gd")
 const DropManagerClass = preload("res://scripts/pickup/drop_manager.gd")
 const IronWhipClass = preload("res://scripts/weapon/iron_whip.gd")
 const WhipDataClass = preload("res://scripts/weapon/whip_data.gd")
+const PlayerProgressionClass = preload("res://scripts/progression/player_progression.gd")
 
 @onready var _level_root: Node3D = %Level
 @onready var _crosshair: ColorRect = %Crosshair
@@ -35,6 +36,7 @@ var _iron_whip: Node3D = null
 var _hit_marker_connected := false
 var _crosshair_x1: ColorRect = null
 var _crosshair_x2: ColorRect = null
+var _player_progression = null
 
 var _run_stats := RunStatsClass.new()
 var _save_data := SaveDataClass.new()
@@ -178,6 +180,7 @@ func _start_level(level_id: String) -> void:
 	_current_level_id = level_id
 	_unload_current_level()
 	_load_arena_level(level_id)
+	_setup_progression()
 	_reset_player_for_level()
 	_set_game_state(GameState.State.PLAYING)
 
@@ -271,6 +274,19 @@ func _reset_player_for_level() -> void:
 	_drop_manager = DropManagerClass.new()
 	_drop_manager.name = "DropManager"
 	add_child(_drop_manager)
+
+
+func _setup_progression() -> void:
+	if _player_progression == null:
+		_player_progression = PlayerProgressionClass.new()
+		_player_progression.name = "PlayerProgression"
+		add_child(_player_progression)
+	_player_progression.level_up.connect(_on_player_level_up)
+	GameBus.player_progression = _player_progression
+
+
+func _on_player_level_up(_level: int, _options: Array) -> void:
+	print("[Progression] 升级！ level=", _level, " options=", _options.size())
 
 
 func _setup_spawn_manager() -> void:
