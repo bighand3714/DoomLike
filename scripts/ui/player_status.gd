@@ -491,7 +491,7 @@ func show_wave_notification(wave_number: int) -> void:
 # ==============================================================================
 # 信号回调
 # ==============================================================================
-func _on_enemy_killed(enemy_name: String, _score_value: int) -> void:
+func _on_enemy_killed(_enemy_name: String, _score_value: int) -> void:
 	_kill_count += 1
 
 

@@ -1,7 +1,8 @@
 # ==============================================================================
 # AdvancedGroundEnemy — 地面近战敌人（高级）
 # ==============================================================================
-# 更快、更高血量。使用 Enemy 基类通用近战攻击。
+# 更快、更高血量。近战三段式攻击(PREPARE→ACTIVE→RECOVER)。
+# 距离档位路由：SUPER_FAR→跑步 / FAR/MEDIUM→行走 / CLOSE/MELEE→攻击。
 # 外观：暗红色中型人形 + 头顶角饰
 # ==============================================================================
 
@@ -41,6 +42,104 @@ func _setup_model() -> void:
 	_add_box(Vector3(0.22, 0.4, 0), Vector3(0.28, 0.6, 0.28), c.darkened(0.18))
 
 	_add_collision(0.5, 2.0, 1.1)
+
+
+# ==============================================================================
+# AI — 距离档位路由
+# ==============================================================================
+func _ai_tick() -> void:
+	if _player == null or enemy_data == null:
+		return
+	if _is_in_attack_state():
+		return
+	if _state in [EnemyState.SPAWNING, EnemyState.STUNNED, EnemyState.GRABBED, EnemyState.PAIN, EnemyState.KNOCKED_DOWN, EnemyState.EXECUTED, EnemyState.DEATH]:
+		return
+
+	var bracket: int = get_player_distance_bracket()
+	match bracket:
+		DistanceBracket.SUPER_FAR:
+			if _state != EnemyState.RUNNING:
+				_transition_to(EnemyState.RUNNING)
+		DistanceBracket.FAR, DistanceBracket.MEDIUM:
+			if _state != EnemyState.WALKING:
+				_transition_to(EnemyState.WALKING)
+		DistanceBracket.CLOSE:
+			if randf() < 0.6 and _attack_cooldown_timer <= 0.0:
+				_transition_to(EnemyState.ATTACK_PREPARE)
+			elif _state != EnemyState.WALKING:
+				_transition_to(EnemyState.WALKING)
+		DistanceBracket.MELEE:
+			if randf() < 0.8 and _attack_cooldown_timer <= 0.0:
+				_transition_to(EnemyState.ATTACK_PREPARE)
+
+
+# ==============================================================================
+# 状态视觉钩子
+# ==============================================================================
+func _state_entered(new_state: EnemyState) -> void:
+	match new_state:
+		EnemyState.ATTACK_PREPARE:
+			_set_all_boxes_emission(Color.ORANGE_RED, 1.2)
+		EnemyState.ATTACK_ACTIVE:
+			pass
+
+
+func _state_exit(old_state: EnemyState) -> void:
+	match old_state:
+		EnemyState.ATTACK_PREPARE:
+			_set_all_boxes_emission(Color.BLACK, 0.0)
+
+
+# ==============================================================================
+# 受伤 — Counter 支持
+# ==============================================================================
+func _on_damaged(amount: float, type: WeaponData.DamageType) -> void:
+	if _state == EnemyState.DEATH:
+		return
+
+	if _damage_mark_timer > 0.0:
+		amount *= _damage_mark_multiplier
+		_damage_mark_multiplier = 1.0
+		_damage_mark_timer = 0.0
+
+	if _current_armor > 0.0:
+		var absorbed: float = deplete_armor(amount)
+		amount -= absorbed
+		if absorbed > 0.0 and _damageable != null:
+			_damageable.health = minf(_damageable.health + absorbed, _damageable.max_health)
+		if amount <= 0.0:
+			_flash_pain(Color(0.6, 0.6, 0.7))
+			return
+
+	if _state == EnemyState.ATTACK_ACTIVE:
+		GameBus.counter_triggered.emit(self, global_position)
+		_current_armor = 0.0
+		_stun = enemy_data.max_stun
+		if not _is_stun_full:
+			_is_stun_full = true
+			_stun_full_timer = enemy_data.stun_full_duration
+			stun_filled.emit(self)
+		_flash_pain(Color(0.3, 0.7, 1.0))
+		_transition_to(EnemyState.STUNNED)
+		return
+
+	if _state != EnemyState.STUNNED and _state != EnemyState.GRABBED:
+		_transition_to(EnemyState.PAIN)
+
+	_flash_pain(Color.WHITE)
+
+
+# ==============================================================================
+# 工具
+# ==============================================================================
+func _set_all_boxes_emission(color: Color, energy: float) -> void:
+	for child in get_children():
+		if child is CSGShape3D:
+			var mat: StandardMaterial3D = child.material_override
+			if mat != null:
+				mat.emission_enabled = energy > 0.0
+				mat.emission = color
+				mat.emission_energy_multiplier = energy
 
 
 func _add_box(pos: Vector3, size: Vector3, color: Color, emissive: bool = false) -> void:

@@ -81,7 +81,7 @@ func _ai_tick() -> void:
 	# 已在攻击流程或受控状态中，不打断
 	if _is_in_attack_state():
 		return
-	if _state in [EnemyState.STUNNED, EnemyState.GRABBED, EnemyState.PAIN, EnemyState.KNOCKED_DOWN, EnemyState.EXECUTED, EnemyState.DEATH]:
+	if _state in [EnemyState.SPAWNING, EnemyState.STUNNED, EnemyState.GRABBED, EnemyState.PAIN, EnemyState.KNOCKED_DOWN, EnemyState.EXECUTED, EnemyState.DEATH]:
 		return
 
 	var bracket: int = get_player_distance_bracket()
@@ -297,13 +297,13 @@ func _on_defending_exited() -> void:
 func _on_knocked_down_entered() -> void:
 	# 倒地视觉
 	var tween := create_tween()
-	tween.tween_property(self, "scale", Vector3(1.0, 0.4, 1.0), 0.15)
+	tween.tween_property(self, "scale", Vector3(0.65, 0.65, 0.65), 0.15)
 
 
 func _on_knocked_down_exited() -> void:
 	# 恢复站立
 	var tween := create_tween()
-	tween.tween_property(self, "scale", Vector3(1.0, 1.0, 1.0), 0.15)
+	tween.tween_property(self, "scale", Vector3.ONE, 0.15)
 
 
 # ==============================================================================

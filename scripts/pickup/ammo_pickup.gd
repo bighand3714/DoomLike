@@ -12,25 +12,19 @@ func _on_pickup(player: Node3D) -> void:
 	if wm == null:
 		return
 
-	var weapon := wm.get_current_weapon()
-	if weapon == null:
+	# 为所有有限弹药武器补充备弹
+	var any_filled := false
+	for i in range(wm.get_weapon_count()):
+		var w := wm.get_weapon_at(i)
+		if w == null or w.weapon_data == null:
+			continue
+		if w.weapon_data.infinite_ammo:
+			continue
+		w.add_reserve_ammo(ammo_amount)
+		any_filled = true
+
+	if not any_filled:
 		return
-
-	# 如果当前武器无限弹药，找一个有限弹药的武器
-	if weapon.weapon_data.infinite_ammo:
-		for i in range(wm.get_weapon_count()):
-			var w := wm.get_weapon_at(i)
-			if w != null and w.weapon_data != null and not w.weapon_data.infinite_ammo:
-				# 检查是否已满
-				if w.get_current_reserve() < w.weapon_data.reserve_ammo:
-					weapon = w
-					break
-
-	# 如果还是无限弹药武器（全部无限），不拾取
-	if weapon.weapon_data.infinite_ammo:
-		return
-
-	weapon.add_reserve_ammo(ammo_amount)
 
 	GameBus.pickup_notification.emit("+%d 弹药" % ammo_amount, Color.GOLD)
 

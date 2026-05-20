@@ -122,7 +122,7 @@ func get_current_armor() -> float:
 func deplete_armor(amount: float) -> float:
 	if _current_armor <= 0.0:
 		return 0.0
-	var absorbed: float = mini(amount, _current_armor)
+	var absorbed: float = minf(amount, _current_armor)
 	_current_armor -= absorbed
 	return absorbed
 
@@ -295,6 +295,34 @@ func _physics_process(delta: float) -> void:
 # ==============================================================================
 func _ai_tick() -> void:
 	pass  # 默认什么都不做——子类（如 OrcEnemy）会覆写此方法
+
+
+## 统计自己周围指定范围内的近战敌人数量
+func _count_nearby_melee_enemies(radius: float) -> int:
+	var count: int = 0
+	for node in get_tree().get_nodes_in_group("enemy"):
+		if node == self:
+			continue
+		if not is_instance_valid(node):
+			continue
+		if global_position.distance_to(node.global_position) <= radius:
+			count += 1
+	return count
+
+
+## 统计玩家身边指定范围内的敌人数量
+func _count_enemies_near_player(radius: float) -> int:
+	if _player == null:
+		return 0
+	var count: int = 0
+	for node in get_tree().get_nodes_in_group("enemy"):
+		if node == self:
+			continue
+		if not is_instance_valid(node):
+			continue
+		if _player.global_position.distance_to(node.global_position) <= radius:
+			count += 1
+	return count
 
 
 # ==============================================================================
