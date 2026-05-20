@@ -137,6 +137,10 @@ func _set_game_state(next_state: GameState.State) -> void:
 			get_tree().paused = true
 			Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
+		GameState.State.LEVEL_UP:
+			get_tree().paused = true
+			Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+
 		GameState.State.GAME_OVER:
 			get_tree().paused = true
 			Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
