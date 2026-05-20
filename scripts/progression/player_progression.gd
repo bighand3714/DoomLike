@@ -190,11 +190,16 @@ func _dispatch_upgrade(upg: UpgradeData, level: int) -> void:
 				_drop_manager.apply_drop_upgrade(upg.stat_key, val, op)
 
 
+
 func _generate_options() -> void:
 	if _upgrade_catalog == null:
-		# 暂无目录：发空选项，不卡死
 		current_options = []
 		level_up.emit(level, current_options)
+		return
+	current_options = _upgrade_catalog.get_choices(selected_levels, 3)
+	level_up.emit(level, current_options)
+
+
 func _load_mvp_upgrades() -> void:
 	var upgrades: Array[UpgradeData] = []
 	var paths := [
@@ -218,8 +223,3 @@ func _load_mvp_upgrades() -> void:
 				upgrades.append(upg)
 	_upgrade_catalog = UpgradeCatalog.new()
 	_upgrade_catalog.setup(upgrades)
-
-		return
-
-	current_options = _upgrade_catalog.get_choices(selected_levels, 3)
-	level_up.emit(level, current_options)

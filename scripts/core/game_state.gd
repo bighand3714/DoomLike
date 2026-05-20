@@ -27,4 +27,5 @@ enum State {
 	PLAYING,       # 游戏中——HUD 可见、鼠标捕获、物理运行
 	PAUSED,        # 暂停——暂停菜单覆盖、鼠标释放
 	GAME_OVER,     # 结算——显示分数和记录
+	LEVEL_UP,      # 升级——暂停游戏、显示三选一升级面板
 }
