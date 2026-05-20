@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="UpgradeData" format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/upgrade_data.gd" id="1_upg"]
+
+[resource]
+script = ExtResource("1_upg")
+upgrade_id = "max_health"
+display_name = "活力之血"
+description = "最大生命值增加"
+category = 2
+max_level = 5
+rarity_weight = 1.2
+target_id = "player"
+stat_key = "max_health"
+operation = 0
+values_by_level = [20.0, 40.0, 60.0, 80.0, 100.0]
+power_value_by_level = [5.0, 10.0, 15.0, 20.0, 25.0]

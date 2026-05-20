@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="UpgradeData" format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/upgrade_data.gd" id="1_upg"]
+
+[resource]
+script = ExtResource("1_upg")
+upgrade_id = "shotgun_damage"
+display_name = "霰弹枪喉缩"
+description = "霰弹枪伤害提高"
+category = 0
+max_level = 5
+rarity_weight = 1.0
+target_id = "shotgun"
+stat_key = "damage_mult"
+operation = 1
+values_by_level = [1.08, 1.16, 1.24, 1.32, 1.4]
+power_value_by_level = [4.0, 8.0, 12.0, 16.0, 20.0]

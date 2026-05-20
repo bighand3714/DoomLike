@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="UpgradeData" format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/upgrade_data.gd" id="1_upg"]
+
+[resource]
+script = ExtResource("1_upg")
+upgrade_id = "move_speed"
+display_name = "疾风之靴"
+description = "移动速度提高"
+category = 2
+max_level = 4
+rarity_weight = 1.0
+target_id = "player"
+stat_key = "move_speed_mult"
+operation = 1
+values_by_level = [1.04, 1.08, 1.12, 1.16]
+power_value_by_level = [3.0, 6.0, 9.0, 12.0]

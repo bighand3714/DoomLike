@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="UpgradeData" format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/upgrade_data.gd" id="1_upg"]
+
+[resource]
+script = ExtResource("1_upg")
+upgrade_id = "whip_stun"
+display_name = "铁鞭电击"
+description = "铁鞭眩晕值增加"
+category = 1
+max_level = 5
+rarity_weight = 1.0
+target_id = "iron_whip"
+stat_key = "stun_damage"
+operation = 1
+values_by_level = [1.12, 1.24, 1.36, 1.48, 1.6]
+power_value_by_level = [4.0, 8.0, 12.0, 16.0, 20.0]

@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="UpgradeData" format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/upgrade_data.gd" id="1_upg"]
+
+[resource]
+script = ExtResource("1_upg")
+upgrade_id = "drop_abundance"
+display_name = "寻宝猎人"
+description = "总掉落概率增加"
+category = 3
+max_level = 4
+rarity_weight = 0.8
+target_id = "drop_manager"
+stat_key = "drop_chance_bonus"
+operation = 0
+values_by_level = [0.05, 0.1, 0.15, 0.2]
+power_value_by_level = [4.0, 8.0, 12.0, 16.0]

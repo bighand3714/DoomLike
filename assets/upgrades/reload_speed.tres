@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="UpgradeData" format=3]
+
+[ext_resource type="Script" path="res://scripts/progression/upgrade_data.gd" id="1_upg"]
+
+[resource]
+script = ExtResource("1_upg")
+upgrade_id = "reload_speed"
+display_name = "快速装填"
+description = "全武器换弹时间缩短"
+category = 0
+max_level = 5
+rarity_weight = 1.2
+target_id = "all_weapons"
+stat_key = "reload_time_mult"
+operation = 1
+values_by_level = [0.92, 0.85, 0.78, 0.72, 0.66]
+power_value_by_level = [3.0, 6.0, 9.0, 12.0, 15.0]
