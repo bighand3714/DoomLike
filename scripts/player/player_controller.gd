@@ -227,7 +227,7 @@ func _physics_process(delta: float) -> void:
 		if _debug_logging or Engine.get_process_frames() < 5:
 			_debug_frame_count += 1
 			if _debug_frame_count <= 180:
-				print("Player frame ", _debug_frame_count, " pos=", global_position, " vel=", velocity, " on_floor=", is_on_floor())
+				print("Player frame ", _debug_frame_count, " pos=", global_position, " cam_pos=", _camera.global_position, " vel=", velocity, " on_floor=", is_on_floor())
 		move_and_slide()
 		_dash_travelled += _dash_speed * delta
 		if _dash_travelled >= _dash_distance:
@@ -270,8 +270,8 @@ func _physics_process(delta: float) -> void:
 	#   3. 更新 is_on_floor() 状态（跳跃后 is_on_floor() 会变成 false）
 	# 必须每物理帧调用一次。
 	_debug_frame_count += 1
-	if _debug_frame_count <= 120:
-		print("[Player frame ", _debug_frame_count, "] pos=", global_position, " vel=", velocity)
+	if _debug_frame_count <= 240:
+		print("[Player frame ", _debug_frame_count, "] pos=", global_position, " cam_pos=", _camera.global_position, " vel=", velocity)
 	move_and_slide()
 
 
