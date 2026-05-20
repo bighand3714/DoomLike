@@ -282,7 +282,7 @@ func _reset_player_for_level() -> void:
 	add_child(_drop_manager)
 
 	if _player_progression != null:
-		var wm := _player.find_child("WeaponManager", true, false)
+		wm = _player.find_child("WeaponManager", true, false)
 		_player_progression.setup_targets(_player, wm, _iron_whip, _drop_manager)
 
 
