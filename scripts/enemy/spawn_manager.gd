@@ -345,7 +345,7 @@ func _create_spawn_warning(pos: Vector3, entry: SpawnEntry) -> void:
 	timer.timeout.connect(_on_warning_expired.bind(pillar, entry, pos))
 
 
-func _on_warning_expired(pillar, entry: SpawnEntry, pos: Vector3) -> void:
+func _on_warning_expired(_timer, pillar, entry: SpawnEntry, pos: Vector3) -> void:
 	for i in range(_pending_warnings.size() - 1, -1, -1):
 		if _pending_warnings[i].node == pillar:
 			_pending_warnings.remove_at(i)
