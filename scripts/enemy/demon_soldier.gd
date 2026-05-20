@@ -148,7 +148,7 @@ func _execute_attack() -> void:
 # ==============================================================================
 # 受伤 — Counter 支持
 # ==============================================================================
-func _on_damaged(amount: float, type: WeaponData.DamageType) -> void:
+func _on_damaged(amount: float, _type: WeaponData.DamageType) -> void:
 	if _state == EnemyState.DEATH:
 		return
 

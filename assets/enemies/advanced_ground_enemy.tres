@@ -1,36 +1,31 @@
-[gd_resource type="Resource" script_class="EnemyData" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="EnemyData" format=3 uid="uid://dotg8488pm8xr"]
 
-[ext_resource type="Script" path="res://scripts/enemy/enemy_data.gd" id="1_edata"]
+[ext_resource type="Script" uid="uid://djdguwmhx8tdc" path="res://scripts/enemy/enemy_data.gd" id="1_edata"]
 
 [resource]
 script = ExtResource("1_edata")
 enemy_id = "advanced_ground_enemy"
 enemy_name = "高阶近战恶魔"
 enemy_role = "ground_melee"
-max_health = 100.0
 attack_damage = 18.0
 damage_type = 3
 score_value = 20
 spawn_cost = 2
-weight = 1.5
+weight = 75.0
 knockback_resistance = 0.2
 max_stun = 80.0
 stun_recovery_rate = 10.0
 stun_resistance = 0.1
 move_speed = 5.5
 attack_range = 2.8
-sight_range = 30.0
 attack_cooldown = 0.85
 preferred_range = 0.0
 min_range = 0.0
 attack_windup = 0.12
-attack_duration = 0.1
 attack_recovery = 0.18
-is_flying = false
 hover_height = 0.0
 vertical_move_speed = 0.0
 pain_duration = 0.25
 knockback_force = 3.5
-death_duration = 2.0
 stun_full_duration = 2.2
 model_color = Color(0.7, 0.15, 0.08, 1)

@@ -115,7 +115,7 @@ func _set_windup_glow(glow: bool) -> void:
 # ==============================================================================
 # 受伤 — Counter 支持（空中阶段 = Counter 窗口）
 # ==============================================================================
-func _on_damaged(amount: float, type: WeaponData.DamageType) -> void:
+func _on_damaged(amount: float, _type: WeaponData.DamageType) -> void:
 	if _state == EnemyState.DEATH:
 		return
 

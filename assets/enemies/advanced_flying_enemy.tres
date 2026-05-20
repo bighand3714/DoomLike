@@ -1,6 +1,6 @@
-[gd_resource type="Resource" script_class="EnemyData" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="EnemyData" format=3 uid="uid://cet7ii7od2dj7"]
 
-[ext_resource type="Script" path="res://scripts/enemy/enemy_data.gd" id="1_edata"]
+[ext_resource type="Script" uid="uid://djdguwmhx8tdc" path="res://scripts/enemy/enemy_data.gd" id="1_edata"]
 
 [resource]
 script = ExtResource("1_edata")
@@ -12,7 +12,7 @@ attack_damage = 16.0
 damage_type = 3
 score_value = 30
 spawn_cost = 3
-weight = 1.0
+weight = 50.0
 knockback_resistance = 0.25
 max_stun = 60.0
 stun_recovery_rate = 10.0
@@ -31,6 +31,4 @@ hover_height = 3.5
 vertical_move_speed = 6.0
 pain_duration = 0.2
 knockback_force = 2.5
-death_duration = 2.0
-stun_full_duration = 2.0
 model_color = Color(0.95, 0.4, 0.05, 1)

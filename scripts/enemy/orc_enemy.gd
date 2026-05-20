@@ -317,7 +317,7 @@ func _execute_attack() -> void:
 # 覆写受伤：防御状态下扣护甲 + Counter 检测
 # ==============================================================================
 
-func _on_damaged(amount: float, type: WeaponData.DamageType) -> void:
+func _on_damaged(amount: float, _type: WeaponData.DamageType) -> void:
 	if _state == EnemyState.DEATH:
 		return
 
@@ -360,7 +360,7 @@ func _on_damaged(amount: float, type: WeaponData.DamageType) -> void:
 		_transition_to(EnemyState.STUNNED)
 		return
 
-	if type == WeaponData.DamageType.MELEE:
+	if _type == WeaponData.DamageType.MELEE:
 		_flash_pain(Color(0.5, 0.5, 0.5))
 	else:
 		_flash_pain(Color.WHITE)

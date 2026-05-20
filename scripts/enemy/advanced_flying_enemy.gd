@@ -125,7 +125,7 @@ func _state_exit(old_state: EnemyState) -> void:
 # ==============================================================================
 # 受伤 — Counter 支持
 # ==============================================================================
-func _on_damaged(amount: float, type: WeaponData.DamageType) -> void:
+func _on_damaged(amount: float, _type: WeaponData.DamageType) -> void:
 	if _state == EnemyState.DEATH:
 		return
 

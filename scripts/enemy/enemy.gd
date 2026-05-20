@@ -341,6 +341,7 @@ func _state_spawning(delta: float) -> void:
 	if t >= 1.0:
 		scale = Vector3.ONE
 		_transition_to(EnemyState.IDLE)
+		_detection_timer = 0.0  # 立即触发 AI，避免在 IDLE 挂机
 
 
 # ==============================================================================
@@ -410,14 +411,6 @@ func _state_chase(delta: float) -> void:
 # WALKING — 走动接近（基础移速）
 # ==============================================================================
 func _state_walking(delta: float) -> void:
-	var to_player := _player.global_position - global_position
-	to_player.y = 0.0
-	var dist := to_player.length()
-
-	if dist > enemy_data.sight_range * 1.5:
-		_transition_to(EnemyState.IDLE)
-		return
-
 	_move_towards_player(delta, enemy_data.move_speed)
 	velocity.y = 0.0
 	_face_player_flat()
@@ -427,14 +420,6 @@ func _state_walking(delta: float) -> void:
 # RUNNING — 跑动接近（1.5 倍移速）
 # ==============================================================================
 func _state_running(delta: float) -> void:
-	var to_player := _player.global_position - global_position
-	to_player.y = 0.0
-	var dist := to_player.length()
-
-	if dist > enemy_data.sight_range * 1.5:
-		_transition_to(EnemyState.IDLE)
-		return
-
 	_move_towards_player(delta, enemy_data.move_speed * 1.5)
 	velocity.y = 0.0
 	_face_player_flat()
