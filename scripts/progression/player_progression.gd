@@ -202,6 +202,7 @@ func _generate_options() -> void:
 
 func _load_mvp_upgrades() -> void:
 	var upgrades: Array[UpgradeData] = []
+	# 先用文件加载，失败则用内置数据兜底
 	var paths := [
 		"res://assets/upgrades/rifle_damage.tres",
 		"res://assets/upgrades/shotgun_damage.tres",
@@ -221,6 +222,41 @@ func _load_mvp_upgrades() -> void:
 			var upg := load(p) as UpgradeData
 			if upg != null:
 				upgrades.append(upg)
+
+	if upgrades.is_empty():
+		_build_builtin_upgrades(upgrades)
+
 	_upgrade_catalog = UpgradeCatalog.new()
 	_upgrade_catalog.setup(upgrades)
 	print("[Progression] 加载了 %d 个升级资源" % upgrades.size())
+
+
+func _build_builtin_upgrades(list: Array[UpgradeData]) -> void:
+	list.append(_make_upg("rifle_damage", "步枪膛线", "步枪伤害提高", UpgradeData.Category.WEAPON, 5, 1.0, "rifle", "damage_mult", UpgradeData.Operation.MULTIPLY, [1.1, 1.2, 1.3, 1.4, 1.5]))
+	list.append(_make_upg("shotgun_damage", "霰弹枪喉缩", "霰弹枪伤害提高", UpgradeData.Category.WEAPON, 5, 1.0, "shotgun", "damage_mult", UpgradeData.Operation.MULTIPLY, [1.08, 1.16, 1.24, 1.32, 1.4]))
+	list.append(_make_upg("reload_speed", "快速装填", "全武器换弹时间缩短", UpgradeData.Category.WEAPON, 5, 1.2, "all_weapons", "reload_time_mult", UpgradeData.Operation.MULTIPLY, [0.92, 0.85, 0.78, 0.72, 0.66]))
+	list.append(_make_upg("whip_range", "铁鞭延长", "铁鞭攻击范围增加", UpgradeData.Category.WHIP, 4, 1.0, "iron_whip", "whip_range", UpgradeData.Operation.ADD, [0.5, 1.0, 1.5, 2.0]))
+	list.append(_make_upg("whip_cooldown", "铁鞭淬火", "铁鞭冷却时间缩短", UpgradeData.Category.WHIP, 5, 1.0, "iron_whip", "cooldown", UpgradeData.Operation.MULTIPLY, [0.92, 0.85, 0.78, 0.72, 0.66]))
+	list.append(_make_upg("whip_stun", "铁鞭电击", "铁鞭眩晕值增加", UpgradeData.Category.WHIP, 5, 1.0, "iron_whip", "stun_damage", UpgradeData.Operation.MULTIPLY, [1.12, 1.24, 1.36, 1.48, 1.6]))
+	list.append(_make_upg("max_health", "活力之血", "最大生命值增加", UpgradeData.Category.SURVIVAL, 5, 1.2, "player", "max_health", UpgradeData.Operation.ADD, [20.0, 40.0, 60.0, 80.0, 100.0]))
+	list.append(_make_upg("max_armor", "钢铁铠甲", "最大护甲值增加", UpgradeData.Category.SURVIVAL, 4, 1.0, "player", "max_armor", UpgradeData.Operation.ADD, [25.0, 50.0, 75.0, 100.0]))
+	list.append(_make_upg("move_speed", "疾风之靴", "移动速度提高", UpgradeData.Category.SURVIVAL, 4, 1.0, "player", "move_speed_mult", UpgradeData.Operation.MULTIPLY, [1.04, 1.08, 1.12, 1.16]))
+	list.append(_make_upg("ammo_loot", "弹药丰收", "弹药掉落数量增加", UpgradeData.Category.ECONOMY, 5, 1.0, "drop_manager", "ammo_amount_mult", UpgradeData.Operation.MULTIPLY, [1.2, 1.4, 1.6, 1.8, 2.0]))
+	list.append(_make_upg("health_loot", "生命之泉", "血包恢复量增加", UpgradeData.Category.ECONOMY, 4, 1.0, "drop_manager", "health_amount_mult", UpgradeData.Operation.MULTIPLY, [1.15, 1.3, 1.45, 1.6]))
+	list.append(_make_upg("drop_abundance", "寻宝猎人", "总掉落概率增加", UpgradeData.Category.ECONOMY, 4, 0.8, "drop_manager", "drop_chance_bonus", UpgradeData.Operation.ADD, [0.05, 0.1, 0.15, 0.2]))
+
+
+func _make_upg(id: String, name: String, desc: String, cat: int, max_lv: int, weight: float, target: String, key: String, op: int, vals: Array) -> UpgradeData:
+	var upg := UpgradeData.new()
+	upg.upgrade_id = id
+	upg.display_name = name
+	upg.description = desc
+	upg.category = cat
+	upg.max_level = max_lv
+	upg.rarity_weight = weight
+	upg.target_id = target
+	upg.stat_key = key
+	upg.operation = op
+	upg.values_by_level = vals
+	upg.power_value_by_level = vals  # 简化：power 同 value
+	return upg

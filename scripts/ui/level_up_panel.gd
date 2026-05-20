@@ -72,10 +72,30 @@ func _create_ui() -> void:
 		card.offset_bottom = card.offset_top + card_height
 		card.pressed.connect(_on_card_pressed.bind(i))
 
-		# 文字换行 + 居中
 		card.add_theme_font_size_override("font_size", 14)
+		card.add_theme_color_override("font_color", Color.WHITE)
+		card.add_theme_color_override("font_hover_color", Color(1.0, 0.85, 0.3))
 		card.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
 		card.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		card.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		card.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+
+		var card_bg := StyleBoxFlat.new()
+		card_bg.bg_color = Color(0.15, 0.15, 0.2, 0.9)
+		card_bg.border_width_left = 2
+		card_bg.border_width_right = 2
+		card_bg.border_width_top = 2
+		card_bg.border_width_bottom = 2
+		card_bg.border_color = Color(0.5, 0.5, 0.6)
+		card_bg.corner_radius_top_left = 8
+		card_bg.corner_radius_top_right = 8
+		card_bg.corner_radius_bottom_left = 8
+		card_bg.corner_radius_bottom_right = 8
+		card.add_theme_stylebox_override("normal", card_bg)
+		var hover_bg := card_bg.duplicate()
+		hover_bg.bg_color = Color(0.25, 0.25, 0.3, 0.9)
+		hover_bg.border_color = Color(1.0, 0.85, 0.3)
+		card.add_theme_stylebox_override("hover", hover_bg)
 
 		add_child(card)
 		_cards.append(card)
