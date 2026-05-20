@@ -1,4 +1,4 @@
-# ==============================================================================
+﻿# ==============================================================================
 # Enemy — 敌人基类（Phase 5 扩展 + Phase 7 优化 + Roadmap 4 Counter/距离档位）
 # ==============================================================================
 class_name Enemy extends CharacterBody3D
@@ -298,7 +298,7 @@ func _physics_process(delta: float) -> void:
 	if _snare_timer > 0.0 and _state not in [EnemyState.GRABBED, EnemyState.DEATH]:
 		velocity = Vector3.ZERO
 
-	if _state != EnemyState.DEATH:
+	if _state != EnemyState.DEATH and _state != EnemyState.SPAWNING:
 		move_and_slide()
 
 	_update_debug_bars()

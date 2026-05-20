@@ -192,8 +192,6 @@ func _input(event: InputEvent) -> void:
 # 这和 _process() 不同——_process 每渲染帧跑一次，帧率不固定；
 # _physics_process 频率固定，适合需要稳定计算的物理逻辑。
 # delta = 这一帧距离上一帧的秒数（通常约 0.016 秒）。
-var _debug_frame_count: int = 0
-var _debug_logging: bool = false
 
 func _physics_process(delta: float) -> void:
 	# === 重力处理 ===
@@ -224,10 +222,6 @@ func _physics_process(delta: float) -> void:
 		velocity.x = _dash_direction.x * _dash_speed
 		velocity.z = _dash_direction.z * _dash_speed
 		velocity.y = 0.0
-		if _debug_logging or Engine.get_process_frames() < 5:
-			_debug_frame_count += 1
-			if _debug_frame_count <= 180:
-				print("Player frame ", _debug_frame_count, " pos=", global_position, " cam_pos=", _camera.global_position, " vel=", velocity, " on_floor=", is_on_floor())
 		move_and_slide()
 		_dash_travelled += _dash_speed * delta
 		if _dash_travelled >= _dash_distance:
@@ -269,9 +263,6 @@ func _physics_process(delta: float) -> void:
 	#   2. 检测碰撞并自动滑过墙面/地面
 	#   3. 更新 is_on_floor() 状态（跳跃后 is_on_floor() 会变成 false）
 	# 必须每物理帧调用一次。
-	_debug_frame_count += 1
-	if _debug_frame_count <= 240:
-		print("[Player frame ", _debug_frame_count, "] pos=", global_position, " cam_pos=", _camera.global_position, " vel=", velocity)
 	move_and_slide()
 
 
