@@ -373,8 +373,10 @@ func _on_boundary_warning() -> void:
 	if ps != null and ps.has_method("show_boundary_warning"):
 		ps.show_boundary_warning()
 
-func _on_enemy_killed_for_score(_enemy_name: String, score_value: int) -> void:
+func _on_enemy_killed_for_score(_enemy_name: String, score_value: int, xp_value: int) -> void:
 	_run_stats.add_kill(score_value)
+	if _player_progression != null:
+		_player_progression.add_xp(xp_value)
 
 func _on_player_died() -> void:
 	if _iron_whip != null and _iron_whip.has_method("release_grab"):

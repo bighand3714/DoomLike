@@ -20,7 +20,7 @@ const EnemyDataClass = preload("res://scripts/enemy/enemy_data.gd")
 signal all_cleared()
 
 ## 每次击杀敌人时发射（Phase 5.11：新增加 score_value 参数）
-signal enemy_killed(enemy_name: String, score_value: int)
+signal enemy_killed(enemy_name: String, score_value: int, xp_value: int)
 
 
 # ==============================================================================
@@ -90,7 +90,8 @@ func _on_enemy_died(enemy: Node) -> void:
 	var ed = enemy.get("enemy_data")
 	var enemy_name: String = ed.get("enemy_name") if ed != null else "未知敌人"
 	var score_value: int = ed.get("score_value") if ed != null else 10
-	enemy_killed.emit(enemy_name, score_value)
+	var xp_value: int = ed.get("xp_value") if ed != null else maxi(3, int(round(float(score_value) * 0.5)))
+	enemy_killed.emit(enemy_name, score_value, xp_value)
 
 	# 通知掉落管理器
 	GameBus.enemy_death_position.emit(enemy.global_position)

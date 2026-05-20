@@ -36,6 +36,9 @@ class_name EnemyData extends Resource
 ## 击杀分数
 @export var score_value: int = 10
 
+## 击杀经验值
+@export var xp_value: int = 5
+
 ## 刷怪消耗（用于 SpawnManager 波次预算）
 @export var spawn_cost: int = 1
 

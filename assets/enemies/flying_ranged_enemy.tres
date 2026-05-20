@@ -11,6 +11,7 @@ max_health = 50.0
 attack_damage = 8.0
 damage_type = 1
 score_value = 25
+xp_value = 16
 spawn_cost = 3
 weight = 40.0
 knockback_resistance = 0.1

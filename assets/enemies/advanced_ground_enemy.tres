@@ -10,6 +10,7 @@ enemy_role = "ground_melee"
 attack_damage = 18.0
 damage_type = 3
 score_value = 20
+xp_value = 12
 spawn_cost = 2
 weight = 75.0
 knockback_resistance = 0.2
