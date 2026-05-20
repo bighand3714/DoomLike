@@ -16,6 +16,7 @@ const DropManagerClass = preload("res://scripts/pickup/drop_manager.gd")
 const IronWhipClass = preload("res://scripts/weapon/iron_whip.gd")
 const WhipDataClass = preload("res://scripts/weapon/whip_data.gd")
 const PlayerProgressionClass = preload("res://scripts/progression/player_progression.gd")
+const LevelUpPanelClass = preload("res://scripts/ui/level_up_panel.gd")
 
 @onready var _level_root: Node3D = %Level
 @onready var _crosshair: ColorRect = %Crosshair
@@ -37,6 +38,7 @@ var _hit_marker_connected := false
 var _crosshair_x1: ColorRect = null
 var _crosshair_x2: ColorRect = null
 var _player_progression = null
+var _level_up_panel = null
 
 var _run_stats := RunStatsClass.new()
 var _save_data := SaveDataClass.new()
@@ -288,9 +290,27 @@ func _setup_progression() -> void:
 	_player_progression.level_up.connect(_on_player_level_up)
 	GameBus.player_progression = _player_progression
 
+	if _level_up_panel == null:
+		_level_up_panel = LevelUpPanelClass.new()
+		_level_up_panel.name = "LevelUpPanel"
+		var ui := get_node("UI")
+		ui.add_child(_level_up_panel)
+		_level_up_panel.upgrade_chosen.connect(_on_upgrade_chosen)
 
-func _on_player_level_up(_level: int, _options: Array) -> void:
-	print("[Progression] 升级！ level=", _level, " options=", _options.size())
+
+func _on_player_level_up(_level: int, options: Array) -> void:
+	_set_game_state(GameState.State.LEVEL_UP)
+	_level_up_panel.show_options(_level, options)
+
+
+func _on_upgrade_chosen(index: int) -> void:
+	_player_progression.select_upgrade(index)
+	_level_up_panel.hide_panel()
+	if _player_progression.pending_level_ups > 0:
+		# 还有待处理升级，会通过 level_up 信号再次触发
+		pass
+	else:
+		_set_game_state(GameState.State.PLAYING)
 
 
 func _setup_spawn_manager() -> void:
