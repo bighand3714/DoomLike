@@ -53,6 +53,12 @@ var power_score: float = 0.0
 
 var _upgrade_catalog: UpgradeCatalog = null
 
+# 外部引用（由 main.gd 注入）
+var _player_controller = null
+var _weapon_manager = null
+var _iron_whip = null
+var _drop_manager = null
+
 
 # ==============================================================================
 # reset() — 重置到开局状态
@@ -133,6 +139,9 @@ func select_upgrade(index: int) -> void:
 
 	selected_levels[upg_id] = new_lv
 
+	# 分发升级效果
+	_dispatch_upgrade(upg, new_lv)
+
 	# 更新战力分
 	power_score += upg.get_power_for_level(new_lv)
 
@@ -150,6 +159,36 @@ func select_upgrade(index: int) -> void:
 # ==============================================================================
 # 内部方法
 # ==============================================================================
+
+func setup_targets(player, weapon_manager, iron_whip, drop_manager) -> void:
+	_player_controller = player
+	_weapon_manager = weapon_manager
+	_iron_whip = iron_whip
+	_drop_manager = drop_manager
+
+
+func _dispatch_upgrade(upg: UpgradeData, level: int) -> void:
+	var val := upg.get_value_for_level(level)
+	var op := upg.operation
+	match upg.category:
+		UpgradeData.Category.WEAPON:
+			if _weapon_manager != null and _weapon_manager.has_method("apply_weapon_upgrade"):
+				_weapon_manager.apply_weapon_upgrade(upg.target_id, upg.stat_key, val, op)
+		UpgradeData.Category.WHIP:
+			if _iron_whip != null and _iron_whip.has_method("apply_whip_upgrade"):
+				_iron_whip.apply_whip_upgrade(upg.stat_key, val, op)
+		UpgradeData.Category.SURVIVAL:
+			if _player_controller != null and _player_controller.has_method("apply_survival_upgrade"):
+				_player_controller.apply_survival_upgrade(upg.stat_key, val, op)
+		UpgradeData.Category.ECONOMY:
+			if upg.stat_key == "xp_mult":
+				match op:
+					0: xp_mult += val
+					1: xp_mult *= val
+					2: xp_mult = val
+			elif _drop_manager != null and _drop_manager.has_method("apply_drop_upgrade"):
+				_drop_manager.apply_drop_upgrade(upg.stat_key, val, op)
+
 
 func _generate_options() -> void:
 	if _upgrade_catalog == null:

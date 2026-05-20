@@ -32,6 +32,10 @@ var _score_label: Label
 var _kills_label: Label
 var _time_label: Label
 var _intensity_label: Label
+var _level_label: Label
+var _xp_label: Label
+var _xp_bar_bg: ColorRect
+var _xp_bar_fill: ColorRect
 
 # 右上角（小地图下方）
 var _position_label: Label
@@ -91,6 +95,30 @@ func _create_labels() -> void:
 	left_y += 22
 	_intensity_label = _make_left_label(left_y, 14, Color(0.9, 0.5, 0.3))
 	_intensity_label.text = "强度: %d" % _current_intensity
+	left_y += 22
+	_level_label = _make_left_label(left_y, 16, Color(1.0, 0.85, 0.3))
+	_level_label.text = "Lv.1"
+	left_y += 18
+	_xp_label = _make_left_label(left_y, 12, Color(0.7, 0.85, 0.7))
+	_xp_label.text = "XP: 0/20"
+
+	# --- 左上角：经验条 ---
+	_xp_bar_bg = ColorRect.new()
+	_xp_bar_bg.color = Color(0.1, 0.1, 0.1, 0.7)
+	_xp_bar_bg.anchor_left = 0.0; _xp_bar_bg.anchor_right = 0.0
+	_xp_bar_bg.anchor_top = 0.0; _xp_bar_bg.anchor_bottom = 0.0
+	_xp_bar_bg.offset_left = 12.0; _xp_bar_bg.offset_right = 162.0
+	_xp_bar_bg.offset_top = left_y; _xp_bar_bg.offset_bottom = left_y + 8.0
+	_xp_bar_bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_xp_bar_bg)
+	_xp_bar_fill = ColorRect.new()
+	_xp_bar_fill.color = Color(0.3, 0.8, 0.3, 0.9)
+	_xp_bar_fill.anchor_left = 0.0; _xp_bar_fill.anchor_right = 0.0
+	_xp_bar_fill.anchor_top = 0.0; _xp_bar_fill.anchor_bottom = 0.0
+	_xp_bar_fill.offset_left = 12.0; _xp_bar_fill.offset_right = 12.0
+	_xp_bar_fill.offset_top = left_y; _xp_bar_fill.offset_bottom = left_y + 8.0
+	_xp_bar_fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_xp_bar_bg.add_child(_xp_bar_fill)
 
 	# --- 正上方居中：血条 ---
 	_center_health_bg = ColorRect.new()
@@ -313,6 +341,8 @@ func _connect_signals() -> void:
 	var weapon := _weapon_manager.get_current_weapon()
 	if weapon != null:
 		_on_weapon_changed(weapon.weapon_data.weapon_name, weapon.weapon_data.slot_index)
+	if not GameBus.xp_changed.is_connected(_on_xp_changed):
+		GameBus.xp_changed.connect(_on_xp_changed)
 
 
 func _connect_enemy_manager() -> void:
@@ -459,6 +489,16 @@ func show_boundary_warning() -> void:
 func reset_kill_count() -> void:
 	_kill_count = 0
 	_current_intensity = 1
+	_level_label.text = "Lv.1"
+	_xp_label.text = "XP: 0/20"
+	_xp_bar_fill.offset_right = 12.0
+
+
+func _on_xp_changed(level: int, xp: int, xp_to_next: int) -> void:
+	_level_label.text = "Lv.%d" % level
+	_xp_label.text = "XP: %d/%d" % [xp, xp_to_next]
+	var ratio := clampf(float(xp) / float(maxi(xp_to_next, 1)), 0.0, 1.0)
+	_xp_bar_fill.offset_right = 12.0 + 150.0 * ratio
 
 
 func update_intensity(new_intensity: int) -> void:

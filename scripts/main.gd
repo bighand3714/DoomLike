@@ -281,6 +281,10 @@ func _reset_player_for_level() -> void:
 	_drop_manager.name = "DropManager"
 	add_child(_drop_manager)
 
+	if _player_progression != null:
+		var wm := _player.find_child("WeaponManager", true, false)
+		_player_progression.setup_targets(_player, wm, _iron_whip, _drop_manager)
+
 
 func _setup_progression() -> void:
 	if _player_progression == null:
@@ -288,6 +292,8 @@ func _setup_progression() -> void:
 		_player_progression.name = "PlayerProgression"
 		add_child(_player_progression)
 	_player_progression.level_up.connect(_on_player_level_up)
+	if not _player_progression.xp_changed.is_connected(_on_progression_xp_changed):
+		_player_progression.xp_changed.connect(_on_progression_xp_changed)
 	GameBus.player_progression = _player_progression
 
 	if _level_up_panel == null:
@@ -301,6 +307,10 @@ func _setup_progression() -> void:
 func _on_player_level_up(_level: int, options: Array) -> void:
 	_set_game_state(GameState.State.LEVEL_UP)
 	_level_up_panel.show_options(_level, options)
+
+
+func _on_progression_xp_changed(level: int, xp: int, xp_to_next: int) -> void:
+	GameBus.xp_changed.emit(level, xp, xp_to_next)
 
 
 func _on_upgrade_chosen(index: int) -> void:
