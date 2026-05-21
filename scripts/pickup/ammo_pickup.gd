@@ -1,4 +1,4 @@
-# ==============================================================================
+﻿# ==============================================================================
 # AmmoPickup — 弹药补充（每种武器按弹匣量分别补给）
 # ==============================================================================
 
@@ -18,7 +18,7 @@ func _on_pickup(player: Node3D) -> void:
 		if w.weapon_data.infinite_ammo:
 			continue
 		var mag := maxi(w.weapon_data.mag_size, 1)
-		var amount := randi_range(mag - mag / 3, mag + mag / 3)
+		var amount := randi_range(mag - floori(mag / 3.0), mag + floori(mag / 3.0))
 		w.add_reserve_ammo(amount)
 		total += amount
 
