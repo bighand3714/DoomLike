@@ -578,21 +578,23 @@ func _set_enemy_transparent(enable: bool) -> void:
 	if _grabbed_enemy == null or not is_instance_valid(_grabbed_enemy):
 		return
 	_enemy_transparent = enable
-	var meshes := _grabbed_enemy.find_children("*", "MeshInstance3D")
-	for mesh in meshes:
-		var mi := mesh as MeshInstance3D
-		if mi == null:
-			continue
-		if mi.material_override != null:
-			var mat := mi.material_override as StandardMaterial3D
-			if mat != null:
-				mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA if enable else BaseMaterial3D.TRANSPARENCY_DISABLED
-				mat.albedo_color.a = 0.35 if enable else 1.0
-		for s in range(mi.get_surface_override_material_count()):
-			var sm := mi.get_surface_override_material(s) as StandardMaterial3D
-			if sm != null:
-				sm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA if enable else BaseMaterial3D.TRANSPARENCY_DISABLED
-				sm.albedo_color.a = 0.35 if enable else 1.0
+	# 处理 MeshInstance3D 和 CSGShape3D（敌人模型使用 CSG 节点）
+	for child in _grabbed_enemy.find_children("*"):
+		var mat: StandardMaterial3D = null
+		if child is MeshInstance3D:
+			var mi := child as MeshInstance3D
+			mat = mi.material_override as StandardMaterial3D
+			for s in range(mi.get_surface_override_material_count()):
+				var sm := mi.get_surface_override_material(s) as StandardMaterial3D
+				if sm != null:
+					sm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA if enable else BaseMaterial3D.TRANSPARENCY_DISABLED
+					sm.albedo_color.a = 0.35 if enable else 1.0
+		elif child is CSGShape3D:
+			var csg := child as CSGShape3D
+			mat = csg.material_override as StandardMaterial3D
+		if mat != null:
+			mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA if enable else BaseMaterial3D.TRANSPARENCY_DISABLED
+			mat.albedo_color.a = 0.35 if enable else 1.0
 
 
 # 创建抛物线预览节点
@@ -646,7 +648,14 @@ func _find_aim_point() -> Vector3:
 	var result := space_state.intersect_ray(query)
 	if not result.is_empty():
 		return result.position
-	return cam_origin + cam_dir * 15.0
+	# 未命中（瞄准天空）：从预估落点向下找地面
+	var air_point := cam_origin + cam_dir * 15.0
+	var down_query := PhysicsRayQueryParameters3D.create(air_point, air_point + Vector3(0, -100.0, 0))
+	down_query.collision_mask = 1
+	var down_result := space_state.intersect_ray(down_query)
+	if not down_result.is_empty():
+		return down_result.position
+	return air_point
 
 
 # 计算抛物线初速度

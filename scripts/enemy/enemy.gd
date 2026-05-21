@@ -74,6 +74,7 @@ var _current_armor: float = 0.0
 var _thrown_impact_callback: Callable
 var _thrown_prev_pos: Vector3 = Vector3.ZERO
 var _thrown_gravity: float = 20.0
+var _thrown_timer: float = 0.0
 
 var _debug_stun_bar: MeshInstance3D = null
 var _debug_armor_bar: MeshInstance3D = null
@@ -291,6 +292,8 @@ func _physics_process(delta: float) -> void:
 			_state_stunned(delta)
 		EnemyState.GRABBED:
 			_state_grabbed(delta)
+		EnemyState.THROWN:
+			_state_thrown(delta)
 		EnemyState.KNOCKED_DOWN:
 			_state_knocked_down(delta)
 		EnemyState.DEATH:
@@ -641,10 +644,15 @@ func _state_grabbed(_delta: float) -> void:
 
 
 func _state_thrown(delta: float) -> void:
-	# 记录位移前位置，用于检测碰撞
 	_thrown_prev_pos = global_position
+	_thrown_timer += delta
 	velocity.y -= _thrown_gravity * delta
 	move_and_slide()
+
+	# 超时或掉出世界强制触发
+	if _thrown_timer > 3.0 or global_position.y < -50.0:
+		_trigger_thrown_impact()
+		return
 
 	# 落地检测
 	if is_on_floor():
@@ -681,6 +689,7 @@ func start_throw(throw_velocity: Vector3, on_impact: Callable, gravity: float = 
 	velocity = throw_velocity
 	_thrown_impact_callback = on_impact
 	_thrown_gravity = gravity
+	_thrown_timer = 0.0
 	_thrown_prev_pos = global_position
 	_grab_owner = null
 	collision_layer = 1
