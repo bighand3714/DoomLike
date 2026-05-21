@@ -13,6 +13,7 @@ score_value = 15
 spawn_cost = 2
 weight = 60.0
 knockback_resistance = 0.2
+armor = 30.0
 stun_recovery_rate = 10.0
 stun_resistance = 0.1
 move_speed = 3.5

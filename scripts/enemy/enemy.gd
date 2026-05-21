@@ -984,6 +984,9 @@ func _update_debug_bars() -> void:
 			var arm_box: BoxMesh = _debug_armor_bar.mesh
 			arm_box.size.x = w
 			_debug_armor_bar.position.x = -(DEBUG_BAR_FULL - w) / 2.0
+			_debug_armor_bar.visible = true
+		else:
+			_debug_armor_bar.visible = false
 
 	if _debug_hp_bar != null and _damageable != null:
 		var ratio: float = _damageable.health / _damageable.max_health
