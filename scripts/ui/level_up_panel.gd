@@ -131,7 +131,11 @@ func show_options(level: int, options: Array) -> void:
 			var upg: UpgradeData = options[i]
 			var lv_text := ""
 			if upg.max_level > 1:
-				lv_text = " [%d/%d]" % [1, upg.max_level]  # 简化：显示 1/max
+				var current_lv: int = 0
+				if GameBus.player_progression != null:
+					current_lv = GameBus.player_progression.selected_levels.get(upg.upgrade_id, 0)
+				var next_lv := current_lv + 1
+				lv_text = " [%d/%d]" % [next_lv, upg.max_level]
 			_cards[i].text = "%s\n\n%s\n%s" % [upg.display_name, upg.description, lv_text]
 			_cards[i].disabled = false
 			_cards[i].show()
