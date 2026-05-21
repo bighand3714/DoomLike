@@ -680,10 +680,13 @@ func _can_see_player() -> bool:
 # ==============================================================================
 # 眩晕 / 击退 / 抓取 / 处决 / 倒地 / 定身 / 增伤标记
 # ==============================================================================
-func apply_stun(amount: float) -> void:
+func apply_stun(amount: float, bypass_armor: bool = false) -> void:
 	if _state == EnemyState.DEATH or _state == EnemyState.EXECUTED:
 		return
 	var effective: float = amount * (1.0 - enemy_data.stun_resistance)
+	# 护甲抵消90%眩晕提升（有护甲时只承受10%眩晕），铁鞭可绕过
+	if not bypass_armor and _current_armor > 0.0:
+		effective *= 0.1
 	_stun = clampf(_stun + effective, 0.0, enemy_data.max_stun)
 	_stun_decay_delay = 1.0
 	stun_changed.emit(_stun, enemy_data.max_stun)
