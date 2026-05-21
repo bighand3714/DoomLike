@@ -29,12 +29,18 @@ var health: float
 var armor: float = 0.0
 @export var max_armor: float = 100.0
 
+# 保存初始值，用于 reset() 恢复升级修改后的上限
+var _base_max_health: float
+var _base_max_armor: float
+
 
 # ==============================================================================
 # _ready()
 # ==============================================================================
 
 func _ready() -> void:
+	_base_max_health = max_health
+	_base_max_armor = max_armor
 	health = max_health
 
 
@@ -106,6 +112,8 @@ func add_armor(amount: float) -> void:
 #   - 不会断开任何信号连接（died、damaged 等仍保持连接）
 #   - 即使之前已经死亡（health <= 0），调用后也能恢复
 func reset() -> void:
+	max_health = _base_max_health
+	max_armor = _base_max_armor
 	health = max_health
 	armor = 50.0
 	armor_changed.emit(armor, max_armor)
