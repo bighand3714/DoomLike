@@ -120,7 +120,7 @@ func _set_game_state(next_state: GameState.State) -> void:
 			Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
 		GameState.State.PLAYING:
-			if prev != GameState.State.PAUSED:
+			if prev != GameState.State.PAUSED and prev != GameState.State.LEVEL_UP:
 				_reset_run_stats()
 				_connect_player_death()
 				if not _hit_marker_connected:

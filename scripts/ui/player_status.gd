@@ -62,7 +62,6 @@ var _shield_block_label: Label
 var _wave_notify_label: Label
 
 var _update_timer: float = 0.0
-var _kill_count: int = 0
 var _current_intensity: int = 1
 var _notify_timer: float = 0.0
 var _boundary_warning_timer: float = 0.0
@@ -402,7 +401,6 @@ func _connect_signals() -> void:
 func _connect_enemy_manager() -> void:
 	if _enemy_manager == null:
 		return
-	_enemy_manager.connect("enemy_killed", _on_enemy_killed)
 	_player_dmg = _player.get_node_or_null("Damageable") as Damageable
 	if _player_dmg != null and not _player_dmg.armor_changed.is_connected(_on_armor_changed):
 		_player_dmg.armor_changed.connect(_on_armor_changed)
@@ -510,7 +508,7 @@ func _update_top_left() -> void:
 		return
 	var stats = GameBus.run_stats
 	_score_label.text = "分数: %d" % stats.score
-	_kills_label.text = "击杀: %d" % _kill_count
+	_kills_label.text = "击杀: %d" % stats.kills
 	_time_label.text = "时间: %.1f" % stats.survival_time
 	_intensity_label.text = "强度: %d" % _current_intensity
 
@@ -549,7 +547,6 @@ func show_boundary_warning() -> void:
 
 
 func reset_kill_count() -> void:
-	_kill_count = 0
 	_current_intensity = 1
 	_level_label.text = "Lv.1"
 	_xp_label.text = "XP: 0/20"
@@ -593,10 +590,6 @@ func show_wave_notification(wave_number: int) -> void:
 # ==============================================================================
 # 信号回调
 # ==============================================================================
-func _on_enemy_killed(_enemy_name: String, _score_value: int, _xp_value: int) -> void:
-	_kill_count += 1
-
-
 func _on_armor_changed(_current: float, _max_val: float) -> void:
 	pass
 
