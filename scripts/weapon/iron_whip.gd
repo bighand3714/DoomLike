@@ -32,6 +32,7 @@ var _dash_direction: Vector3 = Vector3.ZERO  # 冲刺方向（用于击退计算
 var _parabola_nodes: Array = []          # 预览线段节点
 var _aim_point: Vector3 = Vector3.ZERO   # 当前瞄准落点
 var _enemy_transparent: bool = false     # 敌人半透明状态
+var _saved_materials: Dictionary = {}    # 半透明时保存的原始材质
 
 
 func setup(data: WhipData, camera: Camera3D, player: CharacterBody3D) -> void:
@@ -573,28 +574,38 @@ func get_grabbed_enemy() -> Enemy:
 # 抛物线投掷辅助方法
 # ==============================================================================
 
-# 设置被抓敌人半透明
+# 设置被抓敌人半透明（替换式：新建材质避免修改共享材质）
 func _set_enemy_transparent(enable: bool) -> void:
 	if _grabbed_enemy == null or not is_instance_valid(_grabbed_enemy):
 		return
 	_enemy_transparent = enable
-	# 处理 MeshInstance3D 和 CSGShape3D（敌人模型使用 CSG 节点）
 	for child in _grabbed_enemy.find_children("*"):
-		var mat: StandardMaterial3D = null
+		var geo: Node3D = null
 		if child is MeshInstance3D:
-			var mi := child as MeshInstance3D
-			mat = mi.material_override as StandardMaterial3D
-			for s in range(mi.get_surface_override_material_count()):
-				var sm := mi.get_surface_override_material(s) as StandardMaterial3D
-				if sm != null:
-					sm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA if enable else BaseMaterial3D.TRANSPARENCY_DISABLED
-					sm.albedo_color.a = 0.35 if enable else 1.0
+			geo = child as MeshInstance3D
 		elif child is CSGShape3D:
-			var csg := child as CSGShape3D
-			mat = csg.material_override as StandardMaterial3D
-		if mat != null:
-			mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA if enable else BaseMaterial3D.TRANSPARENCY_DISABLED
-			mat.albedo_color.a = 0.35 if enable else 1.0
+			geo = child as CSGShape3D
+		if geo == null:
+			continue
+		var key := geo.get_instance_id()
+		if enable:
+			# 保存原始 override，替换为新半透明材质
+			if not _saved_materials.has(key):
+				_saved_materials[key] = geo.material_override
+			var trans_mat := StandardMaterial3D.new()
+			if geo.material_override != null:
+				var src := geo.material_override as StandardMaterial3D
+				if src != null:
+					trans_mat.albedo_color = src.albedo_color
+			trans_mat.albedo_color.a = 0.35
+			trans_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+			trans_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+			geo.material_override = trans_mat
+		else:
+			# 恢复原始材质
+			if _saved_materials.has(key):
+				geo.material_override = _saved_materials[key]
+				_saved_materials.erase(key)
 
 
 # 创建抛物线预览节点
