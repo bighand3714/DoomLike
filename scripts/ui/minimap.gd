@@ -69,6 +69,12 @@ func _draw() -> void:
 	# 红圈边界（25m 范围）
 	draw_arc(center, radius, 0.0, TAU, 48, Color(1.0, 0.15, 0.15, 0.6), 1.5)
 
+	# 绿圈（3m 距离环）
+	draw_arc(center, 3.0 * map_scale, 0.0, TAU, 32, Color(0.1, 1.0, 0.2, 0.5), 1.0)
+
+	# 黄圈（8m 距离环）
+	draw_arc(center, 8.0 * map_scale, 0.0, TAU, 32, Color(1.0, 0.85, 0.1, 0.5), 1.0)
+
 	# 敌人红点
 	var clip_r := radius - 3.0
 	for enemy_pos in _enemy_positions:

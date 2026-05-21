@@ -62,7 +62,7 @@ func _ai_tick() -> void:
 			if _attack_cooldown_timer <= 0.0 and randf() < 0.3:
 				_transition_to(EnemyState.ATTACK_PREPARE)
 		DistanceBracket.CLOSE, DistanceBracket.MELEE:
-			if _attack_cooldown_timer <= 0.0:
+			if randf() < 0.5 and _attack_cooldown_timer <= 0.0:
 				_transition_to(EnemyState.ATTACK_PREPARE)
 			else:
 				_fly_towards_player(enemy_data.move_speed * 0.4)

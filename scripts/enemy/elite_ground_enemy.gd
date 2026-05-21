@@ -67,12 +67,12 @@ func _ai_tick() -> void:
 			if _state != EnemyState.WALKING:
 				_transition_to(EnemyState.WALKING)
 		DistanceBracket.CLOSE:
-			if randf() < 0.55 and _attack_cooldown_timer <= 0.0:
+			if randf() < 0.5 and _attack_cooldown_timer <= 0.0:
 				_transition_to(EnemyState.ATTACK_PREPARE)
 			elif _state != EnemyState.WALKING:
 				_transition_to(EnemyState.WALKING)
 		DistanceBracket.MELEE:
-			if randf() < 0.75 and _attack_cooldown_timer <= 0.0:
+			if randf() < 0.5 and _attack_cooldown_timer <= 0.0:
 				_transition_to(EnemyState.ATTACK_PREPARE)
 
 
