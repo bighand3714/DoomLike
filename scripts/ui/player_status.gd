@@ -72,8 +72,8 @@ const BAR_W := 300.0
 const BAR_H := 20.0
 const RIGHT_MARGIN := 12.0
 const LABEL_W := 260.0
-# 小地图在右上角约 153px 高（150 + 3 margin），下面 UI 从这里开始
-const RIGHT_TOP_OFFSET := 170.0
+# 小地图在右上角 180px + 12px margin = 192px，下面 UI 从 210px 开始
+const RIGHT_TOP_OFFSET := 210.0
 const RELOAD_BAR_W := 120.0
 const RELOAD_BAR_H := 6.0
 
@@ -94,7 +94,7 @@ func _create_labels() -> void:
 	left_y += 22
 	_kills_label = _make_left_label(left_y, 14, Color(1.0, 0.85, 0.3))
 	left_y += 22
-	_time_label = _make_left_label(left_y, 14, Color(0.85, 0.85, 0.85))
+	_time_label = _make_left_label(left_y, 14, Color(1.0, 0.85, 0.3))
 	left_y += 22
 	_intensity_label = _make_left_label(left_y, 14, Color(0.9, 0.5, 0.3))
 	_intensity_label.text = "强度: %d" % _current_intensity
@@ -218,13 +218,13 @@ func _create_labels() -> void:
 	_position_label = _make_label(y, 14, Color.WHITE, 0.9)
 	y += 22
 
-	_state_label = _make_label(y, 14, Color(0.7, 0.7, 0.7), 0.85)
+	_state_label = _make_label(y, 14, Color(1.0, 0.85, 0.3), 0.9)
 	y += 22
 
 	_armor_label = _make_label(y, 14, Color(0.4, 0.7, 1.0), 0.9)
 	y += 28
 
-	_weapon_label = _make_label(y, 15, Color(0.75, 0.75, 0.75), 0.85)
+	_weapon_label = _make_label(y, 15, Color(1.0, 0.85, 0.3), 0.85)
 	y += 22
 
 	_ammo_label = _make_label(y, 22, Color.WHITE, 0.9)
@@ -264,7 +264,7 @@ func _create_labels() -> void:
 	add_child(_reload_bar_fill)
 	y += RELOAD_BAR_H + 6
 
-	_weapon_slots_label = _make_label(y, 13, Color(0.6, 0.6, 0.6), 0.8)
+	_weapon_slots_label = _make_label(y, 13, Color(1.0, 0.85, 0.3), 0.85)
 
 	# --- 中央提示 ---
 	_pickup_notify = Label.new()

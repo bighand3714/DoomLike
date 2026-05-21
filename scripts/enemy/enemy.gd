@@ -515,7 +515,9 @@ func _execute_attack() -> void:
 
 	match enemy_data.damage_type:
 		WeaponData.DamageType.MELEE:
-			if dist <= enemy_data.attack_range * 1.3:
+			var dy := absf(_player.global_position.y - global_position.y)
+			var max_dy: float = enemy_data.height * 1.0
+			if dist <= enemy_data.attack_range * 1.3 and dy <= max_dy:
 				_damage_player(enemy_data.attack_damage, WeaponData.DamageType.MELEE)
 
 		WeaponData.DamageType.HITSCAN:

@@ -100,6 +100,10 @@ var _dash_speed: float = 0.0
 var _dash_distance: float = 0.0
 var _dash_travelled: float = 0.0
 
+# 距离环（保持在地面）
+var _distance_rings: Array[MeshInstance3D] = []
+var _ring_ground_y: float = 0.0
+
 
 # ==============================================================================
 # 节点引用
@@ -268,6 +272,10 @@ func _physics_process(delta: float) -> void:
 	# 必须每物理帧调用一次。
 	move_and_slide()
 
+	# 保持距离环贴在地面（不跟随玩家跳跃）
+	for ring in _distance_rings:
+		ring.global_position.y = _ring_ground_y
+
 
 # ==============================================================================
 # 脚下距离环 — 3m(绿) / 8m(黄) / 25m(红)，平贴地面
@@ -295,6 +303,9 @@ func _create_distance_rings() -> void:
 		ring.position = Vector3(0, 0.12, 0)
 		ring.rotation_degrees = Vector3(0, 0, 0)
 		add_child(ring)
+		_distance_rings.append(ring)
+	# 记录初始地面 Y（环的全局 Y = 玩家全局 Y + 0.12）
+	_ring_ground_y = _distance_rings[0].global_position.y
 
 func _on_player_damaged(amount: float, _type: WeaponData.DamageType) -> void:
 	apply_screen_shake(0.03)
