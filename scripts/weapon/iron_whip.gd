@@ -121,201 +121,201 @@ func _on_whip_scroll(scroll_up: bool) -> void:
 # _process — 状态机更新
 # ==============================================================================
 func _process(delta: float) -> void:
-if _cooldown_timer > 0.0:
-	_cooldown_timer -= delta
+	if _cooldown_timer > 0.0:
+		_cooldown_timer -= delta
 
-if _whip_line_timer > 0.0:
-	_whip_line_timer -= delta
+	if _whip_line_timer > 0.0:
+		_whip_line_timer -= delta
 
-# 右键 = 盾牌模式（抓取中按住右键进入护盾）
-var sec_pressed := Input.is_action_pressed("secondary_fire")
-if _state == WhipState.GRABBING and sec_pressed and not _secondary_held:
-	_enter_shielding()
-elif _state == WhipState.SHIELDING and not sec_pressed:
-	_exit_shielding()
-_secondary_held = sec_pressed
+	# 右键 = 盾牌模式（抓取中按住右键进入护盾）
+	var sec_pressed := Input.is_action_pressed("secondary_fire")
+	if _state == WhipState.GRABBING and sec_pressed and not _secondary_held:
+		_enter_shielding()
+	elif _state == WhipState.SHIELDING and not sec_pressed:
+		_exit_shielding()
+	_secondary_held = sec_pressed
 
-match _state:
-	WhipState.WHIPPING:
-		if _cooldown_timer <= 0.0:
-			_state = WhipState.IDLE
+	match _state:
+		WhipState.WHIPPING:
+			if _cooldown_timer <= 0.0:
+				_state = WhipState.IDLE
 
-	WhipState.PULLING:
-		_process_pull(delta)
+		WhipState.PULLING:
+			_process_pull(delta)
 
-	WhipState.GRABBING:
-		_process_grab(delta)
+		WhipState.GRABBING:
+			_process_grab(delta)
 
-	WhipState.SHIELDING:
-		_process_shielding(delta)
+		WhipState.SHIELDING:
+			_process_shielding(delta)
 
-	WhipState.DASHING:
-		_process_dash(delta)
+		WhipState.DASHING:
+			_process_dash(delta)
 
 
 # ==============================================================================
 # 挥鞭
 # ==============================================================================
 func _try_whip() -> void:
-var dir := -_camera.global_transform.basis.z.normalized()
-# 射线从摄像机前方 0.6m 开始，避免起点在玩家碰撞体内导致检测异常
-var ray_origin := _camera.global_position + dir * 0.6
-var end: Vector3 = ray_origin + dir * _whip_data.whip_range
+	var dir := -_camera.global_transform.basis.z.normalized()
+	# 射线从摄像机前方 0.6m 开始，避免起点在玩家碰撞体内导致检测异常
+	var ray_origin := _camera.global_position + dir * 0.6
+	var end: Vector3 = ray_origin + dir * _whip_data.whip_range
 
-var space_state := get_world_3d().direct_space_state
-var query := PhysicsRayQueryParameters3D.create(ray_origin, end)
-query.collision_mask = 1
-if _grabbed_enemy != null:
-	query.exclude.append(_grabbed_enemy)
+	var space_state := get_world_3d().direct_space_state
+	var query := PhysicsRayQueryParameters3D.create(ray_origin, end)
+	query.collision_mask = 1
+	if _grabbed_enemy != null:
+		query.exclude.append(_grabbed_enemy)
 
-var result := space_state.intersect_ray(query)
+	var result := space_state.intersect_ray(query)
 
-_cooldown_timer = _whip_data.cooldown
-_state = WhipState.WHIPPING
+	_cooldown_timer = _whip_data.cooldown
+	_state = WhipState.WHIPPING
 
-var hit_point: Vector3 = end
-if not result.is_empty():
-	hit_point = result.position
-	var target: Node = result.collider
-	_execute_whip_hit(target)
+	var hit_point: Vector3 = end
+	if not result.is_empty():
+		hit_point = result.position
+		var target: Node = result.collider
+		_execute_whip_hit(target)
 
-_spawn_whip_effect(global_position, hit_point)
+	_spawn_whip_effect(global_position, hit_point)
 
 
 func _spawn_whip_effect(from: Vector3, to: Vector3) -> void:
-var root := get_tree().root
-var to_dir := to - from
-var total_len := to_dir.length()
-var dir := to_dir.normalized() if total_len > 0.01 else Vector3.FORWARD
-var segment_count: int = ceili(total_len / 0.3)
-segment_count = clampi(segment_count, 3, 20)
+	var root := get_tree().root
+	var to_dir := to - from
+	var total_len := to_dir.length()
+	var dir := to_dir.normalized() if total_len > 0.01 else Vector3.FORWARD
+	var segment_count: int = ceili(total_len / 0.3)
+	segment_count = clampi(segment_count, 3, 20)
 
-for i in range(segment_count):
-	var t: float = float(i) / float(segment_count - 1)
-	var pos := from + dir * (total_len * t)
+	for i in range(segment_count):
+		var t: float = float(i) / float(segment_count - 1)
+		var pos := from + dir * (total_len * t)
 
-	var sphere := MeshInstance3D.new()
-	var sphere_mesh := SphereMesh.new()
-	sphere_mesh.radius = 0.03
-	sphere_mesh.height = 0.06
-	sphere.mesh = sphere_mesh
+		var sphere := MeshInstance3D.new()
+		var sphere_mesh := SphereMesh.new()
+		sphere_mesh.radius = 0.03
+		sphere_mesh.height = 0.06
+		sphere.mesh = sphere_mesh
 
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = Color(1.0, 0.4, 0.05)
-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	sphere.material_override = mat
+		var mat := StandardMaterial3D.new()
+		mat.albedo_color = Color(1.0, 0.4, 0.05)
+		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		sphere.material_override = mat
 
-	root.add_child(sphere)
-	sphere.global_position = pos
+		root.add_child(sphere)
+		sphere.global_position = pos
 
-	var timer := get_tree().create_timer(0.25)
-	timer.timeout.connect(sphere.queue_free)
+		var timer := get_tree().create_timer(0.25)
+		timer.timeout.connect(sphere.queue_free)
 
 
 func _execute_whip_hit(target: Node) -> void:
-var enemy: Enemy = _find_enemy(target)
-if enemy == null:
-	return
+	var enemy: Enemy = _find_enemy(target)
+	if enemy == null:
+		return
 
-# 护甲检查：有护甲时削减护甲，眩晕效果按护甲比例减免
-if enemy.has_method("deplete_armor"):
-	var absorbed: float = enemy.deplete_armor(_whip_data.damage * 0.5)
-	if absorbed > 0.0:
-		# 护甲存在：按已破护甲比例增加眩晕（破甲越多眩晕越多，30%~100%）
-		var armor_ratio: float = 0.3
-		if enemy.enemy_data != null and enemy.enemy_data.armor > 0.0:
-			var remaining := enemy.get_current_armor()
-			armor_ratio = clampf(1.0 - remaining / enemy.enemy_data.armor, 0.3, 1.0)
-		enemy.apply_stun(_whip_data.stun_damage * armor_ratio, true)
-		# 护甲敌人眩晕满后也可拉取，不在此return
+	# 护甲检查：有护甲时削减护甲，眩晕效果按护甲比例减免
+	if enemy.has_method("deplete_armor"):
+		var absorbed: float = enemy.deplete_armor(_whip_data.damage * 0.5)
+		if absorbed > 0.0:
+			# 护甲存在：按已破护甲比例增加眩晕（破甲越多眩晕越多，30%~100%）
+			var armor_ratio: float = 0.3
+			if enemy.enemy_data != null and enemy.enemy_data.armor > 0.0:
+				var remaining := enemy.get_current_armor()
+				armor_ratio = clampf(1.0 - remaining / enemy.enemy_data.armor, 0.3, 1.0)
+			enemy.apply_stun(_whip_data.stun_damage * armor_ratio, true)
+			# 护甲敌人眩晕满后也可拉取，不在此return
 
-var dmg := enemy.get_node_or_null("Damageable") as Damageable
-if dmg != null:
-	dmg.take_damage(_whip_data.damage, WeaponData.DamageType.MELEE)
+	var dmg := enemy.get_node_or_null("Damageable") as Damageable
+	if dmg != null:
+		dmg.take_damage(_whip_data.damage, WeaponData.DamageType.MELEE)
 
-enemy.apply_stun(_whip_data.stun_damage)
+	enemy.apply_stun(_whip_data.stun_damage)
 
-if enemy.can_be_grabbed():
-	_start_pull(enemy)
-else:
-	var kb_dir := (enemy.global_position - _player.global_position).normalized()
-	kb_dir.y = 0.0
-	if kb_dir.length_squared() < 0.01:
-		kb_dir = -_camera.global_transform.basis.z.normalized()
+	if enemy.can_be_grabbed():
+		_start_pull(enemy)
+	else:
+		var kb_dir := (enemy.global_position - _player.global_position).normalized()
 		kb_dir.y = 0.0
-	enemy.apply_knockback(kb_dir, _whip_data.knockback_force)
+		if kb_dir.length_squared() < 0.01:
+			kb_dir = -_camera.global_transform.basis.z.normalized()
+			kb_dir.y = 0.0
+		enemy.apply_knockback(kb_dir, _whip_data.knockback_force)
 
 
 # ==============================================================================
 # 拉取
 # ==============================================================================
 func _start_pull(enemy: Enemy) -> void:
-_pulled_enemy = enemy
-_state = WhipState.PULLING
+	_pulled_enemy = enemy
+	_state = WhipState.PULLING
 
 
 func _process_pull(delta: float) -> void:
-if _pulled_enemy == null or not is_instance_valid(_pulled_enemy):
-	_cancel_pull()
-	return
+	if _pulled_enemy == null or not is_instance_valid(_pulled_enemy):
+		_cancel_pull()
+		return
 
-if not _pulled_enemy.can_be_grabbed():
-	_cancel_pull()
-	return
+	if not _pulled_enemy.can_be_grabbed():
+		_cancel_pull()
+		return
 
-var target_pos: Vector3 = _player.global_position + (-_camera.global_transform.basis.z.normalized()) * _whip_data.grab_distance
-target_pos.y = _player.global_position.y + 0.5
+	var target_pos: Vector3 = _player.global_position + (-_camera.global_transform.basis.z.normalized()) * _whip_data.grab_distance
+	target_pos.y = _player.global_position.y + 0.5
 
-var to_target := target_pos - _pulled_enemy.global_position
-var dist: float = to_target.length()
+	var to_target := target_pos - _pulled_enemy.global_position
+	var dist: float = to_target.length()
 
-if dist < _whip_data.grab_distance * 1.2:
-	_start_grab(_pulled_enemy)
-else:
-	_pulled_enemy.global_position += to_target.normalized() * _whip_data.pull_speed * delta
+	if dist < _whip_data.grab_distance * 1.2:
+		_start_grab(_pulled_enemy)
+	else:
+		_pulled_enemy.global_position += to_target.normalized() * _whip_data.pull_speed * delta
 
 
 func _cancel_pull() -> void:
-_pulled_enemy = null
-_state = WhipState.IDLE
+	_pulled_enemy = null
+	_state = WhipState.IDLE
 
 
 # ==============================================================================
 # 抓取（左手举起模式）
 # ==============================================================================
 func _start_grab(enemy: Enemy) -> void:
-if not enemy.start_grab(_player):
-	_cancel_pull()
-	return
+	if not enemy.start_grab(_player):
+		_cancel_pull()
+		return
 
-_pulled_enemy = null
-_grabbed_enemy = enemy
-_state = WhipState.GRABBING
+	_pulled_enemy = null
+	_grabbed_enemy = enemy
+	_state = WhipState.GRABBING
 
-_player.grabbed_enemy = enemy
+	_player.grabbed_enemy = enemy
 
-var weight: float = 1.0
-if enemy.enemy_data != null:
-	weight = enemy.enemy_data.weight
-var speed_mult: float = clampf(1.0 - weight * 0.006, 0.35, 1.0)
-_player.set_speed_multiplier(speed_mult)
+	var weight: float = 1.0
+	if enemy.enemy_data != null:
+		weight = enemy.enemy_data.weight
+	var speed_mult: float = clampf(1.0 - weight * 0.006, 0.35, 1.0)
+	_player.set_speed_multiplier(speed_mult)
 
-_show_grab_status(enemy)
+	_show_grab_status(enemy)
 
 
 func _process_grab(_delta: float) -> void:
-if _grabbed_enemy == null or not is_instance_valid(_grabbed_enemy):
-	_release_grab_internal()
-	return
+	if _grabbed_enemy == null or not is_instance_valid(_grabbed_enemy):
+		_release_grab_internal()
+		return
 
-var cam_forward := -_camera.global_transform.basis.z.normalized()
-cam_forward.y = 0.0
-var cam_right := _camera.global_transform.basis.x.normalized()
-var target_pos := _player.global_position - cam_right * 1.2 + cam_forward * 0.8 + Vector3(0, 0.5, 0)
-var current_pos := _grabbed_enemy.global_position
-var smoothed_pos := current_pos.lerp(target_pos, 0.3)
-var grab_transform := Transform3D(_player.global_transform.basis, smoothed_pos)
-_grabbed_enemy.update_grabbed_position(grab_transform, _delta)
+	var cam_forward := -_camera.global_transform.basis.z.normalized()
+	cam_forward.y = 0.0
+	var cam_right := _camera.global_transform.basis.x.normalized()
+	var target_pos := _player.global_position - cam_right * 1.2 + cam_forward * 0.8 + Vector3(0, 0.5, 0)
+	var current_pos := _grabbed_enemy.global_position
+	var smoothed_pos := current_pos.lerp(target_pos, 0.3)
+	var grab_transform := Transform3D(_player.global_transform.basis, smoothed_pos)
+	_grabbed_enemy.update_grabbed_position(grab_transform, _delta)
 
 
 # ==============================================================================
@@ -366,7 +366,7 @@ func _process_shielding(_delta: float) -> void:
 
 # ==============================================================================
 # 抛物线投掷
-	# ==============================================================================
+# ==============================================================================
 func _execute_throw() -> void:
 	if _grabbed_enemy == null or not is_instance_valid(_grabbed_enemy):
 		_release_grab_internal()
@@ -374,15 +374,15 @@ func _execute_throw() -> void:
 
 	var enemy := _grabbed_enemy
 
-	# 计算抛射起点（玩家前方2m，稍高）
-	var throw_origin := _player.global_position + _camera.global_transform.basis.z * -1.0 * 2.0 + Vector3(0, 0.5, 0)
-	enemy.global_position = throw_origin
-
-	# 计算抛物线初速度
 	# 若未进入盾牌模式，实时计算瞄准点
 	if _aim_point.length_squared() < 0.01:
 		_aim_point = _find_aim_point()
 
+	# 抛射起点（玩家前方2m，稍高）
+	var throw_origin := _player.global_position + _camera.global_transform.basis.z * -1.0 * 2.0 + Vector3(0, 0.5, 0)
+	enemy.global_position = throw_origin
+
+	# 计算抛物线初速度
 	var throw_vel := _calculate_throw_velocity(throw_origin, _aim_point)
 
 	# 清除预览和半透明
@@ -404,33 +404,9 @@ func _execute_throw() -> void:
 	enemy.start_throw(throw_vel, func(pos: Vector3): _on_throw_impact(pos, impact_weight))
 
 
-# 抛物线落地/碰撞回调
-func _on_throw_impact(impact_pos: Vector3, impact_weight: float) -> void:
-	# 2m 爆炸范围
-	var enemies := get_tree().get_nodes_in_group("enemy")
-	for node in enemies:
-		if not is_instance_valid(node):
-			continue
-		var other: Enemy = node as Enemy
-		if other == null:
-			continue
-		var dist: float = other.global_position.distance_to(impact_pos)
-		if dist <= _whip_data.explosion_radius:
-			# 伤害 = 敌人重量
-			var dmg := other.get_node_or_null("Damageable") as Damageable
-			if dmg != null:
-				dmg.take_damage(impact_weight, WeaponData.DamageType.MELEE)
-			# 水平击退：从爆炸中心指向受击敌人
-			var kb_dir := (other.global_position - impact_pos).normalized()
-			kb_dir.y = 0.0
-			if kb_dir.length_squared() < 0.01:
-				kb_dir = Vector3.RIGHT
-			other.apply_knockback(kb_dir, 15.0)
-
-	# 落地视觉特效
-	_spawn_whip_effect(impact_pos, impact_pos + Vector3(0, 0.5, 0))
-
-
+# ==============================================================================
+# 冲刺处决（盾牌模式下滚轮向下）
+# ==============================================================================
 func _start_dash() -> void:
 	if _grabbed_enemy == null or not is_instance_valid(_grabbed_enemy):
 		_state = WhipState.IDLE
@@ -597,8 +573,7 @@ func get_grabbed_enemy() -> Enemy:
 # 抛物线投掷辅助方法
 # ==============================================================================
 
-
-	## 设置被抓敌人半透明
+# 设置被抓敌人半透明
 func _set_enemy_transparent(enable: bool) -> void:
 	if _grabbed_enemy == null or not is_instance_valid(_grabbed_enemy):
 		return
@@ -620,7 +595,7 @@ func _set_enemy_transparent(enable: bool) -> void:
 				sm.albedo_color.a = 0.35 if enable else 1.0
 
 
-## 创建抛物线预览节点
+# 创建抛物线预览节点
 func _create_parabola_preview() -> void:
 	_clear_parabola_preview()
 	for i in range(20):
@@ -639,7 +614,7 @@ func _create_parabola_preview() -> void:
 		_parabola_nodes.append(sphere)
 
 
-## 清除抛物线预览
+# 清除抛物线预览
 func _clear_parabola_preview() -> void:
 	for node in _parabola_nodes:
 		if is_instance_valid(node):
@@ -647,7 +622,7 @@ func _clear_parabola_preview() -> void:
 	_parabola_nodes.clear()
 
 
-## 更新抛物线预览位置
+# 更新抛物线预览位置
 func _update_parabola_preview() -> void:
 	var throw_origin := _player.global_position + _camera.global_transform.basis.z * -1.0 * 2.0 + Vector3(0, 0.5, 0)
 	var vel := _calculate_throw_velocity(throw_origin, _aim_point)
@@ -659,7 +634,7 @@ func _update_parabola_preview() -> void:
 		_parabola_nodes[i].global_position = pos
 
 
-## 射线检测瞄准落点
+# 射线检测瞄准落点
 func _find_aim_point() -> Vector3:
 	var cam_origin := _camera.global_position
 	var cam_dir := -_camera.global_transform.basis.z.normalized()
@@ -674,7 +649,7 @@ func _find_aim_point() -> Vector3:
 	return cam_origin + cam_dir * 15.0
 
 
-## 计算抛物线初速度
+# 计算抛物线初速度
 func _calculate_throw_velocity(origin: Vector3, target: Vector3) -> Vector3:
 	var g := 20.0
 	var d := target - origin
@@ -691,7 +666,7 @@ func _calculate_throw_velocity(origin: Vector3, target: Vector3) -> Vector3:
 	return Vector3(v_x, v_y, v_z)
 
 
-## 估算飞行时间
+# 估算飞行时间
 func _estimate_flight_time(origin: Vector3, target: Vector3, vel: Vector3) -> float:
 	var d_xz := Vector2(target.x - origin.x, target.z - origin.z).length()
 	var v_xz := Vector2(vel.x, vel.z).length()
@@ -700,7 +675,27 @@ func _estimate_flight_time(origin: Vector3, target: Vector3, vel: Vector3) -> fl
 	return 1.0
 
 
-# ==============================================================================
+# 抛物线落地/碰撞回调
+func _on_throw_impact(impact_pos: Vector3, impact_weight: float) -> void:
+	var enemies := get_tree().get_nodes_in_group("enemy")
+	for node in enemies:
+		if not is_instance_valid(node):
+			continue
+		var other: Enemy = node as Enemy
+		if other == null:
+			continue
+		var dist: float = other.global_position.distance_to(impact_pos)
+		if dist <= _whip_data.explosion_radius:
+			var dmg := other.get_node_or_null("Damageable") as Damageable
+			if dmg != null:
+				dmg.take_damage(impact_weight, WeaponData.DamageType.MELEE)
+			var kb_dir := (other.global_position - impact_pos).normalized()
+			kb_dir.y = 0.0
+			if kb_dir.length_squared() < 0.01:
+				kb_dir = Vector3.RIGHT
+			other.apply_knockback(kb_dir, 15.0)
+	_spawn_whip_effect(impact_pos, impact_pos + Vector3(0, 0.5, 0))
+
 
 # ==============================================================================
 # 工具方法
