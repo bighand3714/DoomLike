@@ -27,6 +27,10 @@ var _center_health_bg: ColorRect
 var _center_health_fill: ColorRect
 var _center_health_label: Label
 
+# 居中护甲条
+var _center_armor_bg: ColorRect
+var _center_armor_fill: ColorRect
+
 # 左上角（FPS 下方，纵向排列）
 var _score_label: Label
 var _kills_label: Label
@@ -140,7 +144,7 @@ func _create_labels() -> void:
 
 	# 经验条填充
 	_xp_bar_fill = ColorRect.new()
-	_xp_bar_fill.color = Color(0.3, 0.8, 0.3, 0.9)
+	_xp_bar_fill.color = Color(1.0, 0.85, 0.2, 0.9)
 	_xp_bar_fill.anchor_left = 0.5; _xp_bar_fill.anchor_right = 0.5
 	_xp_bar_fill.anchor_top = 0.0; _xp_bar_fill.anchor_bottom = 0.0
 	_xp_bar_fill.offset_left = -BAR_W / 2.0; _xp_bar_fill.offset_right = -BAR_W / 2.0
@@ -157,8 +161,8 @@ func _create_labels() -> void:
 	_center_health_bg.anchor_bottom = 0.0
 	_center_health_bg.offset_left = -BAR_W / 2.0
 	_center_health_bg.offset_right = BAR_W / 2.0
-	_center_health_bg.offset_top = 24.0
-	_center_health_bg.offset_bottom = 24.0 + BAR_H
+	_center_health_bg.offset_top = 34.0
+	_center_health_bg.offset_bottom = 34.0 + BAR_H
 	_center_health_bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_center_health_bg)
 
@@ -170,8 +174,8 @@ func _create_labels() -> void:
 	_center_health_fill.anchor_bottom = 0.0
 	_center_health_fill.offset_left = -BAR_W / 2.0
 	_center_health_fill.offset_right = BAR_W / 2.0
-	_center_health_fill.offset_top = 24.0
-	_center_health_fill.offset_bottom = 24.0 + BAR_H
+	_center_health_fill.offset_top = 34.0
+	_center_health_fill.offset_bottom = 34.0 + BAR_H
 	_center_health_fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_center_health_fill)
 
@@ -185,9 +189,29 @@ func _create_labels() -> void:
 	_center_health_label.anchor_bottom = 0.0
 	_center_health_label.offset_left = -100.0
 	_center_health_label.offset_right = 100.0
-	_center_health_label.offset_top = 24.0 + BAR_H + 4.0
-	_center_health_label.offset_bottom = 24.0 + BAR_H + 24.0
+	_center_health_label.offset_top = 34.0 + BAR_H + 4.0
+	_center_health_label.offset_bottom = 34.0 + BAR_H + 24.0
 	add_child(_center_health_label)
+
+	# 护甲条背景（血条上方，高度同经验条 8px，间距 2px）
+	_center_armor_bg = ColorRect.new()
+	_center_armor_bg.color = Color(0.1, 0.1, 0.1, 0.7)
+	_center_armor_bg.anchor_left = 0.5; _center_armor_bg.anchor_right = 0.5
+	_center_armor_bg.anchor_top = 0.0; _center_armor_bg.anchor_bottom = 0.0
+	_center_armor_bg.offset_left = -BAR_W / 2.0; _center_armor_bg.offset_right = BAR_W / 2.0
+	_center_armor_bg.offset_top = 24.0; _center_armor_bg.offset_bottom = 32.0
+	_center_armor_bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_center_armor_bg)
+
+	# 护甲条填充
+	_center_armor_fill = ColorRect.new()
+	_center_armor_fill.color = Color(0.3, 0.6, 1.0, 0.9)
+	_center_armor_fill.anchor_left = 0.5; _center_armor_fill.anchor_right = 0.5
+	_center_armor_fill.anchor_top = 0.0; _center_armor_fill.anchor_bottom = 0.0
+	_center_armor_fill.offset_left = -BAR_W / 2.0; _center_armor_fill.offset_right = -BAR_W / 2.0
+	_center_armor_fill.offset_top = 24.0; _center_armor_fill.offset_bottom = 32.0
+	_center_armor_fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_center_armor_fill)
 
 	# --- 右上角：小地图下方 ---
 	var y := RIGHT_TOP_OFFSET
@@ -443,6 +467,14 @@ func _process(delta: float) -> void:
 		_center_health_fill.color = bar_color
 
 		_armor_label.text = "护甲: %.0f / %.0f" % [_player_dmg.armor, _player_dmg.max_armor]
+
+		# 居中护甲条
+		var armor := _player_dmg.armor
+		var max_armor := _player_dmg.max_armor
+		if max_armor > 0.0:
+			_center_armor_fill.offset_right = -BAR_W / 2.0 + BAR_W * (armor / max_armor)
+		else:
+			_center_armor_fill.offset_right = -BAR_W / 2.0
 
 	_update_top_left()
 	_update_weapon_slots()
