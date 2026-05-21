@@ -15,6 +15,7 @@ xp_value = 15
 spawn_cost = 3
 weight = 50.0
 knockback_resistance = 0.25
+armor = 50.0
 max_stun = 60.0
 stun_recovery_rate = 10.0
 stun_resistance = 0.15

@@ -408,6 +408,8 @@ func _start_dash() -> void:
 		return
 
 	_dash_hit_enemies.clear()
+	# 临时禁用被抓敌人的碰撞层，避免冲刺时玩家撞上它
+	_grabbed_enemy.collision_layer = 0
 	# 通知玩家开始冲刺
 	if _player.has_method("start_dash"):
 		var dash_dir := (-_camera.global_transform.basis.z).normalized()
@@ -464,6 +466,16 @@ func _finish_dash() -> void:
 
 
 func _process_dash(_delta: float) -> void:
+	# 保持被抓敌人跟随玩家一起冲刺（视觉上在前方作为"盾牌冲撞"）
+	if _grabbed_enemy != null and is_instance_valid(_grabbed_enemy):
+		var cam_forward := -_camera.global_transform.basis.z.normalized()
+		cam_forward.y = 0.0
+		var target_pos := _player.global_position + cam_forward * 1.5 + Vector3(0, 0.3, 0)
+		var current := _grabbed_enemy.global_position
+		var smoothed := current.lerp(target_pos, 0.5)
+		var dash_transform := Transform3D(_player.global_transform.basis, smoothed)
+		_grabbed_enemy.update_grabbed_position(dash_transform, _delta)
+
 	# 冲刺路径上的敌人碰撞检测——命中即停
 	var space_state := get_world_3d().direct_space_state
 	var sphere := SphereShape3D.new()

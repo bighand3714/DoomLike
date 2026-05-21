@@ -10,8 +10,6 @@ height = 1.8
 
 [node name="Player" type="CharacterBody3D" unique_id=1527392614]
 script = ExtResource("1_player")
-max_health = 1000.0
-max_armor = 0.0
 
 [node name="PlayerModel" parent="." unique_id=1322925785 instance=ExtResource("3_model")]
 visible = false
