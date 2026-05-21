@@ -1,10 +1,8 @@
 # ==============================================================================
-# AmmoPickup — 弹药补充（智能：跳过无限弹药武器）
+# AmmoPickup — 弹药补充（每种武器按弹匣量分别补给）
 # ==============================================================================
 
 class_name AmmoPickup extends Pickup
-
-@export var ammo_amount: int = 10
 
 
 func _on_pickup(player: Node3D) -> void:
@@ -12,21 +10,22 @@ func _on_pickup(player: Node3D) -> void:
 	if wm == null:
 		return
 
-	# 为所有有限弹药武器补充备弹
-	var any_filled := false
+	var total := 0
 	for i in range(wm.get_weapon_count()):
 		var w := wm.get_weapon_at(i)
 		if w == null or w.weapon_data == null:
 			continue
 		if w.weapon_data.infinite_ammo:
 			continue
-		w.add_reserve_ammo(ammo_amount)
-		any_filled = true
+		var mag := maxi(w.weapon_data.mag_size, 1)
+		var amount := randi_range(mag - mag / 3, mag + mag / 3)
+		w.add_reserve_ammo(amount)
+		total += amount
 
-	if not any_filled:
+	if total <= 0:
 		return
 
-	GameBus.pickup_notification.emit("+%d 弹药" % ammo_amount, Color.GOLD)
+	GameBus.pickup_notification.emit("+弹药", Color.GOLD)
 
 
 func _setup_visual() -> void:

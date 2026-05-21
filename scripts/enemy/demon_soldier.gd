@@ -138,11 +138,7 @@ func _execute_attack() -> void:
 
 	var target: Node = result.collider
 	if _is_player_target(target):
-		var dmg := _player.get_node_or_null("Damageable")
-		if dmg != null and dmg is Damageable:
-			dmg.take_damage(enemy_data.attack_damage, WeaponData.DamageType.HITSCAN)
-		elif _player.has_method("take_damage"):
-			_player.take_damage(enemy_data.attack_damage, WeaponData.DamageType.HITSCAN)
+		_damage_player(enemy_data.attack_damage, WeaponData.DamageType.HITSCAN)
 
 
 # ==============================================================================

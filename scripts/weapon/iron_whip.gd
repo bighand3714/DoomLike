@@ -292,7 +292,7 @@ func _start_grab(enemy: Enemy) -> void:
 	var weight: float = 1.0
 	if enemy.enemy_data != null:
 		weight = enemy.enemy_data.weight
-	var speed_mult: float = clampf(1.0 / (1.0 + weight * 0.35), 0.25, 1.0)
+	var speed_mult: float = clampf(1.0 - weight * 0.006, 0.35, 1.0)
 	_player.set_speed_multiplier(speed_mult)
 
 	_show_grab_status(enemy)

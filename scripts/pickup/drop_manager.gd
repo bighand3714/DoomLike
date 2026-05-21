@@ -60,7 +60,6 @@ func _on_enemy_death(position: Vector3) -> void:
 
 func _spawn_ammo(pos: Vector3) -> void:
 	var ammo := AmmoPickup.new()
-	ammo.ammo_amount = _rng.randi_range(ammo_min, ammo_max)
 	ammo.respawn_time = 0.0
 	_setup_pickup(ammo, pos, Color.GOLD, Color.GOLD * 0.5)
 

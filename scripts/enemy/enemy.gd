@@ -294,11 +294,11 @@ func _physics_process(delta: float) -> void:
 	if _state != EnemyState.DEATH and _state != EnemyState.GRABBED:
 		velocity += _knockback_velocity
 
-	# 定身状态下强制归零速度
-	if _snare_timer > 0.0 and _state not in [EnemyState.GRABBED, EnemyState.DEATH]:
+	# 眩晕/定身状态下强制归零速度
+	if (_snare_timer > 0.0 or _state == EnemyState.STUNNED) and _state not in [EnemyState.GRABBED, EnemyState.DEATH]:
 		velocity = Vector3.ZERO
 
-	if _state != EnemyState.DEATH and is_inside_tree():
+	if _state != EnemyState.DEATH and _state != EnemyState.GRABBED and is_inside_tree():
 		move_and_slide()
 
 	_update_debug_bars()
@@ -715,7 +715,6 @@ func start_grab(grabber: Node3D) -> bool:
 	if not can_be_grabbed():
 		return false
 	_grab_owner = grabber
-	collision_layer = 0
 	_transition_to(EnemyState.GRABBED)
 	return true
 
