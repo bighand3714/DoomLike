@@ -56,3 +56,9 @@ class_name WhipData extends Resource
 
 ## 甩出初速（米/秒）
 @export var throw_speed: float = 35.0
+
+## 抛物线投掷水平速度（米/秒）
+@export var throw_speed_horizontal: float = 18.0
+
+## 投掷落地爆炸半径（米）
+@export var explosion_radius: float = 2.0
