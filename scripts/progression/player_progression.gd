@@ -201,6 +201,23 @@ func _generate_options() -> void:
 	level_up.emit(level, current_options)
 
 
+## 返回已拥有升级的列表（供 UI 使用）
+## 每项为 {id, name, level, max_level, category}
+func get_owned_upgrades() -> Array:
+	var result: Array = []
+	if _upgrade_catalog == null:
+		return result
+	for upg_id in selected_levels:
+		var lv: int = selected_levels[upg_id]
+		var info: Dictionary = _upgrade_catalog.get_upgrade_info(upg_id)
+		if info.is_empty():
+			result.append({"id": upg_id, "name": upg_id, "level": lv, "max_level": 99, "category": 0})
+		else:
+			info["level"] = lv
+			result.append(info)
+	return result
+
+
 func _load_mvp_upgrades() -> void:
 	var upgrades: Array[UpgradeData] = []
 	_build_builtin_upgrades(upgrades)

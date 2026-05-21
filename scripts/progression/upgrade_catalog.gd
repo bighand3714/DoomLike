@@ -134,3 +134,12 @@ func _rng_weighted_select(pool: Array[UpgradeData]) -> UpgradeData:
 			return upg
 
 	return pool[pool.size() - 1]
+
+
+## 根据 upgrade_id 查找升级信息（供 UI 使用）
+## 返回 {id, name, max_level, category}，未找到则返回空字典
+func get_upgrade_info(upgrade_id: String) -> Dictionary:
+	for upg in _upgrades:
+		if upg != null and upg.upgrade_id == upgrade_id:
+			return {id = upg.upgrade_id, name = upg.display_name, max_level = upg.max_level, category = upg.category}
+	return {}

@@ -101,8 +101,9 @@ func _create_labels() -> void:
 	left_y += 18
 	_xp_label = _make_left_label(left_y, 12, Color(0.7, 0.85, 0.7))
 	_xp_label.text = "XP: 0/20"
+	left_y += 20  # XP 标签高度 + 间距
 
-	# --- 左上角：经验条 ---
+	# --- 左上角：经验条（在 XP 标签下方） ---
 	_xp_bar_bg = ColorRect.new()
 	_xp_bar_bg.color = Color(0.1, 0.1, 0.1, 0.7)
 	_xp_bar_bg.anchor_left = 0.0; _xp_bar_bg.anchor_right = 0.0
@@ -115,8 +116,8 @@ func _create_labels() -> void:
 	_xp_bar_fill.color = Color(0.3, 0.8, 0.3, 0.9)
 	_xp_bar_fill.anchor_left = 0.0; _xp_bar_fill.anchor_right = 0.0
 	_xp_bar_fill.anchor_top = 0.0; _xp_bar_fill.anchor_bottom = 0.0
-	_xp_bar_fill.offset_left = 12.0; _xp_bar_fill.offset_right = 12.0
-	_xp_bar_fill.offset_top = left_y; _xp_bar_fill.offset_bottom = left_y + 8.0
+	_xp_bar_fill.offset_left = 0.0; _xp_bar_fill.offset_right = 0.0
+	_xp_bar_fill.offset_top = 0.0; _xp_bar_fill.offset_bottom = 8.0
 	_xp_bar_fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_xp_bar_bg.add_child(_xp_bar_fill)
 
@@ -333,6 +334,10 @@ func _make_left_label(top_offset: float, font_size: int, color: Color) -> Label:
 # _connect_signals / _connect_enemy_manager
 # ==============================================================================
 func _connect_signals() -> void:
+	# xp_changed 信号连接不依赖 WeaponManager，不能因 WeaponManager 为 null 而跳过
+	if not GameBus.xp_changed.is_connected(_on_xp_changed):
+		GameBus.xp_changed.connect(_on_xp_changed)
+
 	_weapon_manager = _player.find_child("WeaponManager", true, false) as WeaponManager
 	if _weapon_manager == null:
 		return
@@ -341,8 +346,6 @@ func _connect_signals() -> void:
 	var weapon := _weapon_manager.get_current_weapon()
 	if weapon != null:
 		_on_weapon_changed(weapon.weapon_data.weapon_name, weapon.weapon_data.slot_index)
-	if not GameBus.xp_changed.is_connected(_on_xp_changed):
-		GameBus.xp_changed.connect(_on_xp_changed)
 
 
 func _connect_enemy_manager() -> void:
@@ -491,14 +494,14 @@ func reset_kill_count() -> void:
 	_current_intensity = 1
 	_level_label.text = "Lv.1"
 	_xp_label.text = "XP: 0/20"
-	_xp_bar_fill.offset_right = 12.0
+	_xp_bar_fill.offset_right = 0.0
 
 
 func _on_xp_changed(level: int, xp: int, xp_to_next: int) -> void:
 	_level_label.text = "Lv.%d" % level
 	_xp_label.text = "XP: %d/%d" % [xp, xp_to_next]
 	var ratio := clampf(float(xp) / float(maxi(xp_to_next, 1)), 0.0, 1.0)
-	_xp_bar_fill.offset_right = 12.0 + 150.0 * ratio
+	_xp_bar_fill.offset_right = 150.0 * ratio
 
 
 func update_intensity(new_intensity: int) -> void:
