@@ -95,33 +95,60 @@ func _create_labels() -> void:
 	left_y += 22
 	_intensity_label = _make_left_label(left_y, 14, Color(0.9, 0.5, 0.3))
 	_intensity_label.text = "强度: %d" % _current_intensity
-	left_y += 22
-	_level_label = _make_left_label(left_y, 16, Color(1.0, 0.85, 0.3))
-	_level_label.text = "Lv.1"
-	left_y += 18
-	_xp_label = _make_left_label(left_y, 12, Color(0.7, 0.85, 0.7))
-	_xp_label.text = "XP: 0/20"
-	left_y += 20  # XP 标签高度 + 间距
+	# 强度标签后再无左侧纵向标签（LV 和 XP 已移到正上方居中）
 
-	# --- 左上角：经验条（在 XP 标签下方） ---
+	# --- 正上方居中：经验条 + 血条 ---
+	# LV 标签（经验条左侧）
+	var lv_label := Label.new()
+	lv_label.name = "LvLabel"
+	lv_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.3))
+	lv_label.add_theme_font_size_override("font_size", 14)
+	lv_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	lv_label.anchor_left = 0.5; lv_label.anchor_right = 0.5
+	lv_label.anchor_top = 0.0; lv_label.anchor_bottom = 0.0
+	lv_label.offset_left = -BAR_W / 2.0 - 65.0
+	lv_label.offset_right = -BAR_W / 2.0 - 5.0
+	lv_label.offset_top = 6.0; lv_label.offset_bottom = 22.0
+	lv_label.text = "Lv.1"
+	add_child(lv_label)
+	_level_label = lv_label
+
+	# XP 值标签（经验条右侧）
+	var xp_val_label := Label.new()
+	xp_val_label.name = "XpValueLabel"
+	xp_val_label.add_theme_color_override("font_color", Color(0.7, 0.85, 0.7))
+	xp_val_label.add_theme_font_size_override("font_size", 12)
+	xp_val_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	xp_val_label.anchor_left = 0.5; xp_val_label.anchor_right = 0.5
+	xp_val_label.anchor_top = 0.0; xp_val_label.anchor_bottom = 0.0
+	xp_val_label.offset_left = BAR_W / 2.0 + 5.0
+	xp_val_label.offset_right = BAR_W / 2.0 + 120.0
+	xp_val_label.offset_top = 7.0; xp_val_label.offset_bottom = 22.0
+	xp_val_label.text = "XP: 0/20"
+	add_child(xp_val_label)
+	_xp_label = xp_val_label
+
+	# 经验条背景
 	_xp_bar_bg = ColorRect.new()
 	_xp_bar_bg.color = Color(0.1, 0.1, 0.1, 0.7)
-	_xp_bar_bg.anchor_left = 0.0; _xp_bar_bg.anchor_right = 0.0
+	_xp_bar_bg.anchor_left = 0.5; _xp_bar_bg.anchor_right = 0.5
 	_xp_bar_bg.anchor_top = 0.0; _xp_bar_bg.anchor_bottom = 0.0
-	_xp_bar_bg.offset_left = 12.0; _xp_bar_bg.offset_right = 162.0
-	_xp_bar_bg.offset_top = left_y; _xp_bar_bg.offset_bottom = left_y + 8.0
+	_xp_bar_bg.offset_left = -BAR_W / 2.0; _xp_bar_bg.offset_right = BAR_W / 2.0
+	_xp_bar_bg.offset_top = 8.0; _xp_bar_bg.offset_bottom = 16.0
 	_xp_bar_bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_xp_bar_bg)
+
+	# 经验条填充
 	_xp_bar_fill = ColorRect.new()
 	_xp_bar_fill.color = Color(0.3, 0.8, 0.3, 0.9)
-	_xp_bar_fill.anchor_left = 0.0; _xp_bar_fill.anchor_right = 0.0
+	_xp_bar_fill.anchor_left = 0.5; _xp_bar_fill.anchor_right = 0.5
 	_xp_bar_fill.anchor_top = 0.0; _xp_bar_fill.anchor_bottom = 0.0
-	_xp_bar_fill.offset_left = 0.0; _xp_bar_fill.offset_right = 0.0
-	_xp_bar_fill.offset_top = 0.0; _xp_bar_fill.offset_bottom = 8.0
+	_xp_bar_fill.offset_left = -BAR_W / 2.0; _xp_bar_fill.offset_right = -BAR_W / 2.0
+	_xp_bar_fill.offset_top = 8.0; _xp_bar_fill.offset_bottom = 16.0
 	_xp_bar_fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_xp_bar_bg.add_child(_xp_bar_fill)
+	add_child(_xp_bar_fill)
 
-	# --- 正上方居中：血条 ---
+	# 血条背景
 	_center_health_bg = ColorRect.new()
 	_center_health_bg.color = Color(0.1, 0.1, 0.1, 0.85)
 	_center_health_bg.anchor_left = 0.5
@@ -130,8 +157,8 @@ func _create_labels() -> void:
 	_center_health_bg.anchor_bottom = 0.0
 	_center_health_bg.offset_left = -BAR_W / 2.0
 	_center_health_bg.offset_right = BAR_W / 2.0
-	_center_health_bg.offset_top = 14.0
-	_center_health_bg.offset_bottom = 14.0 + BAR_H
+	_center_health_bg.offset_top = 24.0
+	_center_health_bg.offset_bottom = 24.0 + BAR_H
 	_center_health_bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_center_health_bg)
 
@@ -143,8 +170,8 @@ func _create_labels() -> void:
 	_center_health_fill.anchor_bottom = 0.0
 	_center_health_fill.offset_left = -BAR_W / 2.0
 	_center_health_fill.offset_right = BAR_W / 2.0
-	_center_health_fill.offset_top = 14.0
-	_center_health_fill.offset_bottom = 14.0 + BAR_H
+	_center_health_fill.offset_top = 24.0
+	_center_health_fill.offset_bottom = 24.0 + BAR_H
 	_center_health_fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_center_health_fill)
 
@@ -158,8 +185,8 @@ func _create_labels() -> void:
 	_center_health_label.anchor_bottom = 0.0
 	_center_health_label.offset_left = -100.0
 	_center_health_label.offset_right = 100.0
-	_center_health_label.offset_top = 14.0 + BAR_H + 4.0
-	_center_health_label.offset_bottom = 14.0 + BAR_H + 24.0
+	_center_health_label.offset_top = 24.0 + BAR_H + 4.0
+	_center_health_label.offset_bottom = 24.0 + BAR_H + 24.0
 	add_child(_center_health_label)
 
 	# --- 右上角：小地图下方 ---
@@ -494,14 +521,14 @@ func reset_kill_count() -> void:
 	_current_intensity = 1
 	_level_label.text = "Lv.1"
 	_xp_label.text = "XP: 0/20"
-	_xp_bar_fill.offset_right = 0.0
+	_xp_bar_fill.offset_right = -BAR_W / 2.0
 
 
 func _on_xp_changed(level: int, xp: int, xp_to_next: int) -> void:
 	_level_label.text = "Lv.%d" % level
 	_xp_label.text = "XP: %d/%d" % [xp, xp_to_next]
 	var ratio := clampf(float(xp) / float(maxi(xp_to_next, 1)), 0.0, 1.0)
-	_xp_bar_fill.offset_right = 150.0 * ratio
+	_xp_bar_fill.offset_right = -BAR_W / 2.0 + BAR_W * ratio
 
 
 func update_intensity(new_intensity: int) -> void:
