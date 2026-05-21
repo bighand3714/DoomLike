@@ -222,7 +222,7 @@ func _execute_whip_hit(target: Node) -> void:
 				var remaining := enemy.get_current_armor()
 				armor_ratio = clampf(1.0 - remaining / enemy.enemy_data.armor, 0.3, 1.0)
 			enemy.apply_stun(_whip_data.stun_damage * armor_ratio, true)
-			return
+			# 护甲敌人眩晕满后也可拉取，不在此return
 
 	var dmg := enemy.get_node_or_null("Damageable") as Damageable
 	if dmg != null:
