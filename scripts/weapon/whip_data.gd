@@ -51,14 +51,14 @@ class_name WhipData extends Resource
 ## 对被抓起敌人的大伤害
 @export var dash_grabbed_damage: float = 150.0
 
-## 甩出对被甩敌人的伤害
-@export var throw_damage: float = 35.0
+## 投掷落地爆炸判定半径（米）
+@export var explosion_radius: float = 3.0
 
-## 甩出初速（米/秒）
-@export var throw_speed: float = 35.0
+## 投掷基准初速（米/秒），60kg标准敌人@45°=20m
+@export var throw_speed_base: float = 20.0
 
-## 抛物线投掷水平速度（米/秒）
-@export var throw_speed_horizontal: float = 18.0
+## 投掷基准体重（kg），用于速度缩放
+@export var throw_reference_weight: float = 60.0
 
-## 投掷落地爆炸半径（米）
-@export var explosion_radius: float = 2.0
+## 投掷落地溅射击退力度
+@export var throw_impact_knockback: float = 10.0

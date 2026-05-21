@@ -1,4 +1,4 @@
-﻿# ==============================================================================
+# ==============================================================================
 # Enemy — 敌人基类（Phase 5 扩展 + Phase 7 优化 + Roadmap 4 Counter/距离档位）
 # ==============================================================================
 class_name Enemy extends CharacterBody3D
@@ -647,6 +647,9 @@ func _state_thrown(delta: float) -> void:
 	_thrown_prev_pos = global_position
 	_thrown_timer += delta
 	velocity.y -= _thrown_gravity * delta
+
+	# 预期移动量必须在 move_and_slide 之前计算（move_and_slide 会削减 velocity）
+	var expected := velocity.length() * delta
 	move_and_slide()
 
 	# 超时或掉出世界强制触发
@@ -659,9 +662,8 @@ func _state_thrown(delta: float) -> void:
 		_trigger_thrown_impact()
 		return
 
-	# 碰撞检测：移动距离远小于预期则撞墙
+	# 碰撞检测：实际移动量远小于预期则判定撞墙
 	var moved := global_position.distance_to(_thrown_prev_pos)
-	var expected := velocity.length() * delta
 	if expected > 0.05 and moved < expected * 0.15:
 		_trigger_thrown_impact()
 		return
@@ -682,7 +684,9 @@ func _trigger_thrown_impact() -> void:
 	_thrown_impact_callback = Callable()
 	if cb.is_valid():
 		cb.call(global_position)
-	_transition_to(EnemyState.KNOCKED_DOWN)
+	# 回调可能已处决敌人（EXECUTED→DEATH），不再覆盖为 KNOCKED_DOWN
+	if _state != EnemyState.DEATH and _state != EnemyState.EXECUTED:
+		_transition_to(EnemyState.KNOCKED_DOWN)
 
 
 func start_throw(throw_velocity: Vector3, on_impact: Callable, gravity: float = 20.0) -> void:
