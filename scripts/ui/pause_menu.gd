@@ -11,6 +11,8 @@ extends CanvasLayer
 signal resumed()
 signal back_to_menu()
 
+var _buttons: Array[Button] = []
+
 var _skills_container: VBoxContainer
 
 
@@ -82,6 +84,7 @@ func _add_button(text: String, y: float, callback: Callable) -> void:
 	btn.offset_top = y
 	btn.offset_bottom = y + 36.0
 	btn.pressed.connect(callback)
+	_buttons.append(btn)
 	add_child(btn)
 
 
@@ -94,7 +97,7 @@ func _on_back_to_menu() -> void:
 
 
 func _input(event: InputEvent) -> void:
-	# Esc 键恢复游戏——通过信号通知状态机
+	# Esc / Start 键恢复游戏——通过信号通知状态机
 	if event.is_action_pressed("ui_cancel") and visible:
 		resumed.emit()
 
@@ -102,6 +105,11 @@ func _input(event: InputEvent) -> void:
 func show_pause() -> void:
 	_refresh_skills()
 	show()
+	if not _buttons.is_empty():
+		_buttons[0].grab_focus()
+		for j in range(_buttons.size() - 1):
+			_buttons[j].focus_neighbor_bottom = _buttons[j + 1].get_path()
+			_buttons[j + 1].focus_neighbor_top = _buttons[j].get_path()
 
 
 ## 从 PlayerProgression 读取已拥有技能并刷新显示

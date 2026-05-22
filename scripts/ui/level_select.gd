@@ -18,6 +18,8 @@ const LevelRegistryClass = preload("res://scripts/level/level_registry.gd")
 
 var _score_labels: Array[Label] = []
 var _time_labels: Array[Label] = []
+var _select_buttons: Array[Button] = []
+var _back_button: Button
 
 
 func _ready() -> void:
@@ -66,6 +68,7 @@ func _create_ui() -> void:
 	back_btn.offset_top = -56.0
 	back_btn.offset_bottom = -20.0
 	back_btn.pressed.connect(_on_back)
+	_back_button = back_btn
 	add_child(back_btn)
 
 	# 测试关卡入口（右下角）
@@ -194,8 +197,14 @@ func _create_level_panel(index: int, level_id: String) -> void:
 	select_btn.offset_top = 240.0
 	select_btn.offset_bottom = 278.0
 	select_btn.pressed.connect(_on_level_selected.bind(level_id))
+	_select_buttons.append(select_btn)
 	bg.add_child(select_btn)
 
+
+
+func _input(event: InputEvent) -> void:
+	if event.is_action_pressed("ui_cancel") and visible:
+		_on_back()
 
 func _on_level_selected(level_id: String) -> void:
 	level_selected.emit(level_id)
@@ -210,6 +219,15 @@ func _on_back() -> void:
 # ==============================================================================
 func show_menu() -> void:
 	show()
+	if not _select_buttons.is_empty():
+		_select_buttons[0].grab_focus()
+		for j in range(_select_buttons.size() - 1):
+			_select_buttons[j].focus_neighbor_right = _select_buttons[j + 1].get_path()
+			_select_buttons[j + 1].focus_neighbor_left = _select_buttons[j].get_path()
+		if _back_button:
+			var last := _select_buttons[-1]
+			last.focus_neighbor_bottom = _back_button.get_path()
+			_back_button.focus_neighbor_top = last.get_path()
 	_refresh_records()
 
 

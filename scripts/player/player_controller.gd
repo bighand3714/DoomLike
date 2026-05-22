@@ -242,8 +242,8 @@ func _physics_process(delta: float) -> void:
 	_update_lock_system(delta)
 	# 手柄右摇杆视角（每帧轮询，摇杆持续有效）
 	if not _is_locked_on:
-		var rstick_x := Input.get_joy_axis(0, 2)
-		var rstick_y := Input.get_joy_axis(0, 3)
+		var rstick_x := Input.get_joy_axis(0, JOY_AXIS_RIGHT_X)
+		var rstick_y := Input.get_joy_axis(0, JOY_AXIS_RIGHT_Y)
 		var joy_dz := 0.15
 		if absf(rstick_x) > joy_dz:
 			_yaw -= rstick_x * gamepad_sensitivity * delta
@@ -490,7 +490,7 @@ func _update_lock_system(delta: float) -> void:
 
 func _try_acquire_lock() -> void:
 	var nearest_enemy: Enemy = null
-	var best_score: float = INF
+	var nearest_dist: float = INF
 
 	var cam_origin := _camera.global_position
 	var cam_forward := -_camera.global_transform.basis.z
@@ -517,11 +517,9 @@ func _try_acquire_lock() -> void:
 		if dot < cos_half_fov:
 			continue
 
-		# 优先选点积最大（最正对），相同时选最近
-		# 点积越大越正对 → score 越小（负 dot 惩罚 + 距离惩罚）
-		var score: float = -dot + dist * 0.001
-		if score < best_score:
-			best_score = score
+		# FOV内选择最近的敌人
+		if dist < nearest_dist:
+			nearest_dist = dist
 			nearest_enemy = enemy
 
 	if nearest_enemy != null:

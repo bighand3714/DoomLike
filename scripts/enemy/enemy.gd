@@ -888,7 +888,9 @@ func _flash_pain(flash_color: Color = Color.WHITE) -> void:
 		geo.material_override = flash_mat
 
 		var timer := get_tree().create_timer(enemy_data.pain_duration)
-		timer.timeout.connect(_restore_material.bind(geo, key))
+		timer.timeout.connect(func():
+			if is_instance_valid(geo):
+				_restore_material(geo, key))
 
 
 func _restore_material(geo: Node3D, key: int) -> void:

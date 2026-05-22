@@ -142,6 +142,14 @@ func show_options(level: int, options: Array) -> void:
 		else:
 			_cards[i].hide()
 
+	for j in range(_cards.size()):
+		if _cards[j].visible:
+			_cards[j].grab_focus()
+			if j + 1 < _cards.size() and _cards[j + 1].visible:
+				_cards[j].focus_neighbor_right = _cards[j + 1].get_path()
+			if j > 0 and _cards[j - 1].visible:
+				_cards[j].focus_neighbor_left = _cards[j - 1].get_path()
+			break
 	show()
 
 

@@ -12,6 +12,8 @@ signal restart_requested()
 signal level_select_requested()
 signal main_menu_requested()
 
+var _buttons: Array[Button] = []
+
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -104,6 +106,7 @@ func _add_button(text: String, y: float, callback: Callable) -> void:
 	btn.offset_top = y
 	btn.offset_bottom = y + 36.0
 	btn.pressed.connect(callback)
+	_buttons.append(btn)
 	add_child(btn)
 
 
@@ -129,11 +132,21 @@ func show_results(data: Dictionary) -> void:
 		_new_record.show()
 	else:
 		_new_record.hide()
+	if not _buttons.is_empty():
+		_buttons[0].grab_focus()
+		for j in range(_buttons.size() - 1):
+			_buttons[j].focus_neighbor_bottom = _buttons[j + 1].get_path()
+			_buttons[j + 1].focus_neighbor_top = _buttons[j].get_path()
 
 
 # ==============================================================================
 # 按钮回调
 # ==============================================================================
+
+
+func _input(event: InputEvent) -> void:
+	if event.is_action_pressed("ui_cancel") and visible:
+		_on_main_menu()
 
 func _on_restart() -> void:
 	restart_requested.emit()

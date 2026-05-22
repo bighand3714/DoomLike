@@ -10,6 +10,8 @@ extends CanvasLayer
 signal start_requested()
 signal quit_requested()
 
+var _buttons: Array[Button] = []
+
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -68,8 +70,14 @@ func _add_button(text: String, y: float, callback: Callable) -> void:
 	btn.offset_top = y
 	btn.offset_bottom = y + 40.0
 	btn.pressed.connect(callback)
+	_buttons.append(btn)
 	add_child(btn)
 
+
+
+func _input(event: InputEvent) -> void:
+	if event.is_action_pressed("ui_cancel") and visible:
+		_on_quit()
 
 func _on_start() -> void:
 	start_requested.emit()
@@ -81,3 +89,8 @@ func _on_quit() -> void:
 
 func show_menu() -> void:
 	show()
+	if not _buttons.is_empty():
+		_buttons[0].grab_focus()
+		for j in range(_buttons.size() - 1):
+			_buttons[j].focus_neighbor_bottom = _buttons[j + 1].get_path()
+			_buttons[j + 1].focus_neighbor_top = _buttons[j].get_path()

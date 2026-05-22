@@ -390,6 +390,21 @@ func _process(delta: float) -> void:
 		_update_proximity_threats()
 
 
+func _input(event: InputEvent) -> void:
+	# 手柄 B 键：根据当前状态决定行为（集中化处理，避免多 UI 脚本竞态）
+	if not (event is InputEventJoypadButton and event.button_index == JOY_BUTTON_B and event.pressed):
+		return
+	match _game_state:
+		GameState.State.MAIN_MENU:
+			_on_quit_requested()
+		GameState.State.LEVEL_SELECT:
+			_on_level_select_back()
+		GameState.State.PAUSED:
+			_on_pause_resumed()
+		GameState.State.GAME_OVER:
+			_on_game_over_main_menu()
+
+
 func _reset_run_stats() -> void:
 	_run_stats.start(_current_level_id)
 	GameBus.run_stats = _run_stats
