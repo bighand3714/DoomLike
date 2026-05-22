@@ -27,6 +27,11 @@ var _was_shielding: bool = false
 # 冲刺过程中已命中的敌人（避免重复击退）
 var _dash_hit_enemies: Array = []
 var _dash_direction: Vector3 = Vector3.ZERO  # 冲刺方向（用于击退计算）
+# 升级运行时修饰符（apply_whip_upgrade 修改）
+var _whip_range_add: float = 0.0
+var _whip_range_mult: float = 1.0
+var _cooldown_mult: float = 1.0
+var _stun_damage_mult: float = 1.0
 
 var _enemy_transparent: bool = false     # 敌人半透明状态
 var _saved_materials: Dictionary = {}    # 半透明时保存的原始材质
@@ -147,7 +152,7 @@ func _try_whip() -> void:
 	var dir := -_camera.global_transform.basis.z.normalized()
 	# 射线从摄像机前方 0.6m 开始，避免起点在玩家碰撞体内导致检测异常
 	var ray_origin := _camera.global_position + dir * 0.6
-	var end: Vector3 = ray_origin + dir * _whip_data.whip_range
+	var end: Vector3 = ray_origin + dir * (_whip_data.whip_range + _whip_range_add)
 
 	var space_state := get_world_3d().direct_space_state
 	var query := PhysicsRayQueryParameters3D.create(ray_origin, end)
@@ -157,7 +162,7 @@ func _try_whip() -> void:
 
 	var result := space_state.intersect_ray(query)
 
-	_cooldown_timer = _whip_data.cooldown
+	_cooldown_timer = _whip_data.cooldown * _cooldown_mult
 	_state = WhipState.WHIPPING
 
 	var hit_point: Vector3 = end
@@ -213,14 +218,14 @@ func _execute_whip_hit(target: Node) -> void:
 			if enemy.enemy_data != null and enemy.enemy_data.armor > 0.0:
 				var remaining := enemy.get_current_armor()
 				armor_ratio = clampf(1.0 - remaining / enemy.enemy_data.armor, 0.3, 1.0)
-			enemy.apply_stun(_whip_data.stun_damage * armor_ratio, true)
+			enemy.apply_stun(_whip_data.stun_damage * _stun_damage_mult * armor_ratio, true)
 			# 护甲敌人眩晕满后也可拉取，不在此return
 
 	var dmg := enemy.get_node_or_null("Damageable") as Damageable
 	if dmg != null:
 		dmg.take_damage(_whip_data.damage, WeaponData.DamageType.MELEE)
 
-	enemy.apply_stun(_whip_data.stun_damage)
+	enemy.apply_stun(_whip_data.stun_damage * _stun_damage_mult)
 
 	if enemy.can_be_grabbed():
 		_start_pull(enemy)
@@ -509,6 +514,22 @@ func is_grabbing() -> bool:
 
 func get_grabbed_enemy() -> Enemy:
 	return _grabbed_enemy
+	
+# 升级系统——运行时修饰符更新（PlayerProgression 分发）
+func apply_whip_upgrade(stat_key: String, value: float, operation: int) -> void:
+	match stat_key:
+		"whip_range":
+			match operation:
+				0: _whip_range_add += value
+				1: _whip_range_mult *= value
+		"cooldown":
+			match operation:
+				0: _cooldown_mult += value
+				1: _cooldown_mult *= value
+		"stun_damage":
+			match operation:
+				0: _stun_damage_mult += value
+				1: _stun_damage_mult *= value
 
 
 # 设置被抓敌人半透明（替换式：新建材质避免修改共享材质）

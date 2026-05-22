@@ -3,6 +3,8 @@
 # ==============================================================================
 
 class_name AmmoPickup extends Pickup
+# 弹药倍率（DropManager.apply_drop_upgrade 修改）
+var ammo_mult: float = 1.0
 
 
 func _on_pickup(player: Node3D) -> void:
@@ -19,6 +21,7 @@ func _on_pickup(player: Node3D) -> void:
 			continue
 		var mag := maxi(w.weapon_data.mag_size, 1)
 		var amount := randi_range(mag - floori(mag / 3.0), mag + floori(mag / 3.0))
+		amount = int(ceil(float(amount) * ammo_mult))
 		w.add_reserve_ammo(amount)
 		total += amount
 
