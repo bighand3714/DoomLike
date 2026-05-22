@@ -288,6 +288,7 @@ func _start_grab(enemy: Enemy) -> void:
 	_pulled_enemy = null
 	_grabbed_enemy = enemy
 	_state = WhipState.GRABBING
+	_secondary_held = false
 
 	_player.grabbed_enemy = enemy
 
