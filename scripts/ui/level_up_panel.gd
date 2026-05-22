@@ -107,15 +107,17 @@ func _create_ui() -> void:
 func _input(event: InputEvent) -> void:
 	if not visible:
 		return
-	if event.is_action_pressed("weapon_1"):
-		_on_card_pressed(0)
-		get_viewport().set_input_as_handled()
-	elif event.is_action_pressed("weapon_2"):
-		_on_card_pressed(1)
-		get_viewport().set_input_as_handled()
-	elif event.is_action_pressed("weapon_3"):
-		_on_card_pressed(2)
-		get_viewport().set_input_as_handled()
+	# 键盘快捷键 1/2/3 选卡（限制 Keyboard 事件，避免手柄 D-pad 误触）
+	if event is InputEventKey and not event.echo:
+		if event.is_action_pressed("weapon_1"):
+			_on_card_pressed(0)
+			get_viewport().set_input_as_handled()
+		elif event.is_action_pressed("weapon_2"):
+			_on_card_pressed(1)
+			get_viewport().set_input_as_handled()
+		elif event.is_action_pressed("weapon_3"):
+			_on_card_pressed(2)
+			get_viewport().set_input_as_handled()
 
 
 # ==============================================================================
@@ -142,14 +144,17 @@ func show_options(level: int, options: Array) -> void:
 		else:
 			_cards[i].hide()
 
+	# 为所有可见卡片设置焦点邻居，让手柄十字键/摇杆可以左右切换
+	var first_visible: int = -1
 	for j in range(_cards.size()):
 		if _cards[j].visible:
-			_cards[j].grab_focus()
+			if first_visible == -1:
+				first_visible = j
 			if j + 1 < _cards.size() and _cards[j + 1].visible:
 				_cards[j].focus_neighbor_right = _cards[j + 1].get_path()
-			if j > 0 and _cards[j - 1].visible:
-				_cards[j].focus_neighbor_left = _cards[j - 1].get_path()
-			break
+				_cards[j + 1].focus_neighbor_left = _cards[j].get_path()
+	if first_visible >= 0:
+		_cards[first_visible].grab_focus()
 	show()
 
 
