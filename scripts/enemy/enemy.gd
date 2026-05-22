@@ -403,7 +403,7 @@ func _state_chase(delta: float) -> void:
 		_transition_to(EnemyState.IDLE)
 		return
 
-	if dist <= enemy_data.attack_range:
+	if dist <= enemy_data.attack_range and _attack_cooldown_timer <= 0.0:
 		_transition_to(EnemyState.ATTACK)
 		return
 
