@@ -13,7 +13,7 @@ class_name HitDirectionIndicator extends Control
 @export var fade_time: float = 1.0
 @export var edge_margin: float = 60.0
 
-@export var proximity_color: Color = Color(0.5, 0.5, 0.5, 0.5)
+@export var proximity_color: Color = Color(0.55, 0.55, 0.55, 0.7)
 @export var proximity_arrow_size: float = 22.0
 @export var proximity_range: float = 3.0
 
@@ -28,7 +28,7 @@ func _ready() -> void:
 ## 添加一个受击方向指示器
 func add_hit_indicator(direction_3d: Vector3, camera_basis: Basis) -> void:
 	var local_dir := camera_basis.inverse() * direction_3d
-	var screen_dir := Vector2(local_dir.x, -local_dir.z)
+	var screen_dir := Vector2(local_dir.x, local_dir.z)
 	if screen_dir.length_squared() < 0.01:
 		screen_dir = Vector2.DOWN
 	var angle: float = screen_dir.angle()
@@ -48,7 +48,7 @@ func update_proximity_threats(world_positions: Array[Vector3], player_pos: Vecto
 		if dist_xz > proximity_range:
 			continue
 		var local_dir := camera_basis.inverse() * to_threat.normalized()
-		var screen_dir := Vector2(local_dir.x, -local_dir.z)
+		var screen_dir := Vector2(local_dir.x, local_dir.z)
 		if screen_dir.length_squared() < 0.01:
 			screen_dir = Vector2.DOWN
 		_proximity_angles.append(screen_dir.angle())
