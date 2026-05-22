@@ -1,5 +1,5 @@
-﻿# ==============================================================================
-# SpawnManager — 刷怪与难度曲线（Phase 7）
+# ==============================================================================
+# SpawnManager — 刷怪与难度曲线（Phase 7 + 20级扩展）
 # ==============================================================================
 # 挂在 Level 节点下，负责：
 #   - 根据生存时间计算强度曲线 → 控制敌人类型和刷新频率
@@ -23,6 +23,9 @@ const ENEMY_SCENES := {
 	"advanced_flying_enemy": "res://scenes/enemies/advanced_flying_enemy.tscn",
 	"flying_ranged_enemy": "res://scenes/enemies/flying_ranged_enemy.tscn",
 	"orc_melee": "res://scenes/enemies/orc_enemy.tscn",
+	"standard_enemy": "res://scenes/enemies/standard_enemy.tscn",
+	"imp": "res://scenes/enemies/imp.tscn",
+	"demon_soldier": "res://scenes/enemies/demon_soldier.tscn",
 }
 
 
@@ -60,13 +63,13 @@ const DESERT_WEIGHTS := {
 	"ground_enemy": 3.0, "advanced_ground_enemy": 2.0, "elite_ground_enemy": 1.5,
 	"ranged_enemy": 1.5, "advanced_ranged_enemy": 1.0,
 	"flying_enemy": 0.3, "advanced_flying_enemy": 0.2, "flying_ranged_enemy": 0.3,
-	"orc_melee": 2.5,
+	"orc_melee": 2.5, "standard_enemy": 2.0, "imp": 1.8, "demon_soldier": 1.5,
 }
 const LAVA_WEIGHTS := {
 	"ground_enemy": 1.5, "advanced_ground_enemy": 1.0, "elite_ground_enemy": 1.0,
 	"ranged_enemy": 2.0, "advanced_ranged_enemy": 1.5,
 	"flying_enemy": 2.0, "advanced_flying_enemy": 1.5, "flying_ranged_enemy": 2.0,
-	"orc_melee": 1.5,
+	"orc_melee": 1.5, "standard_enemy": 1.8, "imp": 2.0, "demon_soldier": 2.0,
 }
 
 
@@ -108,20 +111,23 @@ func reset() -> void:
 
 
 # ==============================================================================
-# 敌人池
+# 敌人池（12种敌人，20级强度分布）
 # ==============================================================================
 func _build_spawn_entries() -> void:
 	_spawn_entries.clear()
 	var entries_data := [
-		{ "id": "ground_enemy",         "min_intensity": 1, "weight": 3.0 },
-		{ "id": "advanced_ground_enemy","min_intensity": 4, "weight": 2.0 },
-		{ "id": "elite_ground_enemy",   "min_intensity": 6, "weight": 1.5 },
-		{ "id": "ranged_enemy",         "min_intensity": 2, "weight": 2.0 },
-		{ "id": "advanced_ranged_enemy","min_intensity": 4, "weight": 1.5 },
-		{ "id": "flying_enemy",         "min_intensity": 3, "weight": 1.5 },
-		{ "id": "advanced_flying_enemy","min_intensity": 5, "weight": 1.0 },
-		{ "id": "flying_ranged_enemy",  "min_intensity": 5, "weight": 1.5 },
-		{ "id": "orc_melee",           "min_intensity": 2, "weight": 2.5 },
+		{ "id": "ground_enemy",         "min_intensity": 1,  "weight": 3.0 },
+		{ "id": "standard_enemy",       "min_intensity": 2,  "weight": 2.5 },
+		{ "id": "ranged_enemy",         "min_intensity": 3,  "weight": 2.0 },
+		{ "id": "orc_melee",            "min_intensity": 3,  "weight": 2.5 },
+		{ "id": "flying_enemy",         "min_intensity": 4,  "weight": 1.5 },
+		{ "id": "imp",                  "min_intensity": 5,  "weight": 2.0 },
+		{ "id": "advanced_ground_enemy","min_intensity": 7,  "weight": 2.0 },
+		{ "id": "advanced_ranged_enemy","min_intensity": 8,  "weight": 1.5 },
+		{ "id": "demon_soldier",        "min_intensity": 9,  "weight": 1.5 },
+		{ "id": "advanced_flying_enemy","min_intensity": 10, "weight": 1.0 },
+		{ "id": "flying_ranged_enemy",  "min_intensity": 11, "weight": 1.5 },
+		{ "id": "elite_ground_enemy",   "min_intensity": 13, "weight": 1.5 },
 	]
 	for ed in entries_data:
 		var eid: String = ed.id
@@ -164,58 +170,58 @@ func _on_spawn_timer() -> void:
 
 
 # ==============================================================================
-# 强度曲线 + 参数
+# 强度曲线 + 参数（20级）
 # ==============================================================================
+
+# 强度升级时间阈值（秒）
+const INTENSITY_TIMES := [
+	0, 12, 25, 40, 56, 74, 94, 116, 140, 166,
+	194, 224, 256, 290, 326, 364, 404, 446, 490, 536
+]
+
 func _update_intensity() -> void:
 	var t: float = _run_stats_ref.survival_time
 	var new_intensity: int = 1
-	if t >= 320.0:
-		new_intensity = 6
-	elif t >= 210.0:
-		new_intensity = 5
-	elif t >= 130.0:
-		new_intensity = 4
-	elif t >= 75.0:
-		new_intensity = 3
-	elif t >= 30.0:
-		new_intensity = 2
-
+	for i in range(INTENSITY_TIMES.size() - 1, 0, -1):
+		if t >= INTENSITY_TIMES[i]:
+			new_intensity = i + 1
+			break
 	if new_intensity != current_intensity:
 		current_intensity = new_intensity
 		intensity_changed.emit(current_intensity)
 
 
-func _get_spawn_interval() -> float:
-	match current_intensity:
-		1: return 4.0
-		2: return 3.0
-		3: return 2.2
-		4: return 1.7
-		5: return 1.4
-		6: return 1.2
-		_: return 4.0
+# 刷怪间隔（秒）
+const SPAWN_INTERVALS := [
+	4.0, 3.8, 3.6, 3.4, 3.2, 3.0, 2.8, 2.6, 2.4, 2.2,
+	2.0, 1.8, 1.6, 1.4, 1.2, 1.1, 0.9, 0.8, 0.7, 0.6
+]
 
+func _get_spawn_interval() -> float:
+	var idx := clampi(current_intensity - 1, 0, SPAWN_INTERVALS.size() - 1)
+	return SPAWN_INTERVALS[idx]
+
+
+# 场上存活敌人上限
+const ACTIVE_LIMITS := [
+	8, 10, 12, 14, 16, 18, 20, 22, 24, 26,
+	28, 31, 33, 35, 37, 40, 42, 44, 47, 50
+]
 
 func _get_active_enemy_limit() -> int:
-	match current_intensity:
-		1: return 8
-		2: return 12
-		3: return 16
-		4: return 20
-		5: return 25
-		6: return 32
-		_: return 8
+	var idx := clampi(current_intensity - 1, 0, ACTIVE_LIMITS.size() - 1)
+	return ACTIVE_LIMITS[idx]
 
+
+# 每波预算
+const WAVE_BUDGETS := [
+	2, 2, 3, 3, 4, 4, 5, 5, 6, 6,
+	7, 7, 8, 8, 9, 9, 10, 11, 11, 12
+]
 
 func _get_wave_budget() -> int:
-	match current_intensity:
-		1: return 2
-		2: return 3
-		3: return 4
-		4: return 5
-		5: return 6
-		6: return 8
-		_: return 2
+	var idx := clampi(current_intensity - 1, 0, WAVE_BUDGETS.size() - 1)
+	return WAVE_BUDGETS[idx]
 
 
 # ==============================================================================
