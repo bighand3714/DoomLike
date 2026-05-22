@@ -387,6 +387,7 @@ func _on_intensity_changed(new_intensity: int) -> void:
 func _process(delta: float) -> void:
 	if _game_state == GameState.State.PLAYING and _run_stats.is_running:
 		_run_stats.update(delta)
+		_update_proximity_threats()
 
 
 func _reset_run_stats() -> void:
@@ -404,6 +405,36 @@ func _connect_enemy_killed() -> void:
 		if not em.enemy_killed.is_connected(_on_enemy_killed_for_score):
 			em.enemy_killed.connect(_on_enemy_killed_for_score)
 
+
+# 每帧更新近身威胁指示器——3m 内的敌人和子弹显示灰色箭头
+func _update_proximity_threats() -> void:
+	if _player == null:
+		return
+	var indicator := get_node_or_null("UI/HitDirectionIndicator")
+	if indicator == null or not indicator.has_method("update_proximity_threats"):
+		return
+	var cam := _player.get_node_or_null("%Camera3D") as Camera3D
+	if cam == null:
+		return
+	var threats: Array[Vector3] = []
+	# 敌人
+	for node in get_tree().get_nodes_in_group("enemy"):
+		if not is_instance_valid(node):
+			continue
+		var enemy := node as Node3D
+		if enemy == null:
+			continue
+		threats.append(enemy.global_position)
+	# 投射物
+	for node in get_tree().get_nodes_in_group("projectile"):
+		if not is_instance_valid(node):
+			continue
+		var proj := node as Node3D
+		if proj == null:
+			continue
+		threats.append(proj.global_position)
+	if not threats.is_empty():
+		indicator.update_proximity_threats(threats, _player.global_position, cam.global_transform.basis)
 func _on_boundary_warning() -> void:
 	var ps := get_node_or_null("UI/PlayerStatus")
 	if ps != null and ps.has_method("show_boundary_warning"):

@@ -54,6 +54,7 @@ func _enter_tree() -> void:
 func setup(direction: Vector3, owner_node: Node3D) -> void:
 	_direction = direction.normalized()
 	_owner_node = owner_node
+	add_to_group("projectile")
 
 	# 让投射物朝向飞行方向（用 look_at_from_position 兼容"不在场景树中"的情况）
 	look_at_from_position(global_position, global_position + _direction, Vector3.UP)
