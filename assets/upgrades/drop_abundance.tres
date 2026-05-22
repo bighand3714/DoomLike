@@ -13,5 +13,5 @@ rarity_weight = 0.8
 target_id = "drop_manager"
 stat_key = "drop_chance_bonus"
 operation = 0
-values_by_level = [0.25, 0.50, 0.75, 1.00]
+values_by_level = [0.25, 0.25, 0.25, 0.25]
 power_value_by_level = [4.0, 8.0, 12.0, 16.0]

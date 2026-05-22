@@ -526,10 +526,12 @@ func apply_whip_upgrade(stat_key: String, value: float, operation: int) -> void:
 			match operation:
 				0: _cooldown_mult += value
 				1: _cooldown_mult *= value
+				2: _cooldown_mult = value
 		"stun_damage":
 			match operation:
 				0: _stun_damage_mult += value
 				1: _stun_damage_mult *= value
+				2: _stun_damage_mult = value
 
 
 # 设置被抓敌人半透明（替换式：新建材质避免修改共享材质）

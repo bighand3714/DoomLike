@@ -12,6 +12,6 @@ max_level = 5
 rarity_weight = 1.2
 target_id = "all_weapons"
 stat_key = "reload_time_mult"
-operation = 1
+operation = 2
 values_by_level = [0.86, 0.72, 0.58, 0.44, 0.30]
 power_value_by_level = [3.0, 6.0, 9.0, 12.0, 15.0]

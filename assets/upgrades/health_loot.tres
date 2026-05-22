@@ -12,6 +12,6 @@ max_level = 4
 rarity_weight = 1.0
 target_id = "drop_manager"
 stat_key = "health_amount_mult"
-operation = 1
+operation = 2
 values_by_level = [1.25, 1.50, 1.75, 2.00]
 power_value_by_level = [3.0, 6.0, 9.0, 12.0]

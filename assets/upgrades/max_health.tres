@@ -13,5 +13,5 @@ rarity_weight = 1.2
 target_id = "player"
 stat_key = "max_health"
 operation = 0
-values_by_level = [50.0, 100.0, 150.0, 200.0, 300.0]
+values_by_level = [50.0, 50.0, 50.0, 50.0, 100.0]
 power_value_by_level = [5.0, 10.0, 15.0, 20.0, 30.0]

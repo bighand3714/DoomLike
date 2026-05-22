@@ -227,18 +227,18 @@ func _load_mvp_upgrades() -> void:
 
 
 func _build_builtin_upgrades(list: Array[UpgradeData]) -> void:
-	list.append(_make_upg("rifle_damage", "步枪膛线", "步枪伤害提高", UpgradeData.Category.WEAPON, 5, 1.0, "rifle", "damage_mult", UpgradeData.Operation.MULTIPLY, [1.3, 1.6, 1.9, 2.2, 2.5]))
-	list.append(_make_upg("shotgun_damage", "霰弹枪喉缩", "霰弹枪伤害提高", UpgradeData.Category.WEAPON, 5, 1.0, "shotgun", "damage_mult", UpgradeData.Operation.MULTIPLY, [1.3, 1.6, 1.9, 2.2, 2.5]))
-	list.append(_make_upg("reload_speed", "快速装填", "全武器换弹时间缩短", UpgradeData.Category.WEAPON, 5, 1.2, "all_weapons", "reload_time_mult", UpgradeData.Operation.MULTIPLY, [0.86, 0.72, 0.58, 0.44, 0.30]))
-	list.append(_make_upg("whip_range", "铁鞭延长", "铁鞭攻击范围增加", UpgradeData.Category.WHIP, 5, 1.0, "iron_whip", "whip_range", UpgradeData.Operation.ADD, [1.0, 2.0, 3.0, 4.0, 5.0]))
-	list.append(_make_upg("whip_cooldown", "铁鞭淬火", "铁鞭冷却时间缩短", UpgradeData.Category.WHIP, 5, 1.0, "iron_whip", "cooldown", UpgradeData.Operation.MULTIPLY, [0.86, 0.72, 0.58, 0.44, 0.30]))
-	list.append(_make_upg("whip_stun", "铁鞭电击", "铁鞭眩晕值增加", UpgradeData.Category.WHIP, 5, 1.0, "iron_whip", "stun_damage", UpgradeData.Operation.MULTIPLY, [1.3, 1.6, 1.9, 2.2, 2.5]))
-	list.append(_make_upg("max_health", "活力之血", "最大生命值增加", UpgradeData.Category.SURVIVAL, 5, 1.2, "player", "max_health", UpgradeData.Operation.ADD, [50.0, 100.0, 150.0, 200.0, 300.0]))
-	list.append(_make_upg("max_armor", "钢铁铠甲", "最大护甲值增加", UpgradeData.Category.SURVIVAL, 5, 1.0, "player", "max_armor", UpgradeData.Operation.ADD, [50.0, 100.0, 150.0, 200.0, 300.0]))
-	list.append(_make_upg("move_speed", "疾风之靴", "移动速度提高", UpgradeData.Category.SURVIVAL, 4, 1.0, "player", "move_speed_mult", UpgradeData.Operation.MULTIPLY, [1.12, 1.25, 1.38, 1.50]))
-	list.append(_make_upg("ammo_loot", "弹药丰收", "弹药掉落数量增加", UpgradeData.Category.ECONOMY, 5, 1.0, "drop_manager", "ammo_amount_mult", UpgradeData.Operation.MULTIPLY, [1.2, 1.4, 1.6, 1.8, 2.0]))
-	list.append(_make_upg("health_loot", "生命之泉", "血包恢复量增加", UpgradeData.Category.ECONOMY, 4, 1.0, "drop_manager", "health_amount_mult", UpgradeData.Operation.MULTIPLY, [1.25, 1.50, 1.75, 2.00]))
-	list.append(_make_upg("drop_abundance", "寻宝猎人", "总掉落概率增加", UpgradeData.Category.ECONOMY, 4, 0.8, "drop_manager", "drop_chance_bonus", UpgradeData.Operation.ADD, [0.25, 0.50, 0.75, 1.00]))
+	list.append(_make_upg("rifle_damage", "步枪膛线", "步枪伤害提高", UpgradeData.Category.WEAPON, 5, 1.0, "rifle", "damage_mult", UpgradeData.Operation.SET, [1.16, 1.32, 1.48, 1.64, 1.80]))
+	list.append(_make_upg("shotgun_damage", "霰弹枪喉缩", "霰弹枪伤害提高", UpgradeData.Category.WEAPON, 5, 1.0, "shotgun", "damage_mult", UpgradeData.Operation.SET, [1.16, 1.32, 1.48, 1.64, 1.80]))
+	list.append(_make_upg("reload_speed", "快速装填", "全武器换弹时间缩短", UpgradeData.Category.WEAPON, 5, 1.2, "all_weapons", "reload_time_mult", UpgradeData.Operation.SET, [0.86, 0.72, 0.58, 0.44, 0.30]))
+	list.append(_make_upg("whip_range", "铁鞭延长", "铁鞭攻击范围增加", UpgradeData.Category.WHIP, 5, 1.0, "iron_whip", "whip_range", UpgradeData.Operation.ADD, [1.0, 1.0, 1.0, 1.0, 1.0]))
+	list.append(_make_upg("whip_cooldown", "铁鞭淬火", "铁鞭冷却时间缩短", UpgradeData.Category.WHIP, 5, 1.0, "iron_whip", "cooldown", UpgradeData.Operation.SET, [0.86, 0.72, 0.58, 0.44, 0.30]))
+	list.append(_make_upg("whip_stun", "铁鞭电击", "铁鞭眩晕值增加", UpgradeData.Category.WHIP, 5, 1.0, "iron_whip", "stun_damage", UpgradeData.Operation.SET, [1.16, 1.32, 1.48, 1.64, 1.80]))
+	list.append(_make_upg("max_health", "活力之血", "最大生命值增加", UpgradeData.Category.SURVIVAL, 5, 1.2, "player", "max_health", UpgradeData.Operation.ADD, [50.0, 50.0, 50.0, 50.0, 100.0]))
+	list.append(_make_upg("max_armor", "钢铁铠甲", "最大护甲值增加", UpgradeData.Category.SURVIVAL, 5, 1.0, "player", "max_armor", UpgradeData.Operation.ADD, [50.0, 50.0, 50.0, 50.0, 100.0]))
+	list.append(_make_upg("move_speed", "疾风之靴", "移动速度提高", UpgradeData.Category.SURVIVAL, 4, 1.0, "player", "move_speed_mult", UpgradeData.Operation.SET, [1.12, 1.25, 1.38, 1.50]))
+	list.append(_make_upg("ammo_loot", "弹药丰收", "弹药掉落数量增加", UpgradeData.Category.ECONOMY, 5, 1.0, "drop_manager", "ammo_amount_mult", UpgradeData.Operation.SET, [1.2, 1.4, 1.6, 1.8, 2.0]))
+	list.append(_make_upg("health_loot", "生命之泉", "血包恢复量增加", UpgradeData.Category.ECONOMY, 4, 1.0, "drop_manager", "health_amount_mult", UpgradeData.Operation.SET, [1.25, 1.50, 1.75, 2.00]))
+	list.append(_make_upg("drop_abundance", "寻宝猎人", "总掉落概率增加", UpgradeData.Category.ECONOMY, 4, 0.8, "drop_manager", "drop_chance_bonus", UpgradeData.Operation.ADD, [0.25, 0.25, 0.25, 0.25]))
 
 
 func _make_upg(id: String, p_name: String, desc: String, cat: int, max_lv: int, weight: float, target: String, key: String, op: int, vals: Array[float]) -> UpgradeData:

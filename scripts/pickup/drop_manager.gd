@@ -98,10 +98,12 @@ func apply_drop_upgrade(stat_key: String, value: float, operation: int) -> void:
 			match operation:
 				0: _ammo_mult += value
 				1: _ammo_mult *= value
+				2: _ammo_mult = value
 		"health_amount_mult":
 			match operation:
 				0: _health_mult += value
 				1: _health_mult *= value
+				2: _health_mult = value
 		"drop_chance_bonus":
 			match operation:
 				0: _drop_chance_bonus += value
