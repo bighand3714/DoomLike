@@ -325,6 +325,9 @@ func _enter_shielding() -> void:
 	_was_shielding = true
 	_state = WhipState.SHIELDING
 
+	_saved_materials.clear()
+	if _grabbed_enemy.has_method("cancel_pain_flash"):
+		_grabbed_enemy.cancel_pain_flash()
 	_set_enemy_transparent(true)
 
 	GameBus.grab_status_show.emit("盾牌模式 [滚轮=冲刺处决]")

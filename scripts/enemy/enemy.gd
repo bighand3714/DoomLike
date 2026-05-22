@@ -903,6 +903,14 @@ func _restore_material(geo: Node3D, key: int) -> void:
 		geo.material_override = _original_materials[key]
 
 
+func cancel_pain_flash() -> void:
+	for key in _original_materials:
+		var geo := instance_from_id(key) as Node3D
+		if geo != null and is_instance_valid(geo):
+			geo.material_override = _original_materials[key]
+	_original_materials.clear()
+
+
 func _on_died() -> void:
 	if _state == EnemyState.DEATH:
 		return
