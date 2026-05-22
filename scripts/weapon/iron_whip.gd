@@ -89,6 +89,11 @@ func _input(event: InputEvent) -> void:
 			_on_whip_scroll(false)
 			get_viewport().set_input_as_handled()
 
+	# 手柄/额外按键触发铁链（Input Map 中 whip_throw 的非鼠标绑定）
+	if event.is_action_pressed("whip_throw") and not event is InputEventMouseButton:
+		_on_whip_scroll(true)
+		get_viewport().set_input_as_handled()
+
 	# F 键处决
 	if event.is_action_pressed("action_key"):
 		if (_state == WhipState.GRABBING or _state == WhipState.SHIELDING) and _grabbed_enemy != null:

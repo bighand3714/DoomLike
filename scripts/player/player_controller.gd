@@ -1,4 +1,4 @@
-﻿# ==============================================================================
+# ==============================================================================
 # PlayerController — 第一人称玩家控制器
 # ==============================================================================
 # 挂在 Player 节点（CharacterBody3D）上。
@@ -21,6 +21,9 @@ extends CharacterBody3D
 
 ## 最大移动速度（米/秒），8.0 相当于每秒走 8 米，偏快，适合 DOOM 风格
 @export var move_speed := 8.0
+
+## 按住 Shift 奔跑的移速倍率
+@export var sprint_multiplier: float = 1.6
 
 ## 加速度——数值越大，玩家按 W 后"蹬地加速"越快
 @export var acceleration := 40.0
@@ -61,6 +64,9 @@ extends CharacterBody3D
 
 ## 鼠标灵敏度。0.002 是比较适中的值，数字越大转得越快
 @export var mouse_sensitivity := 0.002
+
+## 手柄右摇杆灵敏度
+@export var gamepad_sensitivity: float = 3.0
 
 ## 是否反转 Y 轴（飞机摇杆风格），默认 false = 不反转
 @export var invert_y := false
@@ -234,6 +240,23 @@ func _input(event: InputEvent) -> void:
 func _physics_process(delta: float) -> void:
 	# 硬锁更新放在最前面，确保移动前摄像机已对准目标
 	_update_lock_system(delta)
+	# 手柄右摇杆视角（每帧轮询，摇杆持续有效）
+	if not _is_locked_on:
+		var rstick_x := Input.get_joy_axis(0, 2)
+		var rstick_y := Input.get_joy_axis(0, 3)
+		var joy_dz := 0.15
+		if absf(rstick_x) > joy_dz:
+			_yaw -= rstick_x * gamepad_sensitivity * delta
+		if absf(rstick_y) > joy_dz:
+			var joy_pitch_delta: float = rstick_y * gamepad_sensitivity * delta
+			if invert_y:
+				joy_pitch_delta = -joy_pitch_delta
+			_pitch = clampf(_pitch - joy_pitch_delta,
+				-deg_to_rad(vertical_limit), deg_to_rad(vertical_limit))
+		# 应用摇杆旋转到玩家和摄像机
+		if absf(rstick_x) > joy_dz or absf(rstick_y) > joy_dz:
+			transform.basis = Basis.from_euler(Vector3(0.0, _yaw, 0.0))
+			_camera.transform.basis = Basis.from_euler(Vector3(_pitch, 0.0, 0.0))
 	# === 重力处理 ===
 	# is_on_floor() 检查角色是否站在地面/物体表面上。
 	# 如果没站在地上 → 加速下落。
@@ -284,6 +307,9 @@ func _physics_process(delta: float) -> void:
 
 	# 应用外部速度倍率（铁鞭抓取时降低速度）
 	var effective_speed := move_speed * move_speed_mult * _speed_multiplier
+	# 按住 Shift 奔跑（非强制冲刺状态下）
+	if Input.is_action_pressed("dash_sprint") and not _is_dashing:
+		effective_speed *= sprint_multiplier
 
 	# 如果有按键输入
 	if direction.length_squared() > 0.0:
@@ -444,15 +470,17 @@ func _update_lock_system(delta: float) -> void:
 		return
 
 	var right_pressed := Input.is_action_pressed("secondary_fire")
-	var is_grabbing := _iron_whip != null and _iron_whip.is_grabbing()
+	# 铁鞭任意非空闲状态（挥鞭/拉回/抓取/盾牌/冲刺）都释放锁定
+	# 铁鞭激活中或正在抓取敌人 → 释放锁定
+	var whip_busy: bool = (_iron_whip != null and _iron_whip.get("_state") != 0) or grabbed_enemy != null
 
 	if not _is_locked_on:
 		# 边缘触发：右键刚按下 + 非抓取状态 → 尝试锁定
-		if right_pressed and not _lock_key_held and not is_grabbing:
+		if right_pressed and not _lock_key_held and not whip_busy:
 			_try_acquire_lock()
 	else:
 		# 已锁定：检查是否需要解锁
-		if not right_pressed or is_grabbing or not _is_lock_valid():
+		if not right_pressed or whip_busy or not _is_lock_valid():
 			_release_lock()
 		else:
 			_update_lock_camera(delta)
@@ -550,6 +578,8 @@ func _is_lock_valid() -> bool:
 	if state == Enemy.EnemyState.DEATH or state == Enemy.EnemyState.EXECUTED:
 		return false
 	var dist := _camera.global_position.distance_to(_locked_enemy.global_position)
+	if dist < 2.0:  # 抓取时敌人离玩家很近，锁定会无限绕圈
+		return false
 	if dist > lock_max_range * 1.3:
 		return false
 	return true
