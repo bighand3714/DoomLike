@@ -889,8 +889,9 @@ func _flash_pain(flash_color: Color = Color.WHITE) -> void:
 
 		var timer := get_tree().create_timer(enemy_data.pain_duration)
 		timer.timeout.connect(func():
-			if is_instance_valid(geo):
-				_restore_material(geo, key))
+			var g := instance_from_id(key) as Node3D
+			if g != null:
+				_restore_material(g, key))
 
 
 func _restore_material(geo: Node3D, key: int) -> void:
