@@ -66,6 +66,18 @@ func _draw() -> void:
 	# 背景圆
 	draw_circle(center, radius, background_color)
 
+	# 竞技场边界（灰色粗线，最底层）
+	var arena_radius := _get_arena_radius()
+	if arena_radius > 0.0:
+		var arena := _find_arena()
+		if arena != null:
+			var arena_origin := Vector2(arena.global_position.x, arena.global_position.z)
+			var player_xz := Vector2(_player_pos.x, _player_pos.z)
+			var boundary_center := center + (arena_origin - player_xz) * map_scale
+			var boundary_r: float = arena_radius * map_scale
+			var view_r: float = radius - 1.0
+			_draw_boundary_arc(boundary_center, boundary_r, center, view_r)
+
 	# 红圈边界（25m 范围）
 	draw_arc(center, radius, 0.0, TAU, 48, Color(1.0, 0.15, 0.15, 0.6), 1.5)
 
@@ -94,3 +106,40 @@ func _draw() -> void:
 	var arrow_left := center + arrow_dir.rotated(PI * 0.75) * 7.0
 	var arrow_right := center + arrow_dir.rotated(-PI * 0.75) * 7.0
 	draw_colored_polygon(PackedVector2Array([arrow_tip, arrow_left, arrow_right]), player_color)
+
+func _find_arena() -> ArenaLevel:
+	var level_node := get_node_or_null("/root/Main/Level")
+	if level_node == null:
+		return null
+	for child in level_node.get_children():
+		if child is ArenaLevel:
+			return child
+	return null
+
+func _get_arena_radius() -> float:
+	var arena := _find_arena()
+	if arena != null:
+		return arena.arena_radius
+	return 0.0
+
+## 用圆-圆交集计算边界环在 minimap 可视范围内的弧段，裁剪掉外部部分
+func _draw_boundary_arc(bc: Vector2, br: float, vc: Vector2, vr: float) -> void:
+	var d: float = bc.distance_to(vc)
+	if d >= vr + br:
+		return  # 完全不可见
+	var boundary_color := Color(0.5, 0.5, 0.5, 0.7)
+	if d <= vr - br:
+		# 边界完全在 minimap 内
+		draw_arc(bc, br, 0.0, TAU, 64, boundary_color, 2.5)
+	elif d <= br - vr:
+		# minimap 完全在边界内（边界包围视口）——沿视口边缘画整圆
+		draw_arc(vc, vr, 0.0, TAU, 64, boundary_color, 2.5)
+	else:
+		# 部分相交 —— 计算交集弧的角度范围
+		var a: float = (br * br + d * d - vr * vr) / (2.0 * br * d)
+		a = clampf(a, -1.0, 1.0)
+		var angle_offset: float = acos(a)
+		var center_angle: float = (vc - bc).angle()
+		var start_angle: float = center_angle - angle_offset
+		var end_angle: float = center_angle + angle_offset
+		draw_arc(bc, br, start_angle, end_angle, 64, boundary_color, 2.5)

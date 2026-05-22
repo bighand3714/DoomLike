@@ -36,6 +36,9 @@ func _ready() -> void:
 	# 先让基类生成地面 + 边界柱 + 容器节点 + 随机数生成器
 	super._ready()
 
+	# 荒漠特有：静态全局光照
+	_setup_directional_light()
+
 	# 荒漠特有：随机生成枯树掩体
 	_spawn_dead_trees()
 
@@ -53,6 +56,18 @@ func _get_boundary_color() -> Color:
 func _get_fog_color() -> Color:
 	return Color(0.76, 0.66, 0.4)
 
+
+# ==============================================================================
+# _setup_directional_light() —— 静态全局光照（沙漠日光）
+# ==============================================================================
+func _setup_directional_light() -> void:
+	var light := DirectionalLight3D.new()
+	light.name = "DesertSun"
+	light.light_energy = 1.0
+	light.light_color = Color(1.0, 0.92, 0.75)
+	light.shadow_enabled = true
+	light.rotation_degrees = Vector3(-45.0, 135.0, 0.0)
+	add_child(light)
 
 # ==============================================================================
 # _spawn_dead_trees() —— 随机生成枯树道具（Phase 3.6）
