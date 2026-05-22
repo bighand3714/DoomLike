@@ -63,11 +63,11 @@ func _ai_tick() -> void:
 			# 理想射程：站定射击
 			velocity = Vector3.ZERO
 			_face_player_flat()
-			if randf() < 0.5 and _attack_cooldown_timer <= 0.0:
+			if randf() < enemy_data.attack_probability and _attack_cooldown_timer <= 0.0:
 				_transition_to(EnemyState.ATTACK_PREPARE)
 		DistanceBracket.CLOSE:
 			# 太近：后退 + 射击
-			if randf() < 0.5 and _attack_cooldown_timer <= 0.0 and _state != EnemyState.ATTACK_PREPARE:
+			if randf() < enemy_data.attack_probability and _attack_cooldown_timer <= 0.0 and _state != EnemyState.ATTACK_PREPARE:
 				_transition_to(EnemyState.ATTACK_PREPARE)
 			elif _state == EnemyState.ATTACK_PREPARE:
 				_move_away_from_player(0.0, enemy_data.move_speed * 0.5)
@@ -75,7 +75,7 @@ func _ai_tick() -> void:
 				_move_away_from_player(0.0, enemy_data.move_speed * 0.5)
 		DistanceBracket.MELEE:
 			# 贴身：快速后撤
-			if randf() < 0.5 and _attack_cooldown_timer <= 0.0 and _state != EnemyState.ATTACK_PREPARE:
+			if randf() < enemy_data.attack_probability and _attack_cooldown_timer <= 0.0 and _state != EnemyState.ATTACK_PREPARE:
 				_transition_to(EnemyState.ATTACK_PREPARE)
 			elif _state == EnemyState.ATTACK_PREPARE:
 				_move_away_from_player(0.0, enemy_data.move_speed * 0.8)

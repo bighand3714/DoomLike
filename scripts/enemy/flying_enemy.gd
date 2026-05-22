@@ -59,10 +59,10 @@ func _ai_tick() -> void:
 		DistanceBracket.MEDIUM:
 			# 盘旋绕圈寻找俯冲时机
 			_fly_strafe_around_player(enemy_data.move_speed * 0.5)
-			if _attack_cooldown_timer <= 0.0 and randf() < 0.3:
+			if _attack_cooldown_timer <= 0.0 and randf() < enemy_data.attack_probability:
 				_transition_to(EnemyState.ATTACK_PREPARE)
 		DistanceBracket.CLOSE, DistanceBracket.MELEE:
-			if randf() < 0.5 and _attack_cooldown_timer <= 0.0:
+			if randf() < enemy_data.attack_probability and _attack_cooldown_timer <= 0.0:
 				_transition_to(EnemyState.ATTACK_PREPARE)
 			else:
 				_fly_towards_player(enemy_data.move_speed * 0.4)

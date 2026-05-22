@@ -92,6 +92,9 @@ class_name EnemyData extends Resource
 @export var sight_range: float = 30.0
 @export var attack_cooldown: float = 1.0
 
+## 攻击概率（0.0~1.0）——冷却就绪后实际发动攻击的概率，控制攻击节奏随机性
+@export var attack_probability: float = 0.5
+
 ## 偏好距离——远程敌人尝试保持在此距离射击
 @export var preferred_range: float = 12.0
 

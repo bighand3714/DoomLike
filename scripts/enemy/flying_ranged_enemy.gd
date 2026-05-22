@@ -60,16 +60,16 @@ func _ai_tick() -> void:
 		DistanceBracket.MEDIUM:
 			# 理想射程：悬停 + 射击
 			_hover_in_place()
-			if randf() < 0.5 and _attack_cooldown_timer <= 0.0:
+			if randf() < enemy_data.attack_probability and _attack_cooldown_timer <= 0.0:
 				_transition_to(EnemyState.ATTACK_PREPARE)
 		DistanceBracket.CLOSE:
 			# 太近：后飞 + 射击
-			if randf() < 0.5 and _attack_cooldown_timer <= 0.0 and _state != EnemyState.ATTACK_PREPARE:
+			if randf() < enemy_data.attack_probability and _attack_cooldown_timer <= 0.0 and _state != EnemyState.ATTACK_PREPARE:
 				_transition_to(EnemyState.ATTACK_PREPARE)
 			_fly_away_from_player(enemy_data.move_speed * 0.6)
 		DistanceBracket.MELEE:
 			# 贴身：快速飞离
-			if randf() < 0.5 and _attack_cooldown_timer <= 0.0 and _state != EnemyState.ATTACK_PREPARE:
+			if randf() < enemy_data.attack_probability and _attack_cooldown_timer <= 0.0 and _state != EnemyState.ATTACK_PREPARE:
 				_transition_to(EnemyState.ATTACK_PREPARE)
 			_fly_away_from_player(enemy_data.move_speed * 1.0)
 

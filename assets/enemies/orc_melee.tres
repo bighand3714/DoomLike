@@ -23,6 +23,7 @@ stun_recovery_rate = 10.0
 stun_resistance = 0.1
 attack_range = 1.0
 attack_cooldown = 2.0
+attack_probability = 0.4
 preferred_range = 0.0
 min_range = 0.0
 attack_windup = 0.8

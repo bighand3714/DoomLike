@@ -116,7 +116,7 @@ func _ai_tick() -> void:
 
 		DistanceBracket.CLOSE:  # 1~3m — 主战斗距离：举盾 + 概率攻击
 			if _state not in [EnemyState.DEFENDING, EnemyState.ATTACK_PREPARE, EnemyState.ATTACK_ACTIVE, EnemyState.ATTACK_RECOVER]:
-				if randf() < 0.4 and _attack_cooldown_timer <= 0.0:
+				if randf() < enemy_data.attack_probability and _attack_cooldown_timer <= 0.0:
 					_transition_to(EnemyState.ATTACK_PREPARE)
 					return
 			else:

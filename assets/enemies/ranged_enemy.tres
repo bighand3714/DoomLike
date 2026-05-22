@@ -20,6 +20,7 @@ move_speed = 3.0
 attack_range = 18.0
 sight_range = 35.0
 attack_cooldown = 1.8
+attack_probability = 0.45
 preferred_range = 10.0
 attack_windup = 0.25
 attack_recovery = 0.35
