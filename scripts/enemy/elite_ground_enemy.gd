@@ -138,12 +138,14 @@ func _on_damaged(amount: float, _type: WeaponData.DamageType) -> void:
 func _set_all_boxes_emission(color: Color, energy: float) -> void:
 	for child in get_children():
 		if child is CSGShape3D:
-			var mat: StandardMaterial3D = child.material_override
-			if mat != null:
-				mat.emission_enabled = energy > 0.0
-				mat.emission = color
-				mat.emission_energy_multiplier = energy
-
+			var new_mat := StandardMaterial3D.new()
+			var old_mat: StandardMaterial3D = child.material_override
+			if old_mat != null:
+				new_mat.albedo_color = old_mat.albedo_color
+			new_mat.emission_enabled = energy > 0.0
+			new_mat.emission = color
+			new_mat.emission_energy_multiplier = energy
+			child.material_override = new_mat
 
 func _add_box(pos: Vector3, size: Vector3, color: Color, emissive: bool = false) -> void:
 	var box := CSGBox3D.new()
