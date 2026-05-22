@@ -1,8 +1,16 @@
 [gd_scene format=3 uid="uid://bd2yrfuxb618"]
 
 [ext_resource type="Script" path="res://scripts/level/lava_arena.gd" id="1_1uf8h"]
+[ext_resource type="Script" path="res://scripts/level/cycle_sun.gd" id="2_cycle_sun"]
 
 [node name="LavaArena" type="Node3D" unique_id=730122899]
 script = ExtResource("1_1uf8h")
 spawn_outer_radius = 56.0
 boundary_marker_count = 72
+
+[node name="CycleSun" type="DirectionalLight3D" parent="."]
+script = ExtResource("2_cycle_sun")
+transform = Transform3D(1, 0, 0, 0, -4.37114e-08, -1, 0, 1, -4.37114e-08, 100, 50, 0)
+light_energy = 0.0
+light_color = Color(1, 0.95, 0.8, 1)
+shadow_enabled = true
