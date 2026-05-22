@@ -181,6 +181,12 @@ func _ready() -> void:
 
 	_create_debug_bars()
 
+	# 移动端性能优化：远距离隐藏非关键模型
+	if PlatformDetector.is_mobile():
+		for child in get_children():
+			if child is MeshInstance3D or child is CSGShape3D:
+				child.visibility_range_end = 15.0
+
 
 func _get_or_create_damageable() -> Damageable:
 	for child in get_children():

@@ -210,7 +210,11 @@ const ACTIVE_LIMITS := [
 
 func _get_active_enemy_limit() -> int:
 	var idx := clampi(current_intensity - 1, 0, ACTIVE_LIMITS.size() - 1)
-	return ACTIVE_LIMITS[idx]
+	var limit: int = ACTIVE_LIMITS[idx]
+	# Android 端限制同时最多 15 个敌人
+	if PlatformDetector.is_mobile():
+		limit = mini(limit, 15)
+	return limit
 
 
 # 每波预算

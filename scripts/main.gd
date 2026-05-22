@@ -1,4 +1,4 @@
-﻿# ==============================================================================
+# ==============================================================================
 # Main — 游戏主控制器
 # ==============================================================================
 extends Node3D
@@ -17,6 +17,7 @@ const IronWhipClass = preload("res://scripts/weapon/iron_whip.gd")
 const WhipDataClass = preload("res://scripts/weapon/whip_data.gd")
 const PlayerProgressionClass = preload("res://scripts/progression/player_progression.gd")
 const LevelUpPanelClass = preload("res://scripts/ui/level_up_panel.gd")
+const PlatformDetectorClass = preload("res://scripts/platform/platform_detector.gd")
 
 @onready var _level_root: Node3D = %Level
 @onready var _crosshair: ColorRect = %Crosshair
@@ -94,6 +95,12 @@ func _ready() -> void:
 	minimap.offset_top = 12.0
 	minimap.offset_bottom = 165.0
 	ui.add_child(minimap)
+
+	# 平台初始化：触摸设备启用虚拟 HUD
+	if PlatformDetectorClass.is_touch_primary():
+		var touch_input: Control = load("res://scripts/platform/touch_input.gd").new()
+		touch_input.name = "TouchInput"
+		ui.add_child(touch_input)
 
 	_set_game_state(GameState.State.MAIN_MENU)
 
@@ -666,10 +673,10 @@ func _on_wave_started(wave_number: int) -> void:
 func _setup_crosshair() -> void:
 	_crosshair.color = Color(0.0, 1.0, 0.0, 0.7)
 	_crosshair.size = Vector2(4, 4)
-	_crosshair.position = Vector2(get_viewport().size) / 2.0 - _crosshair.size / 2.0
+	_crosshair.position = Vector2(get_viewport().get_visible_rect().size) / 2.0 - _crosshair.size / 2.0
 
 	# X 字准星
-	var viewport_size: Vector2 = get_viewport().size
+	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
 	var cx: float = viewport_size.x / 2.0
 	var cy: float = viewport_size.y / 2.0
 	var x_len: float = 12.0
@@ -698,7 +705,7 @@ func _setup_crosshair() -> void:
 	get_tree().root.size_changed.connect(_on_window_resized)
 
 func _on_window_resized() -> void:
-	var viewport_size: Vector2 = get_viewport().size
+	var viewport_size: Vector2 = get_viewport().get_visible_rect().size
 	var cx: float = viewport_size.x / 2.0
 	var cy: float = viewport_size.y / 2.0
 	var x_len: float = 12.0

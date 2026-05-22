@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+	<title>DoomLike</title>
+	<link rel="manifest" href="manifest.json">
+	<meta name="theme-color" content="#000000">
+	<style>
+		* { margin: 0; padding: 0; box-sizing: border-box; }
+		html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
+		#game-container {
+			width: 100%; height: 100%;
+			display: flex; align-items: center; justify-content: center;
+		}
+		#game-canvas { display: block; max-width: 100%; max-height: 100%; }
+		#loading-overlay {
+			position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+			background: #111; display: flex; flex-direction: column;
+			align-items: center; justify-content: center; z-index: 1000;
+		}
+		#loading-text { color: #aaa; font-family: monospace; font-size: 14px; margin-bottom: 16px; }
+		#progress-bar-container {
+			width: 300px; height: 6px; background: #333; border-radius: 3px; overflow: hidden;
+		}
+		#progress-bar {
+			width: 0%; height: 100%; background: #e04040;
+			border-radius: 3px; transition: width 0.2s;
+		}
+		#progress-percent { color: #888; font-family: monospace; font-size: 12px; margin-top: 8px; }
+		#fullscreen-btn {
+			position: fixed; bottom: 16px; right: 16px; z-index: 1001;
+			background: rgba(255,255,255,0.15); color: #fff; border: 1px solid rgba(255,255,255,0.3);
+			padding: 8px 14px; font-family: monospace; font-size: 13px; cursor: pointer;
+			border-radius: 4px; display: none;
+		}
+		#fullscreen-btn:hover { background: rgba(255,255,255,0.25); }
+	</style>
+	$GODOT_HEAD_INCLUDE
+</head>
+<body>
+	<div id="loading-overlay">
+		<div id="loading-text">DoomLike 加载中...</div>
+		<div id="progress-bar-container">
+			<div id="progress-bar"></div>
+		</div>
+		<div id="progress-percent">0%</div>
+	</div>
+	<div id="game-container">
+		$GODOT_BASIC
+	</div>
+	<button id="fullscreen-btn" onclick="toggleFullscreen()">全屏</button>
+
+	<script>
+		function toggleFullscreen() {
+			var canvas = document.getElementById('game-canvas') || document.querySelector('canvas');
+			if (!canvas) return;
+			if (!document.fullscreenElement) {
+				canvas.requestFullscreen().catch(function() {});
+			} else {
+				document.exitFullscreen();
+			}
+		}
+
+		document.addEventListener('fullscreenchange', function() {
+			var btn = document.getElementById('fullscreen-btn');
+			btn.textContent = document.fullscreenElement ? '退出全屏' : '全屏';
+		});
+
+		var statusDiv = document.getElementById('loading-text');
+		var progressBar = document.getElementById('progress-bar');
+		var progressPercent = document.getElementById('progress-percent');
+
+		if (typeof GodotProgress !== 'undefined') {
+			GodotProgress = function(loaded, total) {
+				if (total > 0) {
+					var pct = Math.round(loaded / total * 100);
+					progressBar.style.width = pct + '%';
+					progressPercent.textContent = pct + '%';
+				}
+				if (loaded >= total && total > 0) {
+					document.getElementById('loading-overlay').style.display = 'none';
+					document.getElementById('fullscreen-btn').style.display = 'block';
+				}
+			};
+		} else {
+			// 监听 canvas 出现作为引擎就绪的备选检测
+			var checkReady = setInterval(function() {
+				var canvas = document.querySelector('canvas');
+				if (canvas) {
+					clearInterval(checkReady);
+					document.getElementById('loading-overlay').style.display = 'none';
+					document.getElementById('fullscreen-btn').style.display = 'block';
+				}
+			}, 500);
+		}
+
+		if ('serviceWorker' in navigator) {
+			navigator.serviceWorker.register('service_worker.js').catch(function() {});
+		}
+	</script>
+</body>
+</html>
