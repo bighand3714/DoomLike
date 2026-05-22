@@ -12,7 +12,7 @@ enum EnemyState {
 	WALKING, RUNNING,
 	ATTACK_PREPARE, ATTACK_ACTIVE, ATTACK_RECOVER,
 	DEFENDING,
-	PAIN, STUNNED, GRABBED, THROWN,
+	PAIN, STUNNED, GRABBED,
 	KNOCKED_DOWN, EXECUTED, DEATH
 }
 
@@ -70,11 +70,6 @@ var _stun_flash_toggle: bool = false  # 眩晕闪烁交替开关
 ## 每实例护甲值（从 enemy_data.armor 初始化，避免共享 Resource 变异）
 var _current_armor: float = 0.0
 
-# 抛物线投掷：落地/碰撞时调用的回调
-var _thrown_impact_callback: Callable
-var _thrown_prev_pos: Vector3 = Vector3.ZERO
-var _thrown_gravity: float = 20.0
-var _thrown_timer: float = 0.0
 
 var _debug_stun_bar: MeshInstance3D = null
 var _debug_armor_bar: MeshInstance3D = null
@@ -249,7 +244,7 @@ func _physics_process(delta: float) -> void:
 	# 眩晕衰减延迟：受击后保持 1s 不变，1s 后慢慢回落
 	if _stun_decay_delay > 0.0:
 		_stun_decay_delay -= delta
-	if _stun > 0.0 and _state != EnemyState.STUNNED and _state != EnemyState.GRABBED and _state != EnemyState.THROWN:
+	if _stun > 0.0 and _state != EnemyState.STUNNED and _state != EnemyState.GRABBED:
 		if _stun_decay_delay <= 0.0:
 			_stun -= enemy_data.stun_recovery_rate * delta
 			if _stun < 0.0:
@@ -292,21 +287,19 @@ func _physics_process(delta: float) -> void:
 			_state_stunned(delta)
 		EnemyState.GRABBED:
 			_state_grabbed(delta)
-		EnemyState.THROWN:
-			_state_thrown(delta)
 		EnemyState.KNOCKED_DOWN:
 			_state_knocked_down(delta)
 		EnemyState.DEATH:
 			_state_death(delta)
 
-	if _state != EnemyState.DEATH and _state != EnemyState.GRABBED and _state != EnemyState.THROWN:
+	if _state != EnemyState.DEATH and _state != EnemyState.GRABBED:
 		velocity += _knockback_velocity
 
 	# 眩晕/定身状态下强制归零速度
 	if (_snare_timer > 0.0 or _state == EnemyState.STUNNED) and _state not in [EnemyState.GRABBED, EnemyState.DEATH]:
 		velocity = Vector3.ZERO
 
-	if _state != EnemyState.DEATH and _state != EnemyState.GRABBED and _state != EnemyState.THROWN and is_inside_tree():
+	if _state != EnemyState.DEATH and _state != EnemyState.GRABBED and is_inside_tree():
 		move_and_slide()
 
 	_update_debug_bars()
@@ -641,63 +634,6 @@ func _stun_pulse() -> void:
 func _state_grabbed(_delta: float) -> void:
 	if _grab_owner == null or not is_instance_valid(_grab_owner):
 		release_grab()
-
-
-func _state_thrown(delta: float) -> void:
-	_thrown_prev_pos = global_position
-	_thrown_timer += delta
-	velocity.y -= _thrown_gravity * delta
-
-	# 预期移动量必须在 move_and_slide 之前计算（move_and_slide 会削减 velocity）
-	var expected := velocity.length() * delta
-	move_and_slide()
-
-	# 超时或掉出世界强制触发
-	if _thrown_timer > 3.0 or global_position.y < -50.0:
-		_trigger_thrown_impact()
-		return
-
-	# 落地检测
-	if is_on_floor():
-		_trigger_thrown_impact()
-		return
-
-	# 碰撞检测：实际移动量远小于预期则判定撞墙
-	var moved := global_position.distance_to(_thrown_prev_pos)
-	if expected > 0.05 and moved < expected * 0.15:
-		_trigger_thrown_impact()
-		return
-
-	# 撞到其他敌人检测
-	var col_count := get_slide_collision_count()
-	for i in range(col_count):
-		var col := get_slide_collision(i)
-		if col != null:
-			var other := col.get_collider()
-			if other is Enemy:
-				_trigger_thrown_impact()
-				return
-
-
-func _trigger_thrown_impact() -> void:
-	var cb := _thrown_impact_callback
-	_thrown_impact_callback = Callable()
-	if cb.is_valid():
-		cb.call(global_position)
-	# 回调可能已处决敌人（EXECUTED→DEATH），不再覆盖为 KNOCKED_DOWN
-	if _state != EnemyState.DEATH and _state != EnemyState.EXECUTED:
-		_transition_to(EnemyState.KNOCKED_DOWN)
-
-
-func start_throw(throw_velocity: Vector3, on_impact: Callable, gravity: float = 20.0) -> void:
-	velocity = throw_velocity
-	_thrown_impact_callback = on_impact
-	_thrown_gravity = gravity
-	_thrown_timer = 0.0
-	_thrown_prev_pos = global_position
-	_grab_owner = null
-	collision_layer = 1
-	_transition_to(EnemyState.THROWN)
 
 
 func _state_knocked_down(delta: float) -> void:

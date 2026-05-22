@@ -6,7 +6,7 @@ class_name IronWhip extends Node3D
 const WhipDataClass = preload("res://scripts/weapon/whip_data.gd")
 const EnemyClass = preload("res://scripts/enemy/enemy.gd")
 
-enum WhipState { IDLE, WHIPPING, PULLING, GRABBING, SHIELDING, THROWING, DASHING }
+enum WhipState { IDLE, WHIPPING, PULLING, GRABBING, SHIELDING, DASHING }
 
 var _whip_data: WhipData
 var _camera: Camera3D
@@ -28,11 +28,8 @@ var _was_shielding: bool = false
 var _dash_hit_enemies: Array = []
 var _dash_direction: Vector3 = Vector3.ZERO  # 冲刺方向（用于击退计算）
 
-# 抛物线投掷预览
-var _parabola_nodes: Array = []          # 预览线段节点
 var _enemy_transparent: bool = false     # 敌人半透明状态
 var _saved_materials: Dictionary = {}    # 半透明时保存的原始材质
-var _ground_circle: MeshInstance3D = null  # 落点地面红圈
 
 
 func setup(data: WhipData, camera: Camera3D, player: CharacterBody3D) -> void:
@@ -95,27 +92,16 @@ func _input(event: InputEvent) -> void:
 
 
 ## 滚轮触发铁链的统一入口
-func _on_whip_scroll(scroll_up: bool) -> void:
+func _on_whip_scroll(_scroll_up: bool) -> void:
 	match _state:
 		WhipState.IDLE:
 			# IDLE 状态：滚轮任意方向都触发挥鞭
 			_try_whip()
 
-		WhipState.GRABBING:
-			if scroll_up:
-				# 滚轮向上 = 甩出
-				_state = WhipState.THROWING
-				_execute_throw()
-
 		WhipState.SHIELDING:
-			if not scroll_up:
-				# 滚轮向下 = 冲刺处决
-				_state = WhipState.DASHING
-				_start_dash()
-			else:
-				# 滚轮向上 = 甩出
-				_state = WhipState.THROWING
-				_execute_throw()
+			# 滚轮任意方向 = 冲刺处决
+			_state = WhipState.DASHING
+			_start_dash()
 
 
 # ==============================================================================
@@ -329,9 +315,8 @@ func _enter_shielding() -> void:
 	_state = WhipState.SHIELDING
 
 	_set_enemy_transparent(true)
-	_create_parabola_preview()
 
-	GameBus.grab_status_show.emit("盾牌模式 [滚轮上=投掷] [滚轮下=冲刺处决]")
+	GameBus.grab_status_show.emit("盾牌模式 [滚轮=冲刺处决]")
 
 
 func _exit_shielding() -> void:
@@ -341,7 +326,6 @@ func _exit_shielding() -> void:
 	_state = WhipState.GRABBING
 
 	_set_enemy_transparent(false)
-	_clear_parabola_preview()
 
 	_show_grab_status(_grabbed_enemy)
 
@@ -360,46 +344,10 @@ func _process_shielding(_delta: float) -> void:
 	var shield_transform := Transform3D(_player.global_transform.basis, smoothed)
 	_grabbed_enemy.update_grabbed_position(shield_transform, _delta)
 
-	# 更新抛物线预览（基于镜头方向，不再瞄准地面某点）
-	_update_parabola_preview()
 
 
 # ==============================================================================
-# 抛物线投掷
-# ==============================================================================
-func _execute_throw() -> void:
-	if _grabbed_enemy == null or not is_instance_valid(_grabbed_enemy):
-		_release_grab_internal()
-		return
-
-	var enemy := _grabbed_enemy
-
-	# 投掷方向 = 镜头朝向
-	var cam_forward := (-_camera.global_transform.basis.z).normalized()
-	var weight: float = 60.0
-	if enemy.enemy_data != null:
-		weight = enemy.enemy_data.weight
-	var speed := _calc_throw_speed(weight)
-	var throw_origin := _player.global_position + cam_forward * 2.0 + Vector3(0, 0.5, 0)
-	enemy.global_position = throw_origin
-
-	# 清除预览和半透明
-	_set_enemy_transparent(false)
-	_clear_parabola_preview()
-
-	_grabbed_enemy = null
-	_player.grabbed_enemy = null
-	_player.set_speed_multiplier(1.0)
-	_hide_grab_status()
-	_state = WhipState.IDLE
-
-	# 启动抛物线飞行
-	var thrown_enemy := enemy
-	enemy.start_throw(cam_forward * speed, func(pos: Vector3): _on_throw_impact(pos, thrown_enemy))
-
-
-# ==============================================================================
-# 冲刺处决（盾牌模式下滚轮向下）
+# 冲刺处决（盾牌模式下滚轮触发）
 # ==============================================================================
 func _start_dash() -> void:
 	if _grabbed_enemy == null or not is_instance_valid(_grabbed_enemy):
@@ -563,10 +511,6 @@ func get_grabbed_enemy() -> Enemy:
 	return _grabbed_enemy
 
 
-# ==============================================================================
-# 抛物线投掷辅助方法
-# ==============================================================================
-
 # 设置被抓敌人半透明（替换式：新建材质避免修改共享材质）
 func _set_enemy_transparent(enable: bool) -> void:
 	if _grabbed_enemy == null or not is_instance_valid(_grabbed_enemy):
@@ -599,224 +543,6 @@ func _set_enemy_transparent(enable: bool) -> void:
 			if _saved_materials.has(key):
 				geo.material_override = _saved_materials[key]
 				_saved_materials.erase(key)
-
-
-# 创建抛物线预览节点（渐变色线段 + 落点红圈）
-func _create_parabola_preview() -> void:
-	_clear_parabola_preview()
-	const SEGMENT_COUNT := 30
-	for i in range(SEGMENT_COUNT - 1):
-		var segment := MeshInstance3D.new()
-		segment.name = "ParabolaSegment"
-		var box := BoxMesh.new()
-		box.size = Vector3(0.02, 0.02, 0.01)
-		segment.mesh = box
-		# 颜色：玩家端(i=0)=淡红 → 落点端(i=N)=灰白
-		var t := float(i) / float(SEGMENT_COUNT - 2)
-		var mat := StandardMaterial3D.new()
-		mat.albedo_color = Color(1.0, 0.25, 0.25, 0.6).lerp(Color(0.85, 0.85, 0.85, 0.6), t)
-		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		segment.material_override = mat
-		get_tree().root.add_child(segment)
-		_parabola_nodes.append(segment)
-
-	# 落点地面红圈（扁平圆柱，使用 explosion_radius）
-	_ground_circle = MeshInstance3D.new()
-	_ground_circle.name = "GroundCircle"
-	var cylinder := CylinderMesh.new()
-	cylinder.top_radius = _whip_data.explosion_radius
-	cylinder.bottom_radius = _whip_data.explosion_radius
-	cylinder.height = 0.03
-	_ground_circle.mesh = cylinder
-	var circle_mat := StandardMaterial3D.new()
-	circle_mat.albedo_color = Color(1.0, 0.15, 0.15, 0.35)
-	circle_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	circle_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	circle_mat.emission_enabled = true
-	circle_mat.emission = Color(1.0, 0.08, 0.08)
-	circle_mat.render_priority = 10
-	_ground_circle.material_override = circle_mat
-	get_tree().root.add_child(_ground_circle)
-
-
-# 清除抛物线预览
-func _clear_parabola_preview() -> void:
-	for node in _parabola_nodes:
-		if is_instance_valid(node):
-			node.queue_free()
-	_parabola_nodes.clear()
-	if _ground_circle != null and is_instance_valid(_ground_circle):
-		_ground_circle.queue_free()
-		_ground_circle = null
-
-
-# 更新抛物线预览（基于镜头方向，采样轨迹 + 射线找落点）
-func _update_parabola_preview() -> void:
-	var cam_forward := (-_camera.global_transform.basis.z).normalized()
-	var weight: float = 60.0
-	if _grabbed_enemy != null and is_instance_valid(_grabbed_enemy) and _grabbed_enemy.enemy_data != null:
-		weight = _grabbed_enemy.enemy_data.weight
-	var speed := _calc_throw_speed(weight)
-	var throw_origin := _player.global_position + cam_forward * 2.0 + Vector3(0, 0.5, 0)
-	var vel := cam_forward * speed
-	var g := 20.0
-
-	const SEGMENT_COUNT := 30
-	const MAX_TIME := 3.0
-	var space_state := get_world_3d().direct_space_state
-
-	# 采样轨迹并检测落点
-	var sample_points: Array[Vector3] = []
-	var landing: Vector3 = Vector3.ZERO
-	var landing_idx: int = SEGMENT_COUNT
-
-	for i in range(SEGMENT_COUNT + 1):
-		var t := float(i) / float(SEGMENT_COUNT) * MAX_TIME
-		var pos := throw_origin + vel * t + Vector3(0, -0.5 * g * t * t, 0)
-		sample_points.append(pos)
-		# 射线向下找地面，判断落点
-		if landing_idx > SEGMENT_COUNT - 1:
-			var ground_y := _find_ground_height_at(Vector3(pos.x, pos.y + 5.0, pos.z))
-			if ground_y > -999.0 and pos.y <= ground_y:
-				landing = Vector3(pos.x, ground_y, pos.z)
-				landing_idx = i
-
-	# 放置线段
-	for i in range(mini(SEGMENT_COUNT, landing_idx + 1) - 1):
-		if i >= _parabola_nodes.size():
-			break
-		var p0 := sample_points[i]
-		var p1 := sample_points[i + 1]
-		var mid := (p0 + p1) * 0.5
-		var seg_dir := p1 - p0
-		var seg_len := seg_dir.length()
-		var seg := _parabola_nodes[i] as MeshInstance3D
-		var box := seg.mesh as BoxMesh
-		box.size = Vector3(0.02, 0.02, maxf(seg_len, 0.001))
-		seg.global_position = mid
-		if seg_len > 0.001:
-			var up := Vector3(0, 1, 0)
-			if abs(seg_dir.normalized().dot(up)) > 0.99:
-				up = Vector3(1, 0, 0)
-			seg.look_at(mid + seg_dir.normalized(), up)
-
-	# 隐藏超出的线段
-	for i in range(landing_idx, _parabola_nodes.size()):
-		var seg := _parabola_nodes[i] as MeshInstance3D
-		seg.visible = false
-
-	# 更新落点红圈
-	if _ground_circle != null and is_instance_valid(_ground_circle):
-		if landing_idx < SEGMENT_COUNT:
-			_ground_circle.global_position = landing + Vector3(0, 0.05, 0)
-			_ground_circle.visible = true
-		else:
-			_ground_circle.visible = false
-
-
-
-
-
-# 抛物线落地/碰撞回调——3m球体判定 + 体重伤害 + 水平击退
-func _on_throw_impact(impact_pos: Vector3, thrown_enemy: Enemy) -> void:
-	# 被投掷敌人受到体重伤害 + 击退，不处决
-	var weight: float = 60.0
-	if is_instance_valid(thrown_enemy) and thrown_enemy.enemy_data != null:
-		weight = thrown_enemy.enemy_data.weight
-
-	if is_instance_valid(thrown_enemy):
-		var dmg := thrown_enemy.get_node_or_null("Damageable") as Damageable
-		if dmg != null:
-			dmg.take_damage(weight, WeaponData.DamageType.MELEE)
-		# _trigger_thrown_impact() 在回调返回后自动转入 KNOCKED_DOWN，此处不重复处理
-		GameBus.pickup_notification.emit("投掷冲击", Color(1.0, 0.5, 0.2))
-
-	# 3m 球体判定：范围 = explosion_radius
-	var space_state := get_world_3d().direct_space_state
-	var sphere := SphereShape3D.new()
-	sphere.radius = _whip_data.explosion_radius
-	var params := PhysicsShapeQueryParameters3D.new()
-	params.shape = sphere
-	params.transform = Transform3D(Basis(), impact_pos)
-	params.collision_mask = 1
-	var results := space_state.intersect_shape(params, 32)
-	var hit_enemies: Dictionary = {}
-	for result in results:
-		var body := result.get("collider") as Node3D
-		if body == null:
-			continue
-		var other: Enemy = body.get_parent() as Enemy
-		if other == null:
-			other = body as Enemy
-		if other == null or other == thrown_enemy:
-			continue
-		if hit_enemies.has(other.get_instance_id()):
-			continue
-		hit_enemies[other.get_instance_id()] = true
-
-		var od := other.get_node_or_null("Damageable") as Damageable
-		if od != null:
-			od.take_damage(weight, WeaponData.DamageType.MELEE)
-		var kb_dir := (other.global_position - impact_pos)
-		kb_dir.y = 0.0
-		if kb_dir.length_squared() < 0.01:
-			kb_dir = Vector3.RIGHT
-		else:
-			kb_dir = kb_dir.normalized()
-		other.apply_knockback(kb_dir, _whip_data.throw_impact_knockback)
-
-	_spawn_whip_effect(impact_pos, impact_pos + Vector3(0, 0.5, 0))
-	_spawn_explosion_ring(impact_pos, _whip_data.explosion_radius)
-
-
-# 在投掷落点生成爆炸范围红圈（缩放入+淡出动画）
-func _spawn_explosion_ring(pos: Vector3, radius: float) -> void:
-	var ring := MeshInstance3D.new()
-	ring.name = "ExplosionRing"
-	var cylinder := CylinderMesh.new()
-	cylinder.top_radius = radius
-	cylinder.bottom_radius = radius
-	cylinder.height = 0.03
-	ring.mesh = cylinder
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = Color(1.0, 0.15, 0.15, 0.7)
-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	mat.emission_enabled = true
-	mat.emission = Color(1.0, 0.1, 0.1)
-	mat.render_priority = 10
-	ring.material_override = mat
-	ring.global_position = pos + Vector3(0, 0.05, 0)
-	ring.scale = Vector3(0.3, 1.0, 0.3)
-	get_tree().root.add_child(ring)
-
-	var tween := create_tween()
-	tween.set_parallel(true)
-	tween.tween_property(ring, "scale", Vector3(1.0, 1.0, 1.0), 0.35).set_ease(Tween.EASE_OUT)
-	tween.tween_property(mat, "albedo_color:a", 0.0, 0.5).set_ease(Tween.EASE_OUT)
-	tween.tween_property(mat, "emission", Color(1.0, 0.1, 0.1, 0.0), 0.5).set_ease(Tween.EASE_OUT)
-	tween.chain().tween_callback(ring.queue_free)
-
-
-# 按体重计算投掷初速（恒定动能缩放，钳制[10, 25]）
-func _calc_throw_speed(weight: float) -> float:
-	var ratio := _whip_data.throw_reference_weight / maxf(weight, 1.0)
-	var speed := _whip_data.throw_speed_base * sqrt(ratio)
-	return clampf(speed, 10.0, 25.0)
-
-
-# 给定XZ位置，从上方射线向下找地面高度，未命中返回 -1000
-func _find_ground_height_at(xz: Vector3, above: float = 50.0) -> float:
-	var space_state := get_world_3d().direct_space_state
-	var from := Vector3(xz.x, above, xz.z)
-	var to := Vector3(xz.x, -100.0, xz.z)
-	var query := PhysicsRayQueryParameters3D.create(from, to)
-	query.collision_mask = 1
-	var result := space_state.intersect_ray(query)
-	if not result.is_empty():
-		return result.position.y
-	return -1000.0
 
 
 # ==============================================================================
