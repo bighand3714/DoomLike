@@ -892,6 +892,8 @@ func _flash_pain(flash_color: Color = Color.WHITE) -> void:
 
 
 func _restore_material(geo: Node3D, key: int) -> void:
+	if not is_instance_valid(geo):
+		return
 	if _original_materials.has(key):
 		geo.material_override = _original_materials[key]
 

@@ -104,6 +104,34 @@ var _dash_travelled: float = 0.0
 var _distance_rings: Array[MeshInstance3D] = []
 var _ring_ground_y: float = 0.0
 
+# ==============================================================================
+# 硬锁系统（按住右键锁定前方最近敌人）
+# ==============================================================================
+
+## 锁定最大距离（米）
+@export var lock_max_range: float = 50.0
+
+## 锁定半角（度），值越大锁定范围越宽
+@export var lock_fov_half: float = 20.0
+
+## 锁定追踪速度（越大越快咬住目标）
+@export var lock_tracking_speed: float = 20.0
+
+## 当前是否在硬锁状态
+var _is_locked_on: bool = false
+
+## 当前锁定的敌人
+var _locked_enemy: Enemy = null
+
+## 锁定标记（billboard 四边形，挂在敌人身上）
+var _lock_marker: MeshInstance3D = null
+
+## 铁鞭引用（检查抓取状态）
+var _iron_whip: IronWhip = null
+
+## 右键按住状态（边缘检测）
+var _lock_key_held: bool = false
+
 
 # ==============================================================================
 # 节点引用
@@ -147,6 +175,9 @@ func _ready() -> void:
 
 	_create_distance_rings()
 
+	# 获取铁鞭引用（硬锁需要检查抓取状态）
+	_iron_whip = get_node_or_null("LeftHandHolder/IronWhip") as IronWhip
+
 
 # ==============================================================================
 # _input(event) — 每次有输入事件（按键、鼠标移动）时自动调用
@@ -159,7 +190,7 @@ func _input(event: InputEvent) -> void:
 		return
 
 	# --- 鼠标视角旋转 ---
-	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED and not _is_locked_on:
 		# event.relative 记录的是"鼠标这一小步移动了多远"（像素）
 		# 乘以 sensitivity 把像素转换成旋转角度
 		_yaw -= event.relative.x * mouse_sensitivity
@@ -201,6 +232,8 @@ func _input(event: InputEvent) -> void:
 # delta = 这一帧距离上一帧的秒数（通常约 0.016 秒）。
 
 func _physics_process(delta: float) -> void:
+	# 硬锁更新放在最前面，确保移动前摄像机已对准目标
+	_update_lock_system(delta)
 	# === 重力处理 ===
 	# is_on_floor() 检查角色是否站在地面/物体表面上。
 	# 如果没站在地上 → 加速下落。
@@ -400,3 +433,171 @@ func reset_runtime_modifiers() -> void:
 func set_player_model_visible(v: bool) -> void:
 	if _player_model:
 		_player_model.visible = v
+
+
+# ==============================================================================
+# 硬锁系统
+# ==============================================================================
+
+func _update_lock_system(delta: float) -> void:
+	if get_tree().paused:
+		return
+
+	var right_pressed := Input.is_action_pressed("secondary_fire")
+	var is_grabbing := _iron_whip != null and _iron_whip.is_grabbing()
+
+	if not _is_locked_on:
+		# 边缘触发：右键刚按下 + 非抓取状态 → 尝试锁定
+		if right_pressed and not _lock_key_held and not is_grabbing:
+			_try_acquire_lock()
+	else:
+		# 已锁定：检查是否需要解锁
+		if not right_pressed or is_grabbing or not _is_lock_valid():
+			_release_lock()
+		else:
+			_update_lock_camera(delta)
+
+	_lock_key_held = right_pressed
+
+
+func _try_acquire_lock() -> void:
+	var nearest_enemy: Enemy = null
+	var best_score: float = INF
+
+	var cam_origin := _camera.global_position
+	var cam_forward := -_camera.global_transform.basis.z
+	var cos_half_fov := cos(deg_to_rad(lock_fov_half))
+
+	for node in get_tree().get_nodes_in_group("enemy"):
+		if not is_instance_valid(node):
+			continue
+		var enemy := node as Enemy
+		if enemy == null:
+			continue
+		# 过滤已死亡/处决的敌人
+		var state = enemy.get("_state")
+		if state == Enemy.EnemyState.DEATH or state == Enemy.EnemyState.EXECUTED:
+			continue
+
+		var to_enemy := enemy.global_position - cam_origin
+		var dist := to_enemy.length()
+		if dist > lock_max_range:
+			continue
+
+		var dir := to_enemy.normalized()
+		var dot := dir.dot(cam_forward)
+		if dot < cos_half_fov:
+			continue
+
+		# 优先选点积最大（最正对），相同时选最近
+		# 点积越大越正对 → score 越小（负 dot 惩罚 + 距离惩罚）
+		var score: float = -dot + dist * 0.001
+		if score < best_score:
+			best_score = score
+			nearest_enemy = enemy
+
+	if nearest_enemy != null:
+		_locked_enemy = nearest_enemy
+		_is_locked_on = true
+		_attach_lock_marker()
+
+
+func _update_lock_camera(delta: float) -> void:
+	if not is_instance_valid(_locked_enemy):
+		_release_lock()
+		return
+
+	var half_height := _get_enemy_half_height()
+	var target_pos := _locked_enemy.global_position + Vector3(0.0, half_height, 0.0)
+	var cam_origin := _camera.global_position
+	var to_target := target_pos - cam_origin
+
+	if to_target.length_squared() < 0.0001:
+		return
+
+	# 计算目标 yaw（玩家左右旋转）
+	var target_yaw: float = atan2(-to_target.x, -to_target.z)
+
+	# 计算目标 pitch（摄像机上下旋转）
+	var xz_dist := Vector2(to_target.x, to_target.z).length()
+	var target_pitch: float = atan2(to_target.y, xz_dist)
+	target_pitch = clampf(target_pitch,
+		-deg_to_rad(vertical_limit), deg_to_rad(vertical_limit))
+
+	# 平滑旋转
+	var t: float = 1.0 - exp(-lock_tracking_speed * delta)
+	_yaw = _slerp_angle(_yaw, target_yaw, t)
+	_pitch = lerpf(_pitch, target_pitch, t)
+
+	transform.basis = Basis.from_euler(Vector3(0.0, _yaw, 0.0))
+	_camera.transform.basis = Basis.from_euler(Vector3(_pitch, 0.0, 0.0))
+
+	# 更新锁定标记位置（敌人头顶上方）
+	if _lock_marker != null and is_instance_valid(_lock_marker):
+		_lock_marker.position = Vector3(0.0, half_height * 2.0 + 0.5, 0.0)
+
+
+func _release_lock() -> void:
+	_is_locked_on = false
+	_locked_enemy = null
+	_detach_lock_marker()
+
+
+func _is_lock_valid() -> bool:
+	if not is_instance_valid(_locked_enemy):
+		return false
+	var state = _locked_enemy.get("_state")
+	if state == Enemy.EnemyState.DEATH or state == Enemy.EnemyState.EXECUTED:
+		return false
+	var dist := _camera.global_position.distance_to(_locked_enemy.global_position)
+	if dist > lock_max_range * 1.3:
+		return false
+	return true
+
+
+func _attach_lock_marker() -> void:
+	if _lock_marker != null:
+		if is_instance_valid(_lock_marker):
+			_lock_marker.queue_free()
+		_lock_marker = null
+
+	_lock_marker = MeshInstance3D.new()
+	_lock_marker.name = "LockMarker"
+	var quad := QuadMesh.new()
+	quad.size = Vector2(0.6, 0.6)
+	_lock_marker.mesh = quad
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(1.0, 0.15, 0.1, 0.85)
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	_lock_marker.material_override = mat
+	_locked_enemy.add_child(_lock_marker)
+
+
+func _detach_lock_marker() -> void:
+	if _lock_marker != null and is_instance_valid(_lock_marker):
+		_lock_marker.queue_free()
+	_lock_marker = null
+
+
+func _get_enemy_half_height() -> float:
+	var coll_shape := _locked_enemy.get_node_or_null("CollisionShape3D") as CollisionShape3D
+	if coll_shape and coll_shape.shape is CapsuleShape3D:
+		return (coll_shape.shape as CapsuleShape3D).height * 0.5
+	elif coll_shape and coll_shape.shape is CylinderShape3D:
+		return (coll_shape.shape as CylinderShape3D).height * 0.5
+	elif coll_shape and coll_shape.shape is BoxShape3D:
+		return (coll_shape.shape as BoxShape3D).size.y * 0.5
+	return 1.0
+
+
+# 两个角度之间的最短球面线性插值
+func _slerp_angle(from: float, to: float, t: float) -> float:
+	var diff := fmod(to - from, TAU)
+	if diff > PI:
+		diff -= TAU
+	elif diff < -PI:
+		diff += TAU
+	return from + diff * clampf(t, 0.0, 1.0)
