@@ -15,3 +15,7 @@ addons/
 *.keystore
 *.jks
 *.p12
+
+# Auto-generated
+*.uid
+.release/
