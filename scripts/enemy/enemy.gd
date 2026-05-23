@@ -158,7 +158,7 @@ func _ready() -> void:
 
 	add_to_group("enemy")
 
-	# 地面贴附：move_and_slide 自动 floor snap
+	# 地面贴附：CharacterBody3D 内置 floor snap + is_on_floor 驱动重力
 	up_direction = Vector3.UP
 	floor_snap_length = 2.0
 
@@ -309,50 +309,15 @@ func _physics_process(delta: float) -> void:
 	if (_snare_timer > 0.0 or _state == EnemyState.STUNNED) and _state not in [EnemyState.GRABBED, EnemyState.DEATH]:
 		velocity = Vector3.ZERO
 
-	# 地面敌人 raycast 贴地（飞行敌人 / 特殊状态跳过）
-	var _no_ground_states := [EnemyState.SPAWNING, EnemyState.DEATH, EnemyState.GRABBED, EnemyState.KNOCKED_DOWN, EnemyState.EXECUTED]
-	if enemy_data != null and not enemy_data.is_flying and not _state in _no_ground_states:
-		_snap_to_ground(delta)
+	# 非飞行敌人不着地时施加重力，由 move_and_slide 处理地面碰撞与贴附
+	if enemy_data != null and not enemy_data.is_flying and not is_on_floor():
+		velocity.y -= 9.8 * delta
 
 	if _state != EnemyState.DEATH and _state != EnemyState.GRABBED and is_inside_tree():
 		move_and_slide()
 
 	_update_debug_bars()
 
-
-# ==============================================================================
-# 地面贴附 —— raycast 检测地面，直接修正 Y 坐标
-# ==============================================================================
-func _snap_to_ground(delta: float) -> void:
-	var space_state := get_world_3d().direct_space_state
-	var ray_origin := global_position + Vector3.UP * 0.5
-	var ray_end := global_position + Vector3.DOWN * 10.0
-	var query := PhysicsRayQueryParameters3D.create(ray_origin, ray_end, 1)
-	var result := space_state.intersect_ray(query)
-	if not result.is_empty():
-		var offset := _get_collision_offset()
-		var target_y: float = result.position.y + offset
-		if absf(global_position.y - target_y) > 0.03:
-			global_position.y = target_y
-			velocity.y = 0.0
-	else:
-		velocity.y -= 9.8 * delta
-
-func _get_collision_offset() -> float:
-	for child in get_children():
-		if child is CollisionShape3D:
-			var cs := child as CollisionShape3D
-			var shape := cs.shape
-			var scale_y := absf(cs.scale.y)
-			var half_extent: float = 0.0
-			if shape is CapsuleShape3D:
-				half_extent = (shape.height / 2.0 + shape.radius) * scale_y
-			elif shape is SphereShape3D:
-				half_extent = shape.radius * scale_y
-			elif shape is BoxShape3D:
-				half_extent = shape.size.y / 2.0 * scale_y
-			return half_extent - cs.position.y
-	return 1.0
 
 # ==============================================================================
 # AI tick — 子类覆写以自定义行为
@@ -461,8 +426,6 @@ func _state_chase(delta: float) -> void:
 		var target_y: float = _player.global_position.y + enemy_data.hover_height
 		var y_diff: float = target_y - global_position.y
 		velocity.y = clampf(y_diff * 3.0, -enemy_data.vertical_move_speed, enemy_data.vertical_move_speed)
-	else:
-		velocity.y = 0.0
 
 	_face_player_flat()
 
@@ -472,7 +435,6 @@ func _state_chase(delta: float) -> void:
 # ==============================================================================
 func _state_walking(delta: float) -> void:
 	_move_towards_player(delta, enemy_data.move_speed)
-	velocity.y = 0.0
 	_face_player_flat()
 
 
@@ -481,7 +443,6 @@ func _state_walking(delta: float) -> void:
 # ==============================================================================
 func _state_running(delta: float) -> void:
 	_move_towards_player(delta, enemy_data.move_speed * 1.5)
-	velocity.y = 0.0
 	_face_player_flat()
 
 
@@ -838,21 +799,18 @@ func _get_player_distance_xz() -> float:
 func _move_towards_player(_delta: float, speed: float) -> void:
 	var dir := _get_player_flat_direction()
 	velocity.x = dir.x * speed
-	velocity.y = 0.0
 	velocity.z = dir.z * speed
 
 
 func _move_away_from_player(_delta: float, speed: float) -> void:
 	var dir := -_get_player_flat_direction()
 	velocity.x = dir.x * speed
-	velocity.y = 0.0
 	velocity.z = dir.z * speed
 
 
 func _strafe_around_player(_delta: float, speed: float) -> void:
 	var dir := _get_player_flat_direction()
 	velocity.x = -dir.z * speed
-	velocity.y = 0.0
 	velocity.z = dir.x * speed
 
 

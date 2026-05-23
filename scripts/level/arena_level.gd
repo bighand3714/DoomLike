@@ -82,10 +82,8 @@ signal level_ready(arena: ArenaLevel)
 @export var fog_enabled: bool = true
 
 ## 雾密度
-@export var fog_density: float = 0.02
+@export var fog_density: float = 0.012  # EXPONENTIAL 模式
 
-## 雾开始距离（距摄像机），约 arena_radius * 0.7
-@export var fog_start_distance: float = 31.5
 
 
 # ==============================================================================
@@ -200,7 +198,7 @@ func _setup_rng() -> void:
 # 所以实际上不影响体验。
 #
 # 地面参数：
-#   宽度/深度 = arena_radius × 2 + 4（每边多出 2m 防止边缘露馅）
+#   宽度/深度 = spawn_outer_radius × 2 + 10（覆盖刷怪最远距离 + 缓冲）
 #   高度 = 0.3m（足够薄，看起来像地面而不是高台）
 #   Y 位置 = -0.15（让顶面刚好在 Y=0）
 #
@@ -209,7 +207,7 @@ func _setup_rng() -> void:
 #   PlaneMesh 需要再挂 StaticBody3D + CollisionShape3D，多一步操作。
 #   后续替换为正式美术资源时再统一换。
 func _build_base_arena() -> void:
-	var ground_size := arena_radius * 2.0 + 4.0  # 每边多 2m 余量
+	var ground_size := spawn_outer_radius * 2.0 + 10.0  # 覆盖刷怪最远距离 + 缓冲
 	var ground_height := 0.3
 
 	var ground := CSGBox3D.new()
@@ -453,7 +451,7 @@ func _get_boundary_color() -> Color:
 func _get_fog_color() -> Color:
 	return Color(0.5, 0.5, 0.5)  # 默认灰色
 
-## 创建 WorldEnvironment 节点并设置深度雾
+## 创建 WorldEnvironment 节点并设置指数雾
 func _setup_fog() -> void:
 	if not fog_enabled:
 		return
@@ -473,11 +471,9 @@ func _setup_fog() -> void:
 
 	var fog_color := _get_fog_color()
 	env.fog_enabled = true
-	env.fog_mode = Environment.FOG_MODE_DEPTH
+	env.fog_mode = Environment.FOG_MODE_EXPONENTIAL
 	env.fog_density = fog_density
 	env.fog_light_color = fog_color
-	env.fog_depth_begin = fog_start_distance
-	env.fog_depth_end = arena_radius + 20.0
 
 	env.ambient_light_color = fog_color * 0.3
 	env.ambient_light_energy = 0.5
