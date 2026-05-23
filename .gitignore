@@ -10,3 +10,8 @@ desktop.ini
 # Godot
 addons/
 *.translation
+
+# Signing keys (never commit)
+*.keystore
+*.jks
+*.p12

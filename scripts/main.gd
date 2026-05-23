@@ -46,6 +46,7 @@ var _save_data := SaveDataClass.new()
 
 
 func _ready() -> void:
+	_show_developer_splash()
 	_setup_crosshair()
 
 	var ui := get_node("UI")
@@ -103,6 +104,46 @@ func _ready() -> void:
 		ui.add_child(touch_input)
 
 	_set_game_state(GameState.State.MAIN_MENU)
+
+
+func _show_developer_splash() -> void:
+	var ui := get_node("UI")
+
+	var bg := ColorRect.new()
+	bg.color = Color.BLACK
+	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	bg.modulate.a = 1.0
+
+	var logo := TextureRect.new()
+	logo.texture = load("res://assets/title/title.png")
+	logo.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	logo.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	logo.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	logo.anchor_left = 1.0 / 3.0
+	logo.anchor_right = 2.0 / 3.0
+	logo.anchor_top = 0.0
+	logo.anchor_bottom = 1.0
+
+	var overlay := CanvasLayer.new()
+	overlay.name = "DeveloperSplash"
+	overlay.layer = 128
+	overlay.add_child(bg)
+	overlay.add_child(logo)
+	ui.add_child(overlay)
+
+	(func() -> void:
+		await get_tree().create_timer(2.5, true, false, true).timeout
+
+		# 渐出 0.2s
+		const FO := 0.2; const FO_STEPS := 8
+		for i in range(1, FO_STEPS + 1):
+			await get_tree().create_timer(FO / FO_STEPS, true, false, true).timeout
+			bg.modulate.a = 1.0 - float(i) / float(FO_STEPS)
+			logo.modulate.a = 1.0 - float(i) / float(FO_STEPS)
+
+		overlay.queue_free()
+	).call()
 
 
 func _set_game_state(next_state: GameState.State) -> void:

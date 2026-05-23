@@ -5,6 +5,8 @@ const CACHE_FILES = [
 	"index.wasm",
 	"index.pck",
 	"index.audio.worklet.js",
+	"index.icon-192.png",
+	"index.icon-512.png",
 	"manifest.json"
 ];
 
