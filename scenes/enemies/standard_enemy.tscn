@@ -13,14 +13,16 @@ emission_energy_multiplier = 0.3
 [sub_resource type="StandardMaterial3D" id="mat_eye"]
 roughness = 0.1
 
-[sub_resource type="SphereShape3D" id="sphere_shape"]
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_3gjry"]
+height = 0.48934937
+radius = 0.3798828
 
 [node name="StandardEnemy" type="CharacterBody3D" unique_id=1065712478]
 script = ExtResource("1_script")
 enemy_data = ExtResource("2_data")
 
 [node name="Body" type="CSGSphere3D" parent="." unique_id=1375723230]
-transform = Transform3D(1.654, 0, 0, 0, 1.195, 0, 0, 0, 1.563, 0, 0.75, 0)
+transform = Transform3D(1.654, 0, 0, 0, 1.195, 0, 0, 0, 1.563, -0.0005339086, 0.75270665, 0.001478672)
 material_override = SubResource("mat_body")
 radius = 0.55
 
@@ -35,6 +37,5 @@ material_override = SubResource("mat_eye")
 radius = 0.1
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=1959435672]
-transform = Transform3D(1.825, 0, 0, 0, 1.825, 0, 0, 0, 1.825, 0, 0.75, 0)
-shape = SubResource("sphere_shape")
-
+transform = Transform3D(2.38, 0, 0, 0, 2.38, 0, 0, 0, 2.38, 0, 0.72054774, 0)
+shape = SubResource("CylinderShape3D_3gjry")

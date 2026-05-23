@@ -66,10 +66,9 @@ func _state_attack_prepare(delta: float) -> void:
 
 
 func _state_attack_active(delta: float) -> void:
-	# 空中跳跃
+	# 空中跳跃——move_and_slide 由基类 _physics_process 统一调用
 	_jump_velocity.y -= 20.0 * delta
 	velocity = _jump_velocity
-	move_and_slide()
 	_state_timer += delta
 	if not _has_hit_player and global_position.distance_to(_player.global_position) < 1.5:
 		_has_hit_player = true
