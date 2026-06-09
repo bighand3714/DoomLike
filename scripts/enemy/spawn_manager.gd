@@ -379,9 +379,9 @@ func _on_warning_expired(pillar, entry: SpawnEntry, pos: Vector3) -> void:
 			enemy.set("enemy_data", data)
 
 	var parent := get_parent()
-	parent.add_child(enemy)
 	if "global_position" in enemy:
-		enemy.global_position = pos
+		enemy.global_position = pos   # 先定位再入树，避免与原点玩家碰撞体穿透
+	parent.add_child(enemy)
 
 	if enemy_manager != null and enemy_manager.has_method("register_enemy"):
 		enemy_manager.register_enemy(enemy)
