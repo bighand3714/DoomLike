@@ -23,6 +23,11 @@ var _proximity_angles: Array[float] = []
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	resized.connect(_on_resized)
+
+
+func _on_resized() -> void:
+	queue_redraw()
 
 
 ## 添加一个受击方向指示器
@@ -52,8 +57,7 @@ func update_proximity_threats(world_positions: Array[Vector3], player_pos: Vecto
 		if screen_dir.length_squared() < 0.01:
 			screen_dir = Vector2.DOWN
 		_proximity_angles.append(screen_dir.angle())
-	if not _proximity_angles.is_empty():
-		queue_redraw()
+	queue_redraw()
 
 
 func _process(delta: float) -> void:
@@ -71,9 +75,11 @@ func _process(delta: float) -> void:
 
 
 func _draw() -> void:
-	var viewport_size: Vector2 = get_viewport().size
-	var center: Vector2 = viewport_size / 2.0
-	var radius: float = minf(viewport_size.x, viewport_size.y) / 2.0 - edge_margin
+	var canvas_size: Vector2 = size
+	if canvas_size.x <= 0.0 or canvas_size.y <= 0.0:
+		return
+	var center: Vector2 = canvas_size / 2.0
+	var radius: float = maxf(0.0, minf(canvas_size.x, canvas_size.y) / 2.0 - edge_margin)
 
 	# 灰色近身威胁箭头
 	for angle in _proximity_angles:
